@@ -1,3 +1,4 @@
+import json
 from http import HTTPStatus
 
 import arrow
@@ -226,8 +227,16 @@ class EncounterListApi(StaffSessionAuthMixin, SimpleAPI):
     @api.post("/move_claim_queue")
     def move_claim_queue(self) -> list[Response | Effect]:
         """Move a claim to a different queue."""
-        claim_id = self.request.body.get("claim_id")
-        queue_name = self.request.body.get("queue_name")
+        try:
+            body = json.loads(self.request.body)
+        except (json.JSONDecodeError, TypeError):
+            return [JSONResponse(
+                {"error": "Invalid JSON body"},
+                status_code=HTTPStatus.BAD_REQUEST,
+            )]
+
+        claim_id = body.get("claim_id")
+        queue_name = body.get("queue_name")
 
         if not claim_id or not queue_name:
             return [JSONResponse(
