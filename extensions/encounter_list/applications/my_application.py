@@ -4,13 +4,14 @@ import arrow
 from django.db.models import Count, Q, F, Case, When, Value
 
 from canvas_sdk.effects import Effect
+from canvas_sdk.effects.claim import ClaimEffect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
 from canvas_sdk.effects.simple_api import Response, JSONResponse
 from canvas_sdk.handlers.application import Application
 from canvas_sdk.handlers.simple_api import StaffSessionAuthMixin, SimpleAPI, api
 from canvas_sdk.templates import render_to_string
 from canvas_sdk.v1.data import Note, Command, Referral, ImagingOrder, Staff
-from canvas_sdk.v1.data.claim import ClaimQueue
+from canvas_sdk.v1.data.claim import Claim, ClaimQueue
 from canvas_sdk.v1.data.note import NoteStates, NoteTypeCategories, NoteType
 from canvas_sdk.v1.data.task import TaskStatus
 
@@ -121,7 +122,9 @@ class EncounterListApi(StaffSessionAuthMixin, SimpleAPI):
         # Convert queryset to encounter data
         encounters = []
         for note in paginated_notes:
-            claim_queue = note.get_claim().current_queue.name if note.get_claim() else None
+            claim = note.get_claim()
+            claim_queue = claim.current_queue.name if claim else None
+            claim_id = str(claim.id) if claim else None
 
             delegated_commands = self._calculate_delegated_orders_count(note)
 
@@ -146,6 +149,7 @@ class EncounterListApi(StaffSessionAuthMixin, SimpleAPI):
                 "billable": self._get_billable_status(note),
                 "uncommitted_commands": note.staged_commands_count,
                 "delegated_orders": delegated_commands,
+                "claim_id": claim_id,
                 "claim_queue": claim_queue,
                 "location": note.location.full_name if note.location else "Unknown Location",
                 "location_id": str(note.location.id) if note.location else None,
@@ -218,6 +222,40 @@ class EncounterListApi(StaffSessionAuthMixin, SimpleAPI):
         return [JSONResponse({
             "claim_queues": claim_queues
         }, status_code=HTTPStatus.OK)]
+
+    @api.post("/move_claim_queue")
+    def move_claim_queue(self) -> list[Response | Effect]:
+        """Move a claim to a different queue."""
+        claim_id = self.request.body.get("claim_id")
+        queue_name = self.request.body.get("queue_name")
+
+        if not claim_id or not queue_name:
+            return [JSONResponse(
+                {"error": "claim_id and queue_name are required"},
+                status_code=HTTPStatus.BAD_REQUEST,
+            )]
+
+        if not Claim.objects.filter(id=claim_id).exists():
+            return [JSONResponse(
+                {"error": "Claim not found"},
+                status_code=HTTPStatus.NOT_FOUND,
+            )]
+
+        if not ClaimQueue.objects.filter(name=queue_name).exists():
+            return [JSONResponse(
+                {"error": "Queue not found"},
+                status_code=HTTPStatus.NOT_FOUND,
+            )]
+
+        effect = ClaimEffect(claim_id=claim_id).move_to_queue(queue_name)
+
+        return [
+            effect,
+            JSONResponse(
+                {"success": True, "claim_id": claim_id, "queue_name": queue_name},
+                status_code=HTTPStatus.OK,
+            ),
+        ]
 
     def _get_sort_fields(self, sort_by: str) -> list[str]:
         """Map frontend sort field names to database field names, returning a list of fields."""

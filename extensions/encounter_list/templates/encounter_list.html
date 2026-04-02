@@ -181,6 +181,37 @@
             color: #0288d1;
         }
 
+        .claim-queue-select {
+            appearance: none;
+            -webkit-appearance: none;
+            border: 1px solid transparent;
+            border-radius: 12px;
+            padding: 4px 24px 4px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            max-width: 180px;
+            transition: border-color 0.2s;
+        }
+
+        .claim-queue-select:hover {
+            border-color: #ccc;
+        }
+
+        .claim-queue-select:focus {
+            outline: none;
+            border-color: #1976d2;
+        }
+
+        .claim-queue-select.saving {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
         a.encounter-link {
             font-weight: 600;
             color: #1d4ed8;
@@ -976,6 +1007,7 @@
                     billable: encounter.billable,
                     uncommittedCommands: encounter.uncommitted_commands,
                     delegatedOrders: encounter.delegated_orders,
+                    claimId: encounter.claim_id,
                     claimQueue: encounter.claim_queue,
                     created: encounter.created
                 }));
@@ -1072,12 +1104,89 @@
             return `<span class="${badgeClass}">${count}</span>`;
         }
 
+        function getClaimQueueStyle(queueName) {
+            const styles = {
+                'NeedsClinicianReview': { bg: '#e3f2fd', color: '#1976d2' },
+                'NeedsCodingReview': { bg: '#fff3cd', color: '#856404' },
+                'QueuedForSubmission': { bg: '#e8f5e8', color: '#2e7d32' },
+                'FiledAwaitingResponse': { bg: '#e0f2fe', color: '#0277bd' },
+                'RejectedNeedsReview': { bg: '#ffebee', color: '#c62828' },
+                'AdjudicatedOpenBalance': { bg: '#f3e5f5', color: '#7b1fa2' },
+                'PatientBalance': { bg: '#fff8e1', color: '#f57c00' },
+                'ZeroBalance': { bg: '#e8f5e8', color: '#388e3c' },
+                'Trash': { bg: '#ffcdd2', color: '#c62828' },
+                'Appointment': { bg: '#e1f5fe', color: '#0288d1' },
+            };
+            return styles[queueName] || { bg: '#f0f0f0', color: '#666' };
+        }
+
         function createClaimStatus(status) {
             if (!status) {
                 return '<span class="empty-cell">—</span>';
             }
             const statusClass = `claim-${status.toLowerCase()}`;
             return `<span class="claim-status ${statusClass}">${status}</span>`;
+        }
+
+        function createClaimQueueDropdown(encounter) {
+            if (!encounter.claimId) {
+                return '<span class="empty-cell">—</span>';
+            }
+
+            const currentQueue = encounter.claimQueue || '';
+            const style = getClaimQueueStyle(currentQueue);
+
+            let options = `<option value="">—</option>`;
+            claimQueues.forEach(cq => {
+                const selected = cq.name === currentQueue ? 'selected' : '';
+                options += `<option value="${escapeHtml(cq.name)}" ${selected}>${escapeHtml(cq.name)}</option>`;
+            });
+
+            return `<select class="claim-queue-select" data-claim-id="${encounter.claimId}" data-encounter-id="${encounter.id}" data-previous-value="${escapeHtml(currentQueue)}" style="background-color: ${style.bg}; color: ${style.color};" onchange="handleClaimQueueChange(this)">${options}</select>`;
+        }
+
+        async function handleClaimQueueChange(selectEl) {
+            const claimId = selectEl.dataset.claimId;
+            const encounterId = selectEl.dataset.encounterId;
+            const newQueue = selectEl.value;
+            const previousQueue = selectEl.dataset.previousValue || '';
+
+            if (!newQueue) return;
+
+            // Store previous value for rollback
+            selectEl.dataset.previousValue = newQueue;
+            selectEl.classList.add('saving');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/move_claim_queue`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ claim_id: claimId, queue_name: newQueue }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || 'Failed to move claim');
+                }
+
+                // Update local data
+                const encounter = encounterData.find(e => e.id === encounterId);
+                if (encounter) {
+                    encounter.claimQueue = newQueue;
+                }
+
+                // Update dropdown styling
+                const style = getClaimQueueStyle(newQueue);
+                selectEl.style.backgroundColor = style.bg;
+                selectEl.style.color = style.color;
+            } catch (error) {
+                console.error('Error moving claim queue:', error);
+                alert(`Failed to move claim: ${error.message}`);
+                // Rollback
+                selectEl.value = previousQueue;
+            } finally {
+                selectEl.classList.remove('saving');
+            }
         }
 
         function renderTable() {
@@ -1097,7 +1206,7 @@
                     <td>${createBillableStatus(encounter.billable)}</td>
                     <td class="compact">${createCountBadge(encounter.uncommittedCommands)}</td>
                     <td class="compact">${createCountBadge(encounter.delegatedOrders, 'blue')}</td>
-                    <td>${createClaimStatus(encounter.claimQueue)}</td>
+                    <td>${createClaimQueueDropdown(encounter)}</td>
                 `;
 
                 tbody.appendChild(row);
