@@ -212,6 +212,57 @@
             pointer-events: none;
         }
 
+        .tag-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+            margin: 1px 2px;
+            white-space: nowrap;
+        }
+
+        .days-in-queue {
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .days-in-queue.high {
+            color: #c62828;
+        }
+
+        .days-in-queue.medium {
+            color: #f57c00;
+        }
+
+        .days-in-queue.low {
+            color: #388e3c;
+        }
+
+        .export-btn {
+            padding: 8px 16px;
+            background-color: #2e7d32;
+            color: white;
+            border: none;
+            border-radius: 0.375rem;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .export-btn:hover {
+            background-color: #1b5e20;
+        }
+
+        .export-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         a.encounter-link {
             font-weight: 600;
             color: #1d4ed8;
@@ -814,6 +865,42 @@
                         </div>
                     </div>
 
+                    <div class="filter-field">
+                        <label class="filter-label">Insurance</label>
+                        <div class="filter-dropdown" id="insuranceFilter" data-values="">
+                            <div class="selected-value">
+                                <span class="placeholder-text">All Insurances</span>
+                            </div>
+                            <div class="dropdown-options" id="insurance-options">
+                                <div class="dropdown-search">
+                                    <input type="text" id="insurance-search" placeholder="Search insurances..." class="search-input">
+                                </div>
+                                <div class="dropdown-option" data-value="">
+                                    <input type="checkbox" id="insurance-all" checked>
+                                    <label for="insurance-all">All Insurances</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="filter-field">
+                        <label class="filter-label">Tags</label>
+                        <div class="filter-dropdown" id="tagFilter" data-values="">
+                            <div class="selected-value">
+                                <span class="placeholder-text">All Tags</span>
+                            </div>
+                            <div class="dropdown-options" id="tag-options">
+                                <div class="dropdown-search">
+                                    <input type="text" id="tag-search" placeholder="Search tags..." class="search-input">
+                                </div>
+                                <div class="dropdown-option" data-value="">
+                                    <input type="checkbox" id="tag-all" checked>
+                                    <label for="tag-all">All Tags</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
                 
                 <div class="filters-group checkbox-group">
@@ -845,6 +932,14 @@
                     <button id="applyFilters" class="apply-filters-btn">
                         Apply Filters
                     </button>
+                    <button id="exportCsvButton" class="export-btn">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Export CSV
+                    </button>
                 </div>
             </div>
         </div>
@@ -855,12 +950,15 @@
                     <th>Patient Name</th>
                     <th>Owner</th>
                     <th>Location</th>
+                    <th>Insurance</th>
                     <th>Note</th>
                     <th>DOS</th>
                     <th>Billable</th>
                     <th class="compact">Uncommitted<br>Commands</th>
                     <th class="compact">Delegated<br>Orders</th>
                     <th>Claim Queue</th>
+                    <th class="compact">Days in<br>Queue</th>
+                    <th>Tags</th>
                 </tr>
             </thead>
             <tbody id="worklistBody">
@@ -903,11 +1001,15 @@
         let locations = [];
         let noteTypes = [];
         let claimQueues = [];
+        let insurances = [];
+        let tags = [];
         let currentFilters = {
             provider_ids: [],
             location_ids: [],
             note_type_names: [],
             claim_queue_names: [],
+            insurance_names: [],
+            tag_ids: [],
             billable_only: false,
             has_uncommitted_commands: false,
             has_delegated_orders: false,
@@ -966,11 +1068,24 @@
                             }
                         }
                     } else if (key === 'claim_queue_names' && Array.isArray(value)) {
-                        // Handle array of claim queue names as comma-separated string
                         if (value.length > 0) {
                             const claimQueueNamesString = value.filter(name => name !== null && name !== undefined && name !== '').join(',');
                             if (claimQueueNamesString) {
                                 params.append(key, claimQueueNamesString);
+                            }
+                        }
+                    } else if (key === 'insurance_names' && Array.isArray(value)) {
+                        if (value.length > 0) {
+                            const insuranceNamesString = value.filter(name => name !== null && name !== undefined && name !== '').join(',');
+                            if (insuranceNamesString) {
+                                params.append(key, insuranceNamesString);
+                            }
+                        }
+                    } else if (key === 'tag_ids' && Array.isArray(value)) {
+                        if (value.length > 0) {
+                            const tagIdsString = value.filter(id => id !== null && id !== undefined && id !== '').join(',');
+                            if (tagIdsString) {
+                                params.append(key, tagIdsString);
                             }
                         }
                     } else if (['billable_only', 'has_uncommitted_commands', 'has_delegated_orders'].includes(key)) {
@@ -1009,6 +1124,9 @@
                     delegatedOrders: encounter.delegated_orders,
                     claimId: encounter.claim_id,
                     claimQueue: encounter.claim_queue,
+                    daysInQueue: encounter.days_in_queue,
+                    insurance: encounter.insurance,
+                    tags: encounter.tags || [],
                     created: encounter.created
                 }));
                 
@@ -1082,6 +1200,36 @@
             }
         }
 
+        async function fetchInsurances() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/insurances`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                insurances = data.insurances;
+                return data;
+            } catch (error) {
+                console.error('Error fetching insurances:', error);
+                return { insurances: [] };
+            }
+        }
+
+        async function fetchTags() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/tags`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                tags = data.tags;
+                return data;
+            } catch (error) {
+                console.error('Error fetching tags:', error);
+                return { tags: [] };
+            }
+        }
+
 
         // Simple utility functions
         function escapeHtml(text) {
@@ -1145,6 +1293,37 @@
             return `<select class="claim-queue-select" data-claim-id="${encounter.claimId}" data-encounter-id="${encounter.id}" data-previous-value="${escapeHtml(currentQueue)}" style="background-color: ${style.bg}; color: ${style.color};" onchange="handleClaimQueueChange(this)">${options}</select>`;
         }
 
+        function createDaysInQueue(days) {
+            if (days === null || days === undefined) {
+                return '<span class="empty-cell">—</span>';
+            }
+            let cls = 'low';
+            if (days > 30) cls = 'high';
+            else if (days > 14) cls = 'medium';
+            return `<span class="days-in-queue ${cls}">${days}d</span>`;
+        }
+
+        const TAG_COLOR_MAP = {
+            red: { bg: '#ffebee', color: '#c62828' },
+            orange: { bg: '#fff3e0', color: '#e65100' },
+            yellow: { bg: '#fffde7', color: '#f57f17' },
+            green: { bg: '#e8f5e9', color: '#2e7d32' },
+            blue: { bg: '#e3f2fd', color: '#1565c0' },
+            purple: { bg: '#f3e5f5', color: '#7b1fa2' },
+            pink: { bg: '#fce4ec', color: '#c2185b' },
+            gray: { bg: '#f5f5f5', color: '#616161' },
+        };
+
+        function createTagBadges(tagList) {
+            if (!tagList || tagList.length === 0) {
+                return '<span class="empty-cell">—</span>';
+            }
+            return tagList.map(tag => {
+                const colors = TAG_COLOR_MAP[tag.color] || TAG_COLOR_MAP.gray;
+                return `<span class="tag-badge" style="background-color:${colors.bg};color:${colors.color}">${escapeHtml(tag.name)}</span>`;
+            }).join('');
+        }
+
         async function handleClaimQueueChange(selectEl) {
             const claimId = selectEl.dataset.claimId;
             const encounterId = selectEl.dataset.encounterId;
@@ -1201,12 +1380,15 @@
                     <td><a href="${patientLink}" target="_top">${escapeHtml(encounter.patientName)}${encounter.patientDob ? ` (${escapeHtml(encounter.patientDob)})` : ''}</a></td>
                     <td>${escapeHtml(encounter.provider)}</td>
                     <td>${escapeHtml(encounter.location)}</td>
+                    <td>${encounter.insurance ? escapeHtml(encounter.insurance) : '<span class="empty-cell">—</span>'}</td>
                     <td><a href="${patientLink}#noteId=${encounter.dbid}" target="_top">${escapeHtml(encounter.noteTitle)}</a></td>
                     <td>${escapeHtml(encounter.dos)}</td>
                     <td>${createBillableStatus(encounter.billable)}</td>
                     <td class="compact">${createCountBadge(encounter.uncommittedCommands)}</td>
                     <td class="compact">${createCountBadge(encounter.delegatedOrders, 'blue')}</td>
                     <td>${createClaimQueueDropdown(encounter)}</td>
+                    <td class="compact">${createDaysInQueue(encounter.daysInQueue)}</td>
+                    <td>${createTagBadges(encounter.tags)}</td>
                 `;
 
                 tbody.appendChild(row);
@@ -1222,7 +1404,7 @@
 
         // Sorting functionality
         async function sortEncounters(columnIndex) {
-            const columns = ['patientName', 'provider', 'location', 'noteTitle', 'dos', 'billable', 'uncommittedCommands', 'delegatedOrders', 'claimQueue'];
+            const columns = ['patientName', 'provider', 'location', 'insurance', 'noteTitle', 'dos', 'billable', 'uncommittedCommands', 'delegatedOrders', 'claimQueue', 'daysInQueue', 'tags'];
             const key = columns[columnIndex];
 
             if (sortConfig.key === key) {
@@ -1258,7 +1440,7 @@
 
         function updateSortIndicators() {
             const headers = document.querySelectorAll('.worklist-table th');
-            const columns = ['patientName', 'provider', 'location', 'noteTitle', 'dos', 'billable', 'uncommittedCommands', 'delegatedOrders', 'claimQueue'];
+            const columns = ['patientName', 'provider', 'location', 'insurance', 'noteTitle', 'dos', 'billable', 'uncommittedCommands', 'delegatedOrders', 'claimQueue', 'daysInQueue', 'tags'];
             
             headers.forEach((header, index) => {
                 const column = columns[index];
@@ -1429,11 +1611,14 @@
                     displayName = 'All Note Types';
                 } else if (filterKey === 'claim_queue_names') {
                     displayName = 'All Statuses';
+                } else if (filterKey === 'insurance_names') {
+                    displayName = 'All Insurances';
+                } else if (filterKey === 'tag_ids') {
+                    displayName = 'All Tags';
                 }
                 selectedValue.innerHTML = `<span class="placeholder-text">${displayName}</span>`;
             } else {
-                const tags = selectedItems.map(itemId => {
-                    // Find the item name from the data arrays
+                const selectedTags = selectedItems.map(itemId => {
                     let itemName = itemId;
                     if (filterKey === 'provider_ids') {
                         const provider = providers.find(p => p.id === itemId);
@@ -1444,13 +1629,17 @@
                     } else if (filterKey === 'note_type_names') {
                         itemName = itemId;
                     } else if (filterKey === 'claim_queue_names') {
-                        // For claim queues, the id and name are the same
                         itemName = itemId;
+                    } else if (filterKey === 'insurance_names') {
+                        itemName = itemId;
+                    } else if (filterKey === 'tag_ids') {
+                        const tag = tags.find(t => t.id === itemId);
+                        itemName = tag ? tag.name : itemId;
                     }
                     return `<span class="selected-tag">${itemName}<span class="remove-tag" data-${filterKey}-id="${itemId}">×</span></span>`;
                 }).join('');
-                selectedValue.innerHTML = tags;
-                
+                selectedValue.innerHTML = selectedTags;
+
                 // Add event listeners for remove tags
                 selectedValue.querySelectorAll('.remove-tag').forEach(removeBtn => {
                     removeBtn.addEventListener('click', (e) => {
@@ -1525,8 +1714,25 @@
         }
 
         function setupClaimQueueDropdown() {
-            // Use shared function to setup dropdown
             setupDropdown('claimQueueFilter', 'claim-queue-options', 'claim_queue_names');
+        }
+
+        function populateInsuranceDropdown() {
+            const insuranceOptions = insurances.map(name => ({ id: name, name: name }));
+            populateDropdown('insurance-options', insuranceOptions, 'insurance_names', 'Insurances');
+        }
+
+        function setupInsuranceDropdown() {
+            setupDropdown('insuranceFilter', 'insurance-options', 'insurance_names');
+        }
+
+        function populateTagDropdown() {
+            const tagOptions = tags.map(t => ({ id: t.id, name: t.name }));
+            populateDropdown('tag-options', tagOptions, 'tag_ids', 'Tags');
+        }
+
+        function setupTagDropdown() {
+            setupDropdown('tagFilter', 'tag-options', 'tag_ids');
         }
 
         function setupFilterEventListeners() {
@@ -1544,6 +1750,45 @@
             setupLocationDropdown();
             setupNoteTypeDropdown();
             setupClaimQueueDropdown();
+            setupInsuranceDropdown();
+            setupTagDropdown();
+
+            // Export CSV button
+            const exportCsvButton = document.getElementById('exportCsvButton');
+            exportCsvButton.addEventListener('click', async () => {
+                exportCsvButton.disabled = true;
+                exportCsvButton.textContent = 'Exporting...';
+                try {
+                    const params = new URLSearchParams();
+                    Object.entries(currentFilters).forEach(([key, value]) => {
+                        if (Array.isArray(value) && value.length > 0) {
+                            const str = value.filter(v => v !== null && v !== undefined && v !== '').join(',');
+                            if (str) params.append(key, str);
+                        } else if (['billable_only', 'has_uncommitted_commands', 'has_delegated_orders'].includes(key)) {
+                            params.append(key, value.toString());
+                        } else if (value !== null && value !== undefined && value !== '' && !Array.isArray(value)) {
+                            params.append(key, value);
+                        }
+                    });
+                    const response = await fetch(`${API_BASE_URL}/export_csv?${params.toString()}`);
+                    if (!response.ok) throw new Error('Export failed');
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `encounter_worklist_${new Date().toISOString().split('T')[0]}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                } catch (error) {
+                    console.error('Error exporting CSV:', error);
+                    alert('Failed to export CSV. Please try again.');
+                } finally {
+                    exportCsvButton.disabled = false;
+                    exportCsvButton.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export CSV`;
+                }
+            });
 
             // Billable filter change
             billableFilter.addEventListener('change', () => {
@@ -1594,6 +1839,8 @@
                 currentFilters.location_ids = [];
                 currentFilters.note_type_names = [];
                 currentFilters.claim_queue_names = [];
+                currentFilters.insurance_names = [];
+                currentFilters.tag_ids = [];
                 currentFilters.billable_only = false;
                 currentFilters.has_uncommitted_commands = false;
                 currentFilters.has_delegated_orders = false;
@@ -1656,6 +1903,14 @@
                 // Reset claim queue dropdown
                 resetDropdownCheckboxes('claim-queue-options', 'claim_queue_names');
                 resetDropdownDisplay('claimQueueFilter', 'All Statuses');
+
+                // Reset insurance dropdown
+                resetDropdownCheckboxes('insurance-options', 'insurance_names');
+                resetDropdownDisplay('insuranceFilter', 'All Insurances');
+
+                // Reset tags dropdown
+                resetDropdownCheckboxes('tag-options', 'tag_ids');
+                resetDropdownDisplay('tagFilter', 'All Tags');
 
                 // Apply cleared filters
                 applyFilters();
@@ -1857,6 +2112,8 @@
                     fetchLocations(),
                     fetchNoteTypes(),
                     fetchClaimQueues(),
+                    fetchInsurances(),
+                    fetchTags(),
                 ]);
 
                 // Populate all filter dropdowns
@@ -1864,6 +2121,8 @@
                 populateLocationDropdown();
                 populateNoteTypeDropdown();
                 populateClaimQueueDropdown();
+                populateInsuranceDropdown();
+                populateTagDropdown();
 
                 // Initialize page size dropdown
                 const pageSizeSelect = document.getElementById('pageSizeSelect');
@@ -1917,7 +2176,7 @@
                 console.error('Error initializing encounter worklist:', error);
                 // Show error state in the UI
                 document.getElementById('worklistBody').innerHTML = 
-                    '<tr><td colspan="9" class="error-row">Error loading encounters. Please refresh the page.</td></tr>';
+                    '<tr><td colspan="12" class="error-row">Error loading encounters. Please refresh the page.</td></tr>';
                 document.getElementById('encounterCount').textContent = 'Error loading data';
                 hideLoadingSpinner();
             }

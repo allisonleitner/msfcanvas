@@ -1,4 +1,7 @@
+import csv
+import io
 import json
+from datetime import datetime, timezone
 from http import HTTPStatus
 
 import arrow
@@ -12,9 +15,10 @@ from canvas_sdk.handlers.application import Application
 from canvas_sdk.handlers.simple_api import StaffSessionAuthMixin, SimpleAPI, api
 from canvas_sdk.templates import render_to_string
 from canvas_sdk.v1.data import Note, Command, Referral, ImagingOrder, Staff
-from canvas_sdk.v1.data.claim import Claim, ClaimQueue
+from canvas_sdk.v1.data.claim import Claim, ClaimLabel, ClaimQueue
+from canvas_sdk.v1.data.coverage import Coverage, Transactor
 from canvas_sdk.v1.data.note import NoteStates, NoteTypeCategories, NoteType
-from canvas_sdk.v1.data.task import TaskStatus
+from canvas_sdk.v1.data.task import TaskLabel, TaskStatus
 
 
 class MyApplication(Application):
@@ -44,6 +48,8 @@ class EncounterListApi(StaffSessionAuthMixin, SimpleAPI):
         patient_search = self.request.query_params.get("patient_search")
         dos_start = self.request.query_params.get("dos_start")
         dos_end = self.request.query_params.get("dos_end")
+        insurance_names = self.request.query_params.get("insurance_names")
+        tag_ids = self.request.query_params.get("tag_ids")
 
         # Pagination parameters
         page = int(self.request.query_params.get("page", 1))
@@ -88,6 +94,21 @@ class EncounterListApi(StaffSessionAuthMixin, SimpleAPI):
             if clean_claim_queue_names:
                 note_queryset = note_queryset.filter(claims__current_queue__name__in=clean_claim_queue_names)
 
+        if insurance_names:
+            clean_insurance_names = [name.strip() for name in insurance_names.split(',') if name.strip()]
+            if clean_insurance_names:
+                note_queryset = note_queryset.filter(
+                    patient__coverages__issuer__name__in=clean_insurance_names,
+                    patient__coverages__state="active",
+                )
+
+        if tag_ids:
+            clean_tag_ids = [tid.strip() for tid in tag_ids.split(',') if tid.strip()]
+            if clean_tag_ids:
+                note_queryset = note_queryset.filter(
+                    claims__claim_labels__label__id__in=clean_tag_ids
+                )
+
         if patient_search:
             note_queryset = self._apply_patient_search(note_queryset, patient_search)
 
@@ -127,6 +148,34 @@ class EncounterListApi(StaffSessionAuthMixin, SimpleAPI):
             claim_queue = claim.current_queue.name if claim else None
             claim_id = str(claim.id) if claim else None
 
+            # Calculate days in queue from claim modified date
+            days_in_queue = None
+            if claim and claim.modified:
+                delta = datetime.now(timezone.utc) - claim.modified
+                days_in_queue = delta.days
+
+            # Get insurance payer name from patient's active coverages
+            insurance = None
+            if note.patient:
+                primary_coverage = (
+                    Coverage.objects.filter(patient=note.patient, state="active")
+                    .order_by("coverage_rank")
+                    .select_related("issuer")
+                    .first()
+                )
+                if primary_coverage and primary_coverage.issuer:
+                    insurance = primary_coverage.issuer.name
+
+            # Get claim tags/labels
+            tags = []
+            if claim:
+                for cl in claim.claim_labels.select_related("label").all():
+                    tags.append({
+                        "id": str(cl.label.id),
+                        "name": cl.label.name,
+                        "color": cl.label.color if cl.label.color else None,
+                    })
+
             delegated_commands = self._calculate_delegated_orders_count(note)
 
             try:
@@ -152,6 +201,9 @@ class EncounterListApi(StaffSessionAuthMixin, SimpleAPI):
                 "delegated_orders": delegated_commands,
                 "claim_id": claim_id,
                 "claim_queue": claim_queue,
+                "days_in_queue": days_in_queue,
+                "insurance": insurance,
+                "tags": tags,
                 "location": note.location.full_name if note.location else "Unknown Location",
                 "location_id": str(note.location.id) if note.location else None,
                 "created": note.created.isoformat() if note.created else None,
@@ -266,6 +318,167 @@ class EncounterListApi(StaffSessionAuthMixin, SimpleAPI):
             ),
         ]
 
+    @api.get("/insurances")
+    def get_insurances(self) -> list[Response | Effect]:
+        """Get list of unique insurance payer names from active coverages."""
+        payer_names = list(
+            Transactor.objects.filter(
+                coverages__state="active",
+            )
+            .values_list("name", flat=True)
+            .distinct()
+            .order_by("name")
+        )
+        return [JSONResponse({"insurances": payer_names}, status_code=HTTPStatus.OK)]
+
+    @api.get("/tags")
+    def get_tags(self) -> list[Response | Effect]:
+        """Get list of task labels used for claims."""
+        labels = list(
+            TaskLabel.objects.filter(active=True, modules__contains=["claims"])
+            .values("id", "name", "color")
+            .order_by("name")
+        )
+        # Convert id to string
+        for label in labels:
+            label["id"] = str(label["id"])
+        return [JSONResponse({"tags": labels}, status_code=HTTPStatus.OK)]
+
+    @api.get("/export_csv")
+    def export_csv(self) -> list[Response | Effect]:
+        """Export all encounters matching current filters as CSV."""
+        # Re-use the same filter logic but without pagination
+        provider_ids = self.request.query_params.get("provider_ids")
+        location_ids = self.request.query_params.get("location_ids")
+        billable_only = self.request.query_params.get("billable_only") == "true"
+        note_type_names = self.request.query_params.get("note_type_names")
+        claim_queue_names = self.request.query_params.get("claim_queue_names")
+        has_uncommitted_commands = self.request.query_params.get("has_uncommitted_commands") == "true"
+        has_delegated_orders = self.request.query_params.get("has_delegated_orders") == "true"
+        patient_search = self.request.query_params.get("patient_search")
+        dos_start = self.request.query_params.get("dos_start")
+        dos_end = self.request.query_params.get("dos_end")
+        insurance_names = self.request.query_params.get("insurance_names")
+        tag_ids = self.request.query_params.get("tag_ids")
+
+        note_queryset = Note.objects.exclude(current_state__state__in=(
+            NoteStates.SIGNED, NoteStates.LOCKED, NoteStates.DELETED,
+            NoteStates.DISCHARGED, NoteStates.SCHEDULING, NoteStates.BOOKED,
+            NoteStates.CANCELLED, NoteStates.CONFIRM_IMPORT, NoteStates.REVERTED,
+        )).exclude(note_type_version__category__in=(
+            NoteTypeCategories.MESSAGE, NoteTypeCategories.LETTER,
+        ))
+
+        if provider_ids:
+            clean_ids = [pid.strip() for pid in provider_ids.split(',') if pid.strip()]
+            if clean_ids:
+                note_queryset = note_queryset.filter(provider__id__in=clean_ids)
+        if location_ids:
+            clean_ids = [lid.strip() for lid in location_ids.split(',') if lid.strip()]
+            if clean_ids:
+                note_queryset = note_queryset.filter(location__id__in=clean_ids)
+        if note_type_names:
+            clean_names = [n.strip() for n in note_type_names.split(',') if n.strip()]
+            if clean_names:
+                note_queryset = note_queryset.filter(note_type_version__name__in=clean_names)
+        if claim_queue_names:
+            clean_names = [n.strip() for n in claim_queue_names.split(',') if n.strip()]
+            if clean_names:
+                note_queryset = note_queryset.filter(claims__current_queue__name__in=clean_names)
+        if insurance_names:
+            clean_names = [n.strip() for n in insurance_names.split(',') if n.strip()]
+            if clean_names:
+                note_queryset = note_queryset.filter(
+                    patient__coverages__issuer__name__in=clean_names,
+                    patient__coverages__state="active",
+                )
+        if tag_ids:
+            clean_ids = [tid.strip() for tid in tag_ids.split(',') if tid.strip()]
+            if clean_ids:
+                note_queryset = note_queryset.filter(claims__claim_labels__label__id__in=clean_ids)
+        if patient_search:
+            note_queryset = self._apply_patient_search(note_queryset, patient_search)
+        if dos_start or dos_end:
+            note_queryset = self._apply_dos_range_filter(note_queryset, dos_start, dos_end)
+        if billable_only:
+            note_queryset = note_queryset.filter(note_type_version__is_billable=True)
+
+        note_queryset = note_queryset.annotate(
+            staged_commands_count=Count(
+                'commands', filter=Q(commands__state__in=('staged', 'in_review'))
+            )
+        )
+        if has_uncommitted_commands:
+            note_queryset = note_queryset.filter(staged_commands_count__gt=0)
+
+        note_queryset = note_queryset.order_by("datetime_of_service")
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow([
+            "Patient Name", "DOB", "Provider", "Location", "Insurance",
+            "Note Type", "Date of Service", "Billable", "Uncommitted Commands",
+            "Delegated Orders", "Claim Queue", "Days in Queue", "Tags",
+        ])
+
+        for note in note_queryset:
+            claim = note.get_claim()
+            claim_queue = claim.current_queue.name if claim else ""
+            days_in_queue = ""
+            if claim and claim.modified:
+                days_in_queue = (datetime.now(timezone.utc) - claim.modified).days
+
+            insurance = ""
+            if note.patient:
+                primary_cov = (
+                    Coverage.objects.filter(patient=note.patient, state="active")
+                    .order_by("coverage_rank").select_related("issuer").first()
+                )
+                if primary_cov and primary_cov.issuer:
+                    insurance = primary_cov.issuer.name
+
+            tags = []
+            if claim:
+                for cl in claim.claim_labels.select_related("label").all():
+                    tags.append(cl.label.name)
+
+            patient_name = "Unknown Patient"
+            if note.patient:
+                patient_name = f"{note.patient.first_name} {note.patient.last_name}"
+
+            try:
+                note_title = note.note_type_version.name or "Untitled Note"
+            except Exception:
+                note_title = "Untitled Note"
+
+            delegated_count = self._calculate_delegated_orders_count(note)
+
+            writer.writerow([
+                patient_name,
+                arrow.get(note.patient.birth_date).format("YYYY-MM-DD") if note.patient and note.patient.birth_date else "",
+                note.provider.credentialed_name if note.provider else "",
+                note.location.full_name if note.location else "",
+                insurance,
+                note_title,
+                arrow.get(note.datetime_of_service).format("YYYY-MM-DD") if note.datetime_of_service else "",
+                "Yes" if self._get_billable_status(note) else "No",
+                note.staged_commands_count,
+                delegated_count,
+                claim_queue,
+                days_in_queue,
+                "; ".join(tags),
+            ])
+
+        csv_content = output.getvalue()
+        return [Response(
+            status_code=HTTPStatus.OK,
+            body=csv_content,
+            headers={
+                "Content-Type": "text/csv",
+                "Content-Disposition": f"attachment; filename=encounter_worklist_{arrow.now().format('YYYY-MM-DD')}.csv",
+            },
+        )]
+
     def _get_sort_fields(self, sort_by: str) -> list[str]:
         """Map frontend sort field names to database field names, returning a list of fields."""
         sort_mapping = {
@@ -278,6 +491,8 @@ class EncounterListApi(StaffSessionAuthMixin, SimpleAPI):
             "uncommittedCommands": ["staged_commands_count"],
             "delegatedOrders": ["created"],  # Handled specially in sorting logic
             "claimQueue": ["claims__current_queue__name"],
+            "daysInQueue": ["claims__modified"],
+            "insurance": ["patient__coverages__issuer__name"],
             "created": ["created"]
         }
         return sort_mapping.get(sort_by, ["created"])
