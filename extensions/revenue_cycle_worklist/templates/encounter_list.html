@@ -263,6 +263,52 @@
             cursor: not-allowed;
         }
 
+        .worklist-table thead tr.header-filters th {
+            padding: 6px 8px;
+            background-color: #f0f1f3;
+            border-bottom: 2px solid #d0d0d0;
+            vertical-align: middle;
+        }
+
+        .header-filter-input {
+            width: 100%;
+            padding: 4px 6px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #333;
+            background: white;
+            box-sizing: border-box;
+        }
+
+        .header-filter-input:focus {
+            outline: none;
+            border-color: #1d4ed8;
+            box-shadow: 0 0 0 1px rgba(29, 78, 216, 0.2);
+        }
+
+        .header-filter-select {
+            width: 100%;
+            padding: 4px 4px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #333;
+            background: white;
+            box-sizing: border-box;
+            cursor: pointer;
+        }
+
+        .header-filter-select:focus {
+            outline: none;
+            border-color: #1d4ed8;
+        }
+
+        .header-filter-checkbox {
+            transform: scale(1.1);
+            cursor: pointer;
+        }
+
         a.encounter-link {
             font-weight: 600;
             color: #1d4ed8;
@@ -960,6 +1006,25 @@
                     <th class="compact">Days in<br>Queue</th>
                     <th>Tags</th>
                 </tr>
+                <tr class="header-filters">
+                    <th><input type="text" class="header-filter-input" id="hf-patient" placeholder="Filter..."></th>
+                    <th><select class="header-filter-select" id="hf-owner"><option value="">All</option></select></th>
+                    <th><select class="header-filter-select" id="hf-location"><option value="">All</option></select></th>
+                    <th><select class="header-filter-select" id="hf-insurance"><option value="">All</option></select></th>
+                    <th><select class="header-filter-select" id="hf-note-type"><option value="">All</option></select></th>
+                    <th>
+                        <div style="display:flex;gap:2px;align-items:center;">
+                            <input type="date" class="header-filter-input" id="hf-dos-start" style="font-size:10px;padding:3px 2px;">
+                            <input type="date" class="header-filter-input" id="hf-dos-end" style="font-size:10px;padding:3px 2px;">
+                        </div>
+                    </th>
+                    <th style="text-align:center;"><input type="checkbox" class="header-filter-checkbox" id="hf-billable" title="Billable Only"></th>
+                    <th style="text-align:center;"><input type="checkbox" class="header-filter-checkbox" id="hf-uncommitted" title="Has Uncommitted Commands"></th>
+                    <th style="text-align:center;"><input type="checkbox" class="header-filter-checkbox" id="hf-delegated" title="Has Delegated Orders"></th>
+                    <th><select class="header-filter-select" id="hf-claim-queue"><option value="">All</option></select></th>
+                    <th></th>
+                    <th><select class="header-filter-select" id="hf-tags"><option value="">All</option></select></th>
+                </tr>
             </thead>
             <tbody id="worklistBody">
             </tbody>
@@ -1428,7 +1493,8 @@
         }
 
         function setupSortingListeners() {
-            const headers = document.querySelectorAll('.worklist-table th');
+            const headerRow = document.querySelector('.worklist-table thead tr:first-child');
+            const headers = headerRow.querySelectorAll('th');
             headers.forEach((header, index) => {
                 header.style.cursor = 'pointer';
                 header.addEventListener('click', () => {
@@ -1439,7 +1505,8 @@
         }
 
         function updateSortIndicators() {
-            const headers = document.querySelectorAll('.worklist-table th');
+            const headerRow = document.querySelector('.worklist-table thead tr:first-child');
+            const headers = headerRow.querySelectorAll('th');
             const columns = ['patientName', 'provider', 'location', 'insurance', 'noteTitle', 'dos', 'billable', 'uncommittedCommands', 'delegatedOrders', 'claimQueue', 'daysInQueue', 'tags'];
             
             headers.forEach((header, index) => {
@@ -1912,7 +1979,8 @@
                 resetDropdownCheckboxes('tag-options', 'tag_ids');
                 resetDropdownDisplay('tagFilter', 'All Tags');
 
-                // Apply cleared filters
+                // Sync header filters and apply
+                syncStateToHeaderFilters();
                 applyFilters();
             });
 
@@ -1970,6 +2038,175 @@
             });
         }
 
+        function populateHeaderFilters() {
+            // Owner
+            const hfOwner = document.getElementById('hf-owner');
+            hfOwner.innerHTML = '<option value="">All</option>';
+            providers.forEach(p => {
+                hfOwner.innerHTML += `<option value="${p.id}">${escapeHtml(p.name)}</option>`;
+            });
+
+            // Location
+            const hfLocation = document.getElementById('hf-location');
+            hfLocation.innerHTML = '<option value="">All</option>';
+            locations.forEach(l => {
+                hfLocation.innerHTML += `<option value="${l.id}">${escapeHtml(l.name)}</option>`;
+            });
+
+            // Insurance
+            const hfInsurance = document.getElementById('hf-insurance');
+            hfInsurance.innerHTML = '<option value="">All</option>';
+            insurances.forEach(name => {
+                hfInsurance.innerHTML += `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`;
+            });
+
+            // Note Type
+            const hfNoteType = document.getElementById('hf-note-type');
+            hfNoteType.innerHTML = '<option value="">All</option>';
+            noteTypes.forEach(nt => {
+                hfNoteType.innerHTML += `<option value="${escapeHtml(nt.name)}">${escapeHtml(nt.name)}</option>`;
+            });
+
+            // Claim Queue
+            const hfClaimQueue = document.getElementById('hf-claim-queue');
+            hfClaimQueue.innerHTML = '<option value="">All</option>';
+            claimQueues.forEach(cq => {
+                hfClaimQueue.innerHTML += `<option value="${escapeHtml(cq.name)}">${escapeHtml(cq.name)}</option>`;
+            });
+
+            // Tags
+            const hfTags = document.getElementById('hf-tags');
+            hfTags.innerHTML = '<option value="">All</option>';
+            tags.forEach(t => {
+                hfTags.innerHTML += `<option value="${t.id}">${escapeHtml(t.name)}</option>`;
+            });
+        }
+
+        function setupHeaderFilterListeners() {
+            const debounceDelay = 500;
+            let debounceTimer = null;
+
+            function headerFilterChanged() {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    syncHeaderFiltersToState();
+                    applyFilters();
+                }, debounceDelay);
+            }
+
+            function headerFilterChangedImmediate() {
+                syncHeaderFiltersToState();
+                applyFilters();
+            }
+
+            // Text input - patient search (debounced)
+            document.getElementById('hf-patient').addEventListener('input', headerFilterChanged);
+            document.getElementById('hf-patient').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    clearTimeout(debounceTimer);
+                    syncHeaderFiltersToState();
+                    applyFilters();
+                }
+            });
+
+            // Select dropdowns - immediate
+            ['hf-owner', 'hf-location', 'hf-insurance', 'hf-note-type', 'hf-claim-queue', 'hf-tags'].forEach(id => {
+                document.getElementById(id).addEventListener('change', headerFilterChangedImmediate);
+            });
+
+            // Date inputs - immediate
+            document.getElementById('hf-dos-start').addEventListener('change', headerFilterChangedImmediate);
+            document.getElementById('hf-dos-end').addEventListener('change', headerFilterChangedImmediate);
+
+            // Checkboxes - immediate
+            ['hf-billable', 'hf-uncommitted', 'hf-delegated'].forEach(id => {
+                document.getElementById(id).addEventListener('change', headerFilterChangedImmediate);
+            });
+        }
+
+        function syncHeaderFiltersToState() {
+            // Patient search
+            const patientVal = document.getElementById('hf-patient').value.trim();
+            currentFilters.patient_search = patientVal;
+            document.getElementById('patientSearchInput').value = patientVal;
+
+            // Owner
+            const ownerVal = document.getElementById('hf-owner').value;
+            currentFilters.provider_ids = ownerVal ? [ownerVal] : [];
+
+            // Location
+            const locationVal = document.getElementById('hf-location').value;
+            currentFilters.location_ids = locationVal ? [locationVal] : [];
+
+            // Insurance
+            const insuranceVal = document.getElementById('hf-insurance').value;
+            currentFilters.insurance_names = insuranceVal ? [insuranceVal] : [];
+
+            // Note Type
+            const noteTypeVal = document.getElementById('hf-note-type').value;
+            currentFilters.note_type_names = noteTypeVal ? [noteTypeVal] : [];
+
+            // DOS
+            currentFilters.dos_start = document.getElementById('hf-dos-start').value;
+            currentFilters.dos_end = document.getElementById('hf-dos-end').value;
+            document.getElementById('dosStartInput').value = currentFilters.dos_start;
+            document.getElementById('dosEndInput').value = currentFilters.dos_end;
+
+            // Billable
+            const billableVal = document.getElementById('hf-billable').checked;
+            currentFilters.billable_only = billableVal;
+            document.getElementById('billableFilter').checked = billableVal;
+
+            // Uncommitted Commands
+            const uncommittedVal = document.getElementById('hf-uncommitted').checked;
+            currentFilters.has_uncommitted_commands = uncommittedVal;
+            document.getElementById('uncommittedCommandsFilter').checked = uncommittedVal;
+
+            // Delegated Orders
+            const delegatedVal = document.getElementById('hf-delegated').checked;
+            currentFilters.has_delegated_orders = delegatedVal;
+            document.getElementById('delegatedOrdersFilter').checked = delegatedVal;
+
+            // Claim Queue
+            const claimQueueVal = document.getElementById('hf-claim-queue').value;
+            currentFilters.claim_queue_names = claimQueueVal ? [claimQueueVal] : [];
+
+            // Tags
+            const tagVal = document.getElementById('hf-tags').value;
+            currentFilters.tag_ids = tagVal ? [tagVal] : [];
+
+            // Sync the sidebar dropdowns display
+            updateDropdownDisplay('providerFilter', 'provider_ids');
+            updateDropdownDisplay('locationFilter', 'location_ids');
+            updateDropdownDisplay('insuranceFilter', 'insurance_names');
+            updateDropdownDisplay('noteTypeFilter', 'note_type_names');
+            updateDropdownDisplay('claimQueueFilter', 'claim_queue_names');
+            updateDropdownDisplay('tagFilter', 'tag_ids');
+        }
+
+        function syncStateToHeaderFilters() {
+            // Patient
+            document.getElementById('hf-patient').value = currentFilters.patient_search || '';
+
+            // Single-select syncs (use first value if array has items)
+            document.getElementById('hf-owner').value = currentFilters.provider_ids.length === 1 ? currentFilters.provider_ids[0] : '';
+            document.getElementById('hf-location').value = currentFilters.location_ids.length === 1 ? currentFilters.location_ids[0] : '';
+            document.getElementById('hf-insurance').value = currentFilters.insurance_names.length === 1 ? currentFilters.insurance_names[0] : '';
+            document.getElementById('hf-note-type').value = currentFilters.note_type_names.length === 1 ? currentFilters.note_type_names[0] : '';
+            document.getElementById('hf-claim-queue').value = currentFilters.claim_queue_names.length === 1 ? currentFilters.claim_queue_names[0] : '';
+            document.getElementById('hf-tags').value = currentFilters.tag_ids.length === 1 ? currentFilters.tag_ids[0] : '';
+
+            // DOS
+            document.getElementById('hf-dos-start').value = currentFilters.dos_start || '';
+            document.getElementById('hf-dos-end').value = currentFilters.dos_end || '';
+
+            // Checkboxes
+            document.getElementById('hf-billable').checked = currentFilters.billable_only;
+            document.getElementById('hf-uncommitted').checked = currentFilters.has_uncommitted_commands;
+            document.getElementById('hf-delegated').checked = currentFilters.has_delegated_orders;
+        }
+
         async function applyFilters() {
             try {
                 // Show loading state
@@ -1997,6 +2234,7 @@
                 updateEncounterCount();
                 updatePaginationControls();
                 updateSortIndicators();
+                syncStateToHeaderFilters();
                 hideLoadingSpinner();
             } catch (error) {
                 console.error('Error applying filters:', error);
@@ -2123,6 +2361,10 @@
                 populateClaimQueueDropdown();
                 populateInsuranceDropdown();
                 populateTagDropdown();
+
+                // Populate and setup inline header filters
+                populateHeaderFilters();
+                setupHeaderFilterListeners();
 
                 // Initialize page size dropdown
                 const pageSizeSelect = document.getElementById('pageSizeSelect');
