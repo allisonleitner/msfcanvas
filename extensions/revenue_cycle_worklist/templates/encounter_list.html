@@ -1,0 +1,2186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revenue Cycle Worklist</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px 20px 40px 20px;
+        }
+
+        .worklist-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .worklist-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .worklist-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .encounter-count {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .worklist-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .worklist-table th {
+            background-color: #f8f9fa;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 13px;
+            color: #555;
+            border-bottom: 1px solid #e0e0e0;
+            white-space: nowrap;
+        }
+
+        .worklist-table th.compact {
+            padding: 12px 8px;
+            width: 80px;
+            line-height: 1.2;
+        }
+
+        .worklist-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .worklist-table td.compact {
+            padding: 12px 8px;
+            text-align: center;
+            width: 80px;
+        }
+
+        .worklist-table tbody tr:hover {
+            background-color: #f8f9fa;
+            cursor: pointer;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .status-billable {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+        }
+
+        .status-not-billable {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .count-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 24px;
+            height: 20px;
+            padding: 0 6px;
+            background-color: #fff3cd;
+            color: #856404;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .count-badge.blue {
+            background-color: #cce7ff;
+            color: #0066cc;
+        }
+
+        .claim-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .claim-needsclinicianreview {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .claim-needscodingreview {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .claim-queuedforsubmission {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+        }
+
+        .claim-filedawaitingresponse {
+            background-color: #e0f2fe;
+            color: #0277bd;
+        }
+
+        .claim-rejectedneedsreview {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .claim-adjudicatedopenbalance {
+            background-color: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .claim-patientbalance {
+            background-color: #fff8e1;
+            color: #f57c00;
+        }
+
+        .claim-zerobalance {
+            background-color: #e8f5e8;
+            color: #388e3c;
+        }
+
+        .claim-trash {
+            background-color: #ffcdd2;
+            color: #c62828;
+        }
+
+        .claim-appointment {
+            background-color: #e1f5fe;
+            color: #0288d1;
+        }
+
+        .claim-queue-select {
+            appearance: none;
+            -webkit-appearance: none;
+            border: 1px solid transparent;
+            border-radius: 12px;
+            padding: 4px 24px 4px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            max-width: 180px;
+            transition: border-color 0.2s;
+        }
+
+        .claim-queue-select:hover {
+            border-color: #ccc;
+        }
+
+        .claim-queue-select:focus {
+            outline: none;
+            border-color: #1976d2;
+        }
+
+        .claim-queue-select.saving {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .tag-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+            margin: 1px 2px;
+            white-space: nowrap;
+        }
+
+        .days-in-queue {
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .days-in-queue.high {
+            color: #c62828;
+        }
+
+        .days-in-queue.medium {
+            color: #f57c00;
+        }
+
+        .days-in-queue.low {
+            color: #388e3c;
+        }
+
+        .export-btn {
+            padding: 8px 16px;
+            background-color: #2e7d32;
+            color: white;
+            border: none;
+            border-radius: 0.375rem;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .export-btn:hover {
+            background-color: #1b5e20;
+        }
+
+        .export-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        a.encounter-link {
+            font-weight: 600;
+            color: #1d4ed8;
+            text-decoration: underline;
+        }
+
+        .empty-cell {
+            color: #999;
+        }
+
+        /* Pagination styles */
+        .pagination-container {
+            background-color: #f8f9fa;
+        }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+        }
+
+        .pagination-btn {
+            background: white;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin: 0 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background-color: #f0f0f0;
+            border-color: #a0a0a0;
+        }
+
+        .pagination-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .pagination-info {
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* Custom dropdown styling - matching order_tracking */
+        .filter-dropdown {
+            background-color: white;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            padding: 0.4rem 0.5rem;
+            font-size: 0.875rem;
+            color: #2c3e50;
+            cursor: pointer;
+            position: relative;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            user-select: none;
+            min-height: 36px;
+            box-sizing: border-box;
+            width: 300px;
+        }
+
+        .patient-search-input {
+            padding: 0.5rem 0.6rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            color: #2c3e50;
+            min-height: 36px;
+            width: 240px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .patient-search-input:focus {
+            outline: none;
+            border-color: #1d4ed8;
+            box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.1);
+        }
+
+        .date-range-inputs {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .date-range-inputs span {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .date-input {
+            padding: 0.4rem 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            color: #2c3e50;
+            min-height: 36px;
+        }
+
+        .date-input:focus {
+            outline: none;
+            border-color: #1d4ed8;
+            box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.1);
+        }
+
+        .filter-dropdown.open {
+            border-color: #1d4ed8;
+            box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.1);
+        }
+
+        .filter-dropdown .selected-value {
+            padding-right: 20px;
+            min-height: 18px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+            align-items: flex-start;
+            width: 100%;
+        }
+
+        .selected-tag {
+            background-color: #dbeafe;
+            color: #1d4ed8;
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            line-height: 1.2;
+        }
+
+        .selected-tag .remove-tag {
+            cursor: pointer;
+            font-weight: bold;
+            color: #1d4ed8;
+            font-size: 13px;
+        }
+
+        .selected-tag .remove-tag:hover {
+            color: #1e40af;
+        }
+
+        .placeholder-text {
+            color: #9ca3af;
+            font-size: 0.875rem;
+        }
+
+        .filter-dropdown::after {
+            content: '⌄';
+            color: #6b7280;
+            font-size: 14px;
+            transition: transform 0.2s ease;
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        .filter-dropdown.open::after {
+            transform: translateY(-50%) rotate(180deg);
+        }
+
+        .filter-dropdown:hover {
+            border-color: #1d4ed8;
+            box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.1);
+        }
+
+        .dropdown-options {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-top: none;
+            border-radius: 0 0 0.375rem 0.375rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 9999;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .dropdown-search {
+            padding: 0.5rem;
+            border-bottom: 1px solid #e5e7eb;
+            background: #f9fafb;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.375rem 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            outline: none;
+            transition: border-color 0.15s ease;
+        }
+
+        .search-input:focus {
+            border-color: #1d4ed8;
+            box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.1);
+        }
+
+        .dropdown-options.show {
+            display: block;
+        }
+
+        .dropdown-option {
+            padding: 0.4rem 0.5rem;
+            font-size: 0.875rem;
+            color: #2c3e50;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+            border-bottom: 1px solid #f3f4f6;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            user-select: none; /* Prevent text selection when clicking */
+        }
+
+        .dropdown-option:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-option:hover {
+            background-color: #f3f4f6;
+        }
+
+        .dropdown-option.selected {
+            background-color: #dbeafe;
+            color: #1d4ed8;
+            font-weight: 500;
+        }
+
+        .dropdown-option input[type="checkbox"] {
+            margin: 0;
+            cursor: pointer;
+            transform: scale(0.9);
+            pointer-events: none; /* Prevent direct checkbox clicks, let row handle it */
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .worklist-table {
+                font-size: 12px;
+            }
+
+            .worklist-table th,
+            .worklist-table td {
+                padding: 8px 12px;
+            }
+
+            .pagination-container {
+                flex-direction: column;
+                gap: 12px;
+                text-align: center;
+            }
+
+            .pagination-info {
+                order: 2;
+            }
+
+            .pagination-controls {
+                order: 1;
+            }
+        }
+
+        /* Filter buttons styling */
+        .filter-buttons {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .refresh-btn {
+            padding: 8px 16px;
+            background-color: #E5E5E5;
+            color: #595959;
+            border: none;
+            border-radius: 0.375rem;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background-color: #C0C0C0;
+            color: #595959;
+        }
+
+        .clear-filters-btn {
+            padding: 8px 16px;
+            background-color: #E5E5E5;
+            color: #595959;
+            border: none;
+            border-radius: 0.375rem;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .clear-filters-btn:hover {
+            background-color: #C0C0C0;
+            color: #595959;
+        }
+
+        .apply-filters-btn {
+            padding: 8px 16px;
+            background-color: #2384D0;
+            color: white;
+            border: none;
+            border-radius: 0.375rem;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .apply-filters-btn:hover {
+            background-color: #1D6FAF;
+        }
+
+        /* Loading Spinner Animation */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 40px 20px;
+            background-color: #f8f9fa;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .spinner-circle {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1d4ed8;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .spinner-text {
+            margin-top: 12px;
+            color: #6b7280;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* Filters section styling */
+        .filters-section {
+            padding: 16px 20px;
+            border-bottom: 1px solid #e0e0e0;
+            background-color: #f8f9fa;
+        }
+
+        .filters-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .filters-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .filters-group.checkbox-group {
+            width: 100%;
+            margin-top: 8px;
+            justify-content: flex-start;
+            gap: 24px;
+        }
+
+        .filters-group.search-group {
+            width: 100%;
+            justify-content: flex-start;
+            gap: 24px;
+        }
+
+        .checkbox-filter {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #2c3e50;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .checkbox-filter input[type="checkbox"] {
+            transform: scale(1.2);
+        }
+
+        .filter-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .filter-field.wide {
+            min-width: 200px;
+        }
+
+        .filter-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .filter-select {
+            padding: 8px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .filter-checkbox {
+            transform: scale(1.2);
+        }
+
+        /* Pagination styling */
+        .pagination-container {
+            padding: 16px 20px 32px 20px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .page-size-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .page-size-label {
+            font-size: 14px;
+            color: #555;
+        }
+
+        .page-size-select {
+            padding: 6px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            background-color: white;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .pagination-buttons {
+            display: flex;
+            align-items: center;
+        }
+
+        .pagination-btn {
+            padding: 8px 12px;
+            margin: 0 4px;
+            border: 1px solid #d0d0d0;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .pagination-btn:hover {
+            background-color: #f8f9fa;
+        }
+
+        .page-numbers {
+            margin: 0 16px;
+        }
+
+        /* Error message styling */
+        .error-row {
+            text-align: center;
+            color: #dc2626;
+            padding: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="worklist-container">
+        <div class="worklist-header">
+            <h1 class="worklist-title">Revenue Cycle Worklist</h1>
+            <span class="encounter-count" id="encounterCount">Loading encounters...</span>
+        </div>
+        
+        <div class="filters-section">
+            <div class="filters-container">
+                <div class="filters-group search-group">
+                    <div class="filter-field wide">
+                        <label class="filter-label">Patient Search</label>
+                        <input type="text" id="patientSearchInput" class="patient-search-input" placeholder="Search by name...">
+                    </div>
+
+                    <div class="filter-field">
+                        <label class="filter-label">DOS</label>
+                        <div class="date-range-inputs">
+                            <input type="date" id="dosStartInput" class="date-input">
+                            <span>to</span>
+                            <input type="date" id="dosEndInput" class="date-input">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filters-group">
+                    <div class="filter-field">
+                        <label class="filter-label">Owner</label>
+                        <div class="filter-dropdown" id="providerFilter" data-values="">
+                            <div class="selected-value">
+                                <span class="placeholder-text">All Owners</span>
+                            </div>
+                            <div class="dropdown-options" id="provider-options">
+                                <div class="dropdown-search">
+                                    <input type="text" id="provider-search" placeholder="Search owners..." class="search-input">
+                                </div>
+                                <div class="dropdown-option" data-value="">
+                                    <input type="checkbox" id="provider-all" checked>
+                                    <label for="provider-all">All Owners</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-field wide">
+                        <label class="filter-label">Location</label>
+                        <div class="filter-dropdown" id="locationFilter" data-values="">
+                            <div class="selected-value">
+                                <span class="placeholder-text">All Locations</span>
+                            </div>
+                            <div class="dropdown-options" id="location-options">
+                                <div class="dropdown-search">
+                                    <input type="text" id="location-search" placeholder="Search locations..." class="search-input">
+                                </div>
+                                <div class="dropdown-option" data-value="">
+                                    <input type="checkbox" id="location-all" checked>
+                                    <label for="location-all">All Locations</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-field">
+                        <label class="filter-label">Note Type</label>
+                        <div class="filter-dropdown" id="noteTypeFilter" data-values="">
+                            <div class="selected-value">
+                                <span class="placeholder-text">All Note Types</span>
+                            </div>
+                            <div class="dropdown-options" id="note-type-options">
+                                <div class="dropdown-search">
+                                    <input type="text" id="note-type-search" placeholder="Search note types..." class="search-input">
+                                </div>
+                                <div class="dropdown-option" data-value="">
+                                    <input type="checkbox" id="note-type-all" checked>
+                                    <label for="note-type-all">All Note Types</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="filter-field">
+                        <label class="filter-label">Claim Queue</label>
+                        <div class="filter-dropdown" id="claimQueueFilter" data-values="">
+                            <div class="selected-value">
+                                <span class="placeholder-text">All Statuses</span>
+                            </div>
+                            <div class="dropdown-options" id="claim-queue-options">
+                                <div class="dropdown-search">
+                                    <input type="text" id="claim-queue-search" placeholder="Search statuses..." class="search-input">
+                                </div>
+                                <div class="dropdown-option" data-value="">
+                                    <input type="checkbox" id="claim-queue-all" checked>
+                                    <label for="claim-queue-all">All Statuses</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="filter-field">
+                        <label class="filter-label">Insurance</label>
+                        <div class="filter-dropdown" id="insuranceFilter" data-values="">
+                            <div class="selected-value">
+                                <span class="placeholder-text">All Insurances</span>
+                            </div>
+                            <div class="dropdown-options" id="insurance-options">
+                                <div class="dropdown-search">
+                                    <input type="text" id="insurance-search" placeholder="Search insurances..." class="search-input">
+                                </div>
+                                <div class="dropdown-option" data-value="">
+                                    <input type="checkbox" id="insurance-all" checked>
+                                    <label for="insurance-all">All Insurances</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="filter-field">
+                        <label class="filter-label">Tags</label>
+                        <div class="filter-dropdown" id="tagFilter" data-values="">
+                            <div class="selected-value">
+                                <span class="placeholder-text">All Tags</span>
+                            </div>
+                            <div class="dropdown-options" id="tag-options">
+                                <div class="dropdown-search">
+                                    <input type="text" id="tag-search" placeholder="Search tags..." class="search-input">
+                                </div>
+                                <div class="dropdown-option" data-value="">
+                                    <input type="checkbox" id="tag-all" checked>
+                                    <label for="tag-all">All Tags</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                
+                <div class="filters-group checkbox-group">
+                    <label class="checkbox-filter">
+                        <input type="checkbox" id="billableFilter" class="filter-checkbox">
+                        <span>Billable Only</span>
+                    </label>
+                    <label class="checkbox-filter">
+                        <input type="checkbox" id="uncommittedCommandsFilter" class="filter-checkbox">
+                        <span>Has Uncommitted Commands</span>
+                    </label>
+                    <label class="checkbox-filter">
+                        <input type="checkbox" id="delegatedOrdersFilter" class="filter-checkbox">
+                        <span>Has Delegated Orders</span>
+                    </label>
+                </div>
+                
+                <!-- Refresh, Clear and Apply buttons -->
+                <div class="filter-buttons">
+                    <button id="refreshButton" class="refresh-btn">
+                        <svg width="16" height="13" viewBox="0 0 16 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M13.7349 5.55071L15.1929 7.00412C15.3015 7.1124 15.3635 7.26695 15.3635 7.40609C15.3635 7.54522 15.3015 7.69988 15.1929 7.80806C14.9757 8.02451 14.6035 8.02451 14.3863 7.80806L13.8591 7.2824C13.5489 10.2355 11.0362 12.5548 7.99611 12.5548C5.90202 12.5548 3.94775 11.4261 2.87753 9.61709C2.72238 9.33883 2.81553 8.99868 3.09467 8.82858C3.3738 8.67392 3.71503 8.76678 3.88568 9.04503C4.73878 10.5138 6.30529 11.4106 7.99597 11.4106C10.3691 11.4106 12.3389 9.66346 12.6957 7.39065L12.2768 7.80814C12.0597 8.0246 11.6874 8.0246 11.4703 7.80814C11.2531 7.59169 11.2531 7.22058 11.4703 7.00412L12.9283 5.55071C13.1454 5.33425 13.5177 5.33425 13.7349 5.55071ZM7.996 0.772949C10.1054 0.772949 12.0598 1.90161 13.1145 3.72609C13.161 3.81885 13.192 3.9116 13.192 4.00434C13.192 4.20538 13.0834 4.39088 12.8973 4.49917C12.6181 4.66936 12.2614 4.5765 12.1062 4.29824C11.2688 2.82952 9.68668 1.91721 7.996 1.91721C5.62289 1.91721 3.65305 3.66439 3.29631 5.9372L3.71512 5.51971C3.93226 5.30325 4.30455 5.30325 4.5217 5.51971C4.63032 5.62799 4.69232 5.78254 4.69232 5.92168C4.69232 6.06081 4.63032 6.21548 4.5217 6.32365L3.06368 7.77706C2.84654 7.99351 2.47425 7.99351 2.2571 7.77706L0.799087 6.32365C0.581945 6.1072 0.581945 5.73609 0.799087 5.51963C1.01623 5.30317 1.38851 5.30317 1.60566 5.51963L2.11751 6.02985C2.42769 3.07671 4.94043 0.772949 7.996 0.772949Z" fill="#595959"/>
+                        </svg>
+                        <span>Refresh</span>
+                    </button>
+                    <button id="clearFilters" class="clear-filters-btn">
+                        Clear All
+                    </button>
+                    <button id="applyFilters" class="apply-filters-btn">
+                        Apply Filters
+                    </button>
+                    <button id="exportCsvButton" class="export-btn">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Export CSV
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <table class="worklist-table" id="worklistTable">
+            <thead>
+                <tr>
+                    <th>Patient Name</th>
+                    <th>Owner</th>
+                    <th>Location</th>
+                    <th>Insurance</th>
+                    <th>Note</th>
+                    <th>DOS</th>
+                    <th>Billable</th>
+                    <th class="compact">Uncommitted<br>Commands</th>
+                    <th class="compact">Delegated<br>Orders</th>
+                    <th>Claim Queue</th>
+                    <th class="compact">Days in<br>Queue</th>
+                    <th>Tags</th>
+                </tr>
+            </thead>
+            <tbody id="worklistBody">
+            </tbody>
+        </table>
+        
+        <!-- Loading Spinner -->
+        <div id="loadingSpinner" class="loading-spinner">
+            <div class="spinner-circle"></div>
+            <div class="spinner-text">Loading encounters...</div>
+        </div>
+        
+        <div class="pagination-container" id="paginationContainer">
+            <div class="pagination-info" id="paginationInfo"></div>
+            <div class="pagination-controls">
+                <div class="page-size-container">
+                    <label for="pageSizeSelect" class="page-size-label">Records per page:</label>
+                    <select id="pageSizeSelect" class="page-size-select">
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                    </select>
+                </div>
+                <div class="pagination-buttons">
+                    <button id="prevButton" class="pagination-btn">Previous</button>
+                    <span id="pageNumbers" class="page-numbers"></span>
+                    <button id="nextButton" class="pagination-btn">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API base URL
+        const API_BASE_URL = '/plugin-io/api/revenue_cycle_worklist';
+        
+        // Global data store
+        let encounterData = [];
+        let loggedInStaffId = null;
+        let providers = [];
+        let locations = [];
+        let noteTypes = [];
+        let claimQueues = [];
+        let insurances = [];
+        let tags = [];
+        let currentFilters = {
+            provider_ids: [],
+            location_ids: [],
+            note_type_names: [],
+            claim_queue_names: [],
+            insurance_names: [],
+            tag_ids: [],
+            billable_only: false,
+            has_uncommitted_commands: false,
+            has_delegated_orders: false,
+            patient_search: '',
+            dos_start: '',
+            dos_end: ''
+        };
+        let sortConfig = { key: null, direction: 'asc' };
+        let paginationData = {
+            current_page: 1,
+            total_pages: 1,
+            total_count: 0,
+            page_size: 25,
+            has_previous: false,
+            has_next: false
+        };
+
+        // API helper functions
+        async function fetchEncounters(filters = {}, page = 1) {
+            try {
+                const params = new URLSearchParams();
+                const pageSize = parseInt(document.getElementById('pageSizeSelect')?.value || '25');
+                const combinedFilters = {...currentFilters, ...filters, page, page_size: pageSize};
+                
+                // Add sorting parameters
+                if (sortConfig.key) {
+                    combinedFilters.sort_by = sortConfig.key;
+                    combinedFilters.sort_direction = sortConfig.direction;
+                }
+                
+                Object.entries(combinedFilters).forEach(([key, value]) => {
+                    if (key === 'provider_ids' && Array.isArray(value)) {
+                        // Handle array of provider IDs as comma-separated string
+                        if (value.length > 0) {
+                            const providerIdsString = value.filter(id => id !== null && id !== undefined && id !== '').join(',');
+                            if (providerIdsString) {
+                                params.append(key, providerIdsString);
+                            }
+                        }
+                    } else if (key === 'location_ids' && Array.isArray(value)) {
+                        // Handle array of location IDs as comma-separated string
+                        if (value.length > 0) {
+                            const locationIdsString = value.filter(id => id !== null && id !== undefined && id !== '').join(',');
+                            if (locationIdsString) {
+                                params.append(key, locationIdsString);
+                            }
+                        }
+                    } else if (key === 'note_type_names' && Array.isArray(value)) {
+                        // Handle array of note type names as comma-separated string
+                        if (value.length > 0) {
+                            const noteTypeNamesString = value
+                                .filter(name => name !== null && name !== undefined && name !== '')
+                                .join(',');
+                            if (noteTypeNamesString) {
+                                params.append(key, noteTypeNamesString);
+                            }
+                        }
+                    } else if (key === 'claim_queue_names' && Array.isArray(value)) {
+                        if (value.length > 0) {
+                            const claimQueueNamesString = value.filter(name => name !== null && name !== undefined && name !== '').join(',');
+                            if (claimQueueNamesString) {
+                                params.append(key, claimQueueNamesString);
+                            }
+                        }
+                    } else if (key === 'insurance_names' && Array.isArray(value)) {
+                        if (value.length > 0) {
+                            const insuranceNamesString = value.filter(name => name !== null && name !== undefined && name !== '').join(',');
+                            if (insuranceNamesString) {
+                                params.append(key, insuranceNamesString);
+                            }
+                        }
+                    } else if (key === 'tag_ids' && Array.isArray(value)) {
+                        if (value.length > 0) {
+                            const tagIdsString = value.filter(id => id !== null && id !== undefined && id !== '').join(',');
+                            if (tagIdsString) {
+                                params.append(key, tagIdsString);
+                            }
+                        }
+                    } else if (['billable_only', 'has_uncommitted_commands', 'has_delegated_orders'].includes(key)) {
+                        // Always include boolean parameters, even if false
+                        params.append(key, value.toString());
+                    } else if (value !== null && value !== undefined && value !== '') {
+                        params.append(key, value);
+                    }
+                });
+
+                const response = await fetch(`${API_BASE_URL}/encounters?${params.toString()}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                // Update pagination data
+                paginationData = data.pagination;
+                
+                // Transform API data to match expected format
+                encounterData = data.encounters.map(encounter => ({
+                    id: encounter.id,
+                    dbid: encounter.dbid,
+                    patientName: encounter.patient_name,
+                    patientId: encounter.patient_id,
+                    patientDob: encounter.patient_dob,
+                    provider: encounter.provider,
+                    providerId: encounter.provider_id,
+                    location: encounter.location,
+                    locationId: encounter.location_id,
+                    noteTitle: encounter.note_title,
+                    dos: encounter.dos,
+                    dosIso: encounter.dos_iso,
+                    billable: encounter.billable,
+                    uncommittedCommands: encounter.uncommitted_commands,
+                    delegatedOrders: encounter.delegated_orders,
+                    claimId: encounter.claim_id,
+                    claimQueue: encounter.claim_queue,
+                    daysInQueue: encounter.days_in_queue,
+                    insurance: encounter.insurance,
+                    tags: encounter.tags || [],
+                    created: encounter.created
+                }));
+                
+                return data;
+            } catch (error) {
+                console.error('Error fetching encounters:', error);
+                // Return empty data on error
+                return { encounters: [], pagination: { current_page: 1, total_pages: 1, total_count: 0, page_size: 25, has_previous: false, has_next: false } };
+            }
+        }
+
+
+        async function fetchProviders() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/providers`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                providers = data.providers;
+                loggedInStaffId = data.logged_in_staff_id;
+                return data;
+            } catch (error) {
+                console.error('Error fetching providers:', error);
+                return { providers: [] };
+            }
+        }
+
+        async function fetchLocations() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/locations`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                locations = data.locations;
+                return data;
+            } catch (error) {
+                console.error('Error fetching locations:', error);
+                return { locations: [] };
+            }
+        }
+
+        async function fetchNoteTypes() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/note_types`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                noteTypes = data.note_types;
+                return data;
+            } catch (error) {
+                console.error('Error fetching note types:', error);
+                return { note_types: [] };
+            }
+        }
+
+        async function fetchClaimQueues() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/claim_queues`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                claimQueues = data.claim_queues;
+                return data;
+            } catch (error) {
+                console.error('Error fetching claim queues:', error);
+                return { claim_queues: [] };
+            }
+        }
+
+        async function fetchInsurances() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/insurances`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                insurances = data.insurances;
+                return data;
+            } catch (error) {
+                console.error('Error fetching insurances:', error);
+                return { insurances: [] };
+            }
+        }
+
+        async function fetchTags() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/tags`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                tags = data.tags;
+                return data;
+            } catch (error) {
+                console.error('Error fetching tags:', error);
+                return { tags: [] };
+            }
+        }
+
+
+        // Simple utility functions
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function createBillableStatus(billable) {
+            const iconClass = billable ? 'status-billable' : 'status-not-billable';
+            const icon = billable ? '✓' : '✗';
+            return `<span class="status-badge ${iconClass}">${icon}</span>`;
+        }
+
+        function createCountBadge(count, variant = '') {
+            if (count === 0) {
+                return '<span class="empty-cell">0</span>';
+            }
+            const badgeClass = variant ? `count-badge ${variant}` : 'count-badge';
+            return `<span class="${badgeClass}">${count}</span>`;
+        }
+
+        function getClaimQueueStyle(queueName) {
+            const styles = {
+                'NeedsClinicianReview': { bg: '#e3f2fd', color: '#1976d2' },
+                'NeedsCodingReview': { bg: '#fff3cd', color: '#856404' },
+                'QueuedForSubmission': { bg: '#e8f5e8', color: '#2e7d32' },
+                'FiledAwaitingResponse': { bg: '#e0f2fe', color: '#0277bd' },
+                'RejectedNeedsReview': { bg: '#ffebee', color: '#c62828' },
+                'AdjudicatedOpenBalance': { bg: '#f3e5f5', color: '#7b1fa2' },
+                'PatientBalance': { bg: '#fff8e1', color: '#f57c00' },
+                'ZeroBalance': { bg: '#e8f5e8', color: '#388e3c' },
+                'Trash': { bg: '#ffcdd2', color: '#c62828' },
+                'Appointment': { bg: '#e1f5fe', color: '#0288d1' },
+            };
+            return styles[queueName] || { bg: '#f0f0f0', color: '#666' };
+        }
+
+        function createClaimStatus(status) {
+            if (!status) {
+                return '<span class="empty-cell">—</span>';
+            }
+            const statusClass = `claim-${status.toLowerCase()}`;
+            return `<span class="claim-status ${statusClass}">${status}</span>`;
+        }
+
+        function createClaimQueueDropdown(encounter) {
+            if (!encounter.claimId) {
+                return '<span class="empty-cell">—</span>';
+            }
+
+            const currentQueue = encounter.claimQueue || '';
+            const style = getClaimQueueStyle(currentQueue);
+
+            let options = `<option value="">—</option>`;
+            claimQueues.forEach(cq => {
+                const selected = cq.name === currentQueue ? 'selected' : '';
+                options += `<option value="${escapeHtml(cq.name)}" ${selected}>${escapeHtml(cq.name)}</option>`;
+            });
+
+            return `<select class="claim-queue-select" data-claim-id="${encounter.claimId}" data-encounter-id="${encounter.id}" data-previous-value="${escapeHtml(currentQueue)}" style="background-color: ${style.bg}; color: ${style.color};" onchange="handleClaimQueueChange(this)">${options}</select>`;
+        }
+
+        function createDaysInQueue(days) {
+            if (days === null || days === undefined) {
+                return '<span class="empty-cell">—</span>';
+            }
+            let cls = 'low';
+            if (days > 30) cls = 'high';
+            else if (days > 14) cls = 'medium';
+            return `<span class="days-in-queue ${cls}">${days}d</span>`;
+        }
+
+        const TAG_COLOR_MAP = {
+            red: { bg: '#ffebee', color: '#c62828' },
+            orange: { bg: '#fff3e0', color: '#e65100' },
+            yellow: { bg: '#fffde7', color: '#f57f17' },
+            green: { bg: '#e8f5e9', color: '#2e7d32' },
+            blue: { bg: '#e3f2fd', color: '#1565c0' },
+            purple: { bg: '#f3e5f5', color: '#7b1fa2' },
+            pink: { bg: '#fce4ec', color: '#c2185b' },
+            gray: { bg: '#f5f5f5', color: '#616161' },
+        };
+
+        function createTagBadges(tagList) {
+            if (!tagList || tagList.length === 0) {
+                return '<span class="empty-cell">—</span>';
+            }
+            return tagList.map(tag => {
+                const colors = TAG_COLOR_MAP[tag.color] || TAG_COLOR_MAP.gray;
+                return `<span class="tag-badge" style="background-color:${colors.bg};color:${colors.color}">${escapeHtml(tag.name)}</span>`;
+            }).join('');
+        }
+
+        async function handleClaimQueueChange(selectEl) {
+            const claimId = selectEl.dataset.claimId;
+            const encounterId = selectEl.dataset.encounterId;
+            const newQueue = selectEl.value;
+            const previousQueue = selectEl.dataset.previousValue || '';
+
+            if (!newQueue) return;
+
+            // Store previous value for rollback
+            selectEl.dataset.previousValue = newQueue;
+            selectEl.classList.add('saving');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/move_claim_queue`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ claim_id: claimId, queue_name: newQueue }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || 'Failed to move claim');
+                }
+
+                // Update local data
+                const encounter = encounterData.find(e => e.id === encounterId);
+                if (encounter) {
+                    encounter.claimQueue = newQueue;
+                }
+
+                // Update dropdown styling
+                const style = getClaimQueueStyle(newQueue);
+                selectEl.style.backgroundColor = style.bg;
+                selectEl.style.color = style.color;
+            } catch (error) {
+                console.error('Error moving claim queue:', error);
+                alert(`Failed to move claim: ${error.message}`);
+                // Rollback
+                selectEl.value = previousQueue;
+            } finally {
+                selectEl.classList.remove('saving');
+            }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('worklistBody');
+            tbody.innerHTML = '';
+
+            encounterData.forEach(encounter => {
+                const row = document.createElement('tr');
+                const patientLink = `/patient/${encounter.patientId}`;
+
+                row.innerHTML = `
+                    <td><a href="${patientLink}" target="_top">${escapeHtml(encounter.patientName)}${encounter.patientDob ? ` (${escapeHtml(encounter.patientDob)})` : ''}</a></td>
+                    <td>${escapeHtml(encounter.provider)}</td>
+                    <td>${escapeHtml(encounter.location)}</td>
+                    <td>${encounter.insurance ? escapeHtml(encounter.insurance) : '<span class="empty-cell">—</span>'}</td>
+                    <td><a href="${patientLink}#noteId=${encounter.dbid}" target="_top">${escapeHtml(encounter.noteTitle)}</a></td>
+                    <td>${escapeHtml(encounter.dos)}</td>
+                    <td>${createBillableStatus(encounter.billable)}</td>
+                    <td class="compact">${createCountBadge(encounter.uncommittedCommands)}</td>
+                    <td class="compact">${createCountBadge(encounter.delegatedOrders, 'blue')}</td>
+                    <td>${createClaimQueueDropdown(encounter)}</td>
+                    <td class="compact">${createDaysInQueue(encounter.daysInQueue)}</td>
+                    <td>${createTagBadges(encounter.tags)}</td>
+                `;
+
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateEncounterCount() {
+            const countElement = document.getElementById('encounterCount');
+            const start = (paginationData.current_page - 1) * paginationData.page_size + 1;
+            const end = Math.min(start + encounterData.length - 1, paginationData.total_count);
+            countElement.textContent = `${start}-${end} of ${paginationData.total_count} encounters`;
+        }
+
+        // Sorting functionality
+        async function sortEncounters(columnIndex) {
+            const columns = ['patientName', 'provider', 'location', 'insurance', 'noteTitle', 'dos', 'billable', 'uncommittedCommands', 'delegatedOrders', 'claimQueue', 'daysInQueue', 'tags'];
+            const key = columns[columnIndex];
+
+            if (sortConfig.key === key) {
+                sortConfig.direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortConfig.key = key;
+                sortConfig.direction = 'asc';
+            }
+
+            // Reset to first page when sorting
+            paginationData.current_page = 1;
+            
+            // Fetch data with new sorting
+            await fetchEncounters({}, 1);
+            
+            // Render the table with new data
+            renderTable();
+            updateEncounterCount();
+            updatePaginationControls();
+            updateSortIndicators();
+        }
+
+        function setupSortingListeners() {
+            const headers = document.querySelectorAll('.worklist-table th');
+            headers.forEach((header, index) => {
+                header.style.cursor = 'pointer';
+                header.addEventListener('click', () => {
+                    sortEncounters(index);
+                });
+            });
+            updateSortIndicators();
+        }
+
+        function updateSortIndicators() {
+            const headers = document.querySelectorAll('.worklist-table th');
+            const columns = ['patientName', 'provider', 'location', 'insurance', 'noteTitle', 'dos', 'billable', 'uncommittedCommands', 'delegatedOrders', 'claimQueue', 'daysInQueue', 'tags'];
+            
+            headers.forEach((header, index) => {
+                const column = columns[index];
+                const isActive = sortConfig.key === column;
+                const direction = sortConfig.direction;
+                
+                // Remove existing indicators
+                header.innerHTML = header.innerHTML.replace(/ ↑| ↓/g, '');
+                
+                if (isActive) {
+                    const indicator = direction === 'asc' ? ' ↑' : ' ↓';
+                    header.innerHTML += indicator;
+                }
+            });
+        }
+
+        // Helper functions for filtering and UI updates
+        function closeAllDropdowns() {
+            const openDropdowns = document.querySelectorAll('.filter-dropdown.open');
+            openDropdowns.forEach(dropdown => {
+                dropdown.classList.remove('open');
+                const options = dropdown.querySelector('.dropdown-options');
+                if (options) {
+                    options.classList.remove('show');
+                }
+            });
+        }
+
+        function populateDropdown(dropdownId, dataArray, filterKey, displayKey) {
+            const dropdownOptions = document.getElementById(dropdownId);
+            
+            // Clear existing options and add search input
+            dropdownOptions.innerHTML = `
+                <div class="dropdown-search">
+                    <input type="text" id="${filterKey}-search" placeholder="Search ${displayKey.toLowerCase()}..." class="search-input">
+                </div>
+            `;
+            
+            // Ensure data is an array
+            if (!Array.isArray(dataArray)) {
+                dataArray = [];
+            }
+            
+            // Add "All" option
+            const allOption = document.createElement('div');
+            allOption.className = 'dropdown-option';
+            allOption.setAttribute('data-value', '');
+            // Only check "All" if no items are currently selected
+            const isAllSelected = currentFilters[filterKey].length === 0;
+            allOption.innerHTML = `
+                <input type="checkbox" id="${filterKey}-all" ${isAllSelected ? 'checked' : ''}>
+                <label for="${filterKey}-all">All ${displayKey}</label>
+            `;
+            dropdownOptions.appendChild(allOption);
+            
+            // Add data options
+            dataArray.forEach(item => {
+                const isSelected = currentFilters[filterKey].includes(item.id || item);
+                const option = document.createElement('div');
+                option.className = 'dropdown-option';
+                option.setAttribute('data-value', item.id || item);
+                option.innerHTML = `
+                    <input type="checkbox" id="${filterKey}-${(item.id || item).replace(/[^a-zA-Z0-9]/g, '')}" value="${item.id || item}" ${isSelected ? 'checked' : ''}>
+                    <label for="${filterKey}-${(item.id || item).replace(/[^a-zA-Z0-9]/g, '')}">${item.name || item}</label>
+                `;
+                dropdownOptions.appendChild(option);
+            });
+            
+            // Setup search functionality
+            setupSearchFunctionality(filterKey, dropdownOptions);
+        }
+
+        function setupSearchFunctionality(filterKey, dropdownOptions) {
+            const searchInput = document.getElementById(`${filterKey}-search`);
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const searchTerm = e.target.value.toLowerCase();
+                    const options = dropdownOptions.querySelectorAll('.dropdown-option');
+                    
+                    options.forEach(option => {
+                        const label = option.querySelector('label');
+                        const text = label ? label.textContent.toLowerCase() : option.textContent.toLowerCase();
+                        
+                        if (text.includes(searchTerm)) {
+                            option.style.display = 'block';
+                        } else {
+                            option.style.display = 'none';
+                        }
+                    });
+                });
+            }
+        }
+
+        function setupDropdown(dropdownId, optionsId, filterKey) {
+            const dropdown = document.getElementById(dropdownId);
+            const options = document.getElementById(optionsId);
+            
+            // Toggle dropdown - only when clicking the dropdown header, not options
+            dropdown.addEventListener('click', (e) => {
+                // Only toggle if clicking on the dropdown header, not on options
+                if (!e.target.closest('.dropdown-option')) {
+                    // Close all other dropdowns first
+                    closeAllDropdowns();
+                    
+                    // Toggle current dropdown
+                    dropdown.classList.toggle('open');
+                    options.classList.toggle('show');
+                }
+            });
+            
+            // Handle option selection using event delegation
+            options.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent click from bubbling up to dropdown
+                const option = e.target.closest('.dropdown-option');
+                if (!option) return;
+                
+                const input = option.querySelector('input[type="checkbox"]');
+                if (!input) return;
+                
+                const value = option.getAttribute('data-value');
+                
+                // Toggle the checkbox (entire row is clickable)
+                input.checked = !input.checked;
+                
+                if (value === '') {
+                    // "All" option
+                    if (input.checked) {
+                        currentFilters[filterKey] = [];
+                        // Uncheck all other options
+                        options.querySelectorAll(`input[type="checkbox"]:not([id="${filterKey}-all"])`).forEach(cb => cb.checked = false);
+                    }
+                } else {
+                    // Individual option
+                    if (input.checked) {
+                        // Uncheck "All"
+                        const allCheckbox = document.getElementById(`${filterKey}-all`);
+                        if (allCheckbox) allCheckbox.checked = false;
+                        if (!currentFilters[filterKey].includes(value)) {
+                            currentFilters[filterKey].push(value);
+                        }
+                    } else {
+                        currentFilters[filterKey] = currentFilters[filterKey].filter(item => item !== value);
+                        if (currentFilters[filterKey].length === 0) {
+                            const allCheckbox = document.getElementById(`${filterKey}-all`);
+                            if (allCheckbox) allCheckbox.checked = true;
+                        }
+                    }
+                }
+                
+                // Update the display to show selected options
+                updateDropdownDisplay(dropdownId, filterKey);
+            });
+        }
+
+        function updateDropdownDisplay(dropdownId, filterKey) {
+            const dropdown = document.getElementById(dropdownId);
+            const selectedValue = dropdown.querySelector('.selected-value');
+            const selectedItems = currentFilters[filterKey];
+
+            if (selectedItems.length === 0) {
+                // Use friendly display names for placeholder text
+                let displayName = 'All';
+                if (filterKey === 'provider_ids') {
+                    displayName = 'All Owners';
+                } else if (filterKey === 'location_ids') {
+                    displayName = 'All Locations';
+                } else if (filterKey === 'note_type_names') {
+                    displayName = 'All Note Types';
+                } else if (filterKey === 'claim_queue_names') {
+                    displayName = 'All Statuses';
+                } else if (filterKey === 'insurance_names') {
+                    displayName = 'All Insurances';
+                } else if (filterKey === 'tag_ids') {
+                    displayName = 'All Tags';
+                }
+                selectedValue.innerHTML = `<span class="placeholder-text">${displayName}</span>`;
+            } else {
+                const selectedTags = selectedItems.map(itemId => {
+                    let itemName = itemId;
+                    if (filterKey === 'provider_ids') {
+                        const provider = providers.find(p => p.id === itemId);
+                        itemName = provider ? provider.name : itemId;
+                    } else if (filterKey === 'location_ids') {
+                        const location = locations.find(l => l.id === itemId);
+                        itemName = location ? location.name : itemId;
+                    } else if (filterKey === 'note_type_names') {
+                        itemName = itemId;
+                    } else if (filterKey === 'claim_queue_names') {
+                        itemName = itemId;
+                    } else if (filterKey === 'insurance_names') {
+                        itemName = itemId;
+                    } else if (filterKey === 'tag_ids') {
+                        const tag = tags.find(t => t.id === itemId);
+                        itemName = tag ? tag.name : itemId;
+                    }
+                    return `<span class="selected-tag">${itemName}<span class="remove-tag" data-${filterKey}-id="${itemId}">×</span></span>`;
+                }).join('');
+                selectedValue.innerHTML = selectedTags;
+
+                // Add event listeners for remove tags
+                selectedValue.querySelectorAll('.remove-tag').forEach(removeBtn => {
+                    removeBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const itemToRemove = e.target.getAttribute(`data-${filterKey}-id`);
+                        currentFilters[filterKey] = currentFilters[filterKey].filter(item => item !== itemToRemove);
+                        
+                        // Update checkbox state
+                        const checkbox = document.getElementById(`${filterKey}-${itemToRemove.replace(/[^a-zA-Z0-9]/g, '')}`);
+                        if (checkbox) {
+                            checkbox.checked = false;
+                        }
+                        
+                        // If no items selected, check "All"
+                        if (currentFilters[filterKey].length === 0) {
+                            document.getElementById(`${filterKey}-all`).checked = true;
+                        }
+                        
+                        updateDropdownDisplay(dropdownId, filterKey);
+                    });
+                });
+            }
+        }
+
+        function populateProviderDropdown() {
+            // Set initial selection if logged in staff is found BEFORE populating dropdown
+            if (loggedInStaffId) {
+                const loggedInProvider = providers.find(p => p.id === loggedInStaffId);
+                if (loggedInProvider) {
+                    currentFilters.provider_ids = [loggedInStaffId];
+                }
+            }
+            
+            // Use shared function to populate dropdown (now with correct filter state)
+            populateDropdown('provider-options', providers, 'provider_ids', 'Owners');
+            
+            // Update display to show the selected user
+            updateDropdownDisplay('providerFilter', 'provider_ids');
+        }
+
+        function populateLocationDropdown() {
+            // Use shared function to populate dropdown
+            populateDropdown('location-options', locations, 'location_ids', 'Locations');
+        }
+
+        function populateNoteTypeDropdown() {
+            // Use shared function to populate dropdown
+            const noteTypeOptions = noteTypes.map(nt => ({ id: nt.name, name: nt.name }));
+            populateDropdown('note-type-options', noteTypeOptions, 'note_type_names', 'Note Types');
+        }
+
+        function populateClaimQueueDropdown() {
+            // Transform claim queue data to have id and name properties
+            const claimQueueOptions = claimQueues.map(cq => ({ id: cq.name, name: cq.name }));
+            populateDropdown('claim-queue-options', claimQueueOptions, 'claim_queue_names', 'Statuses');
+        }
+
+
+        function setupProviderDropdown() {
+            // Use shared function to setup dropdown
+            setupDropdown('providerFilter', 'provider-options', 'provider_ids');
+        }
+
+        function setupLocationDropdown() {
+            // Use shared function to setup dropdown
+            setupDropdown('locationFilter', 'location-options', 'location_ids');
+        }
+
+        function setupNoteTypeDropdown() {
+            // Use shared function to setup dropdown
+            setupDropdown('noteTypeFilter', 'note-type-options', 'note_type_names');
+        }
+
+        function setupClaimQueueDropdown() {
+            setupDropdown('claimQueueFilter', 'claim-queue-options', 'claim_queue_names');
+        }
+
+        function populateInsuranceDropdown() {
+            const insuranceOptions = insurances.map(name => ({ id: name, name: name }));
+            populateDropdown('insurance-options', insuranceOptions, 'insurance_names', 'Insurances');
+        }
+
+        function setupInsuranceDropdown() {
+            setupDropdown('insuranceFilter', 'insurance-options', 'insurance_names');
+        }
+
+        function populateTagDropdown() {
+            const tagOptions = tags.map(t => ({ id: t.id, name: t.name }));
+            populateDropdown('tag-options', tagOptions, 'tag_ids', 'Tags');
+        }
+
+        function setupTagDropdown() {
+            setupDropdown('tagFilter', 'tag-options', 'tag_ids');
+        }
+
+        function setupFilterEventListeners() {
+            const billableFilter = document.getElementById('billableFilter');
+            const uncommittedCommandsFilter = document.getElementById('uncommittedCommandsFilter');
+            const delegatedOrdersFilter = document.getElementById('delegatedOrdersFilter');
+            const clearFiltersButton = document.getElementById('clearFilters');
+            const applyFiltersButton = document.getElementById('applyFilters');
+            const refreshButton = document.getElementById('refreshButton');
+            const patientSearchInput = document.getElementById('patientSearchInput');
+            const dosStartInput = document.getElementById('dosStartInput');
+            const dosEndInput = document.getElementById('dosEndInput');
+
+            setupProviderDropdown();
+            setupLocationDropdown();
+            setupNoteTypeDropdown();
+            setupClaimQueueDropdown();
+            setupInsuranceDropdown();
+            setupTagDropdown();
+
+            // Export CSV button
+            const exportCsvButton = document.getElementById('exportCsvButton');
+            exportCsvButton.addEventListener('click', async () => {
+                exportCsvButton.disabled = true;
+                exportCsvButton.textContent = 'Exporting...';
+                try {
+                    const params = new URLSearchParams();
+                    Object.entries(currentFilters).forEach(([key, value]) => {
+                        if (Array.isArray(value) && value.length > 0) {
+                            const str = value.filter(v => v !== null && v !== undefined && v !== '').join(',');
+                            if (str) params.append(key, str);
+                        } else if (['billable_only', 'has_uncommitted_commands', 'has_delegated_orders'].includes(key)) {
+                            params.append(key, value.toString());
+                        } else if (value !== null && value !== undefined && value !== '' && !Array.isArray(value)) {
+                            params.append(key, value);
+                        }
+                    });
+                    const response = await fetch(`${API_BASE_URL}/export_csv?${params.toString()}`);
+                    if (!response.ok) throw new Error('Export failed');
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `encounter_worklist_${new Date().toISOString().split('T')[0]}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                } catch (error) {
+                    console.error('Error exporting CSV:', error);
+                    alert('Failed to export CSV. Please try again.');
+                } finally {
+                    exportCsvButton.disabled = false;
+                    exportCsvButton.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export CSV`;
+                }
+            });
+
+            // Billable filter change
+            billableFilter.addEventListener('change', () => {
+                currentFilters.billable_only = billableFilter.checked;
+                // Don't auto-refresh, wait for action button
+            });
+
+            // Uncommitted commands filter change
+            uncommittedCommandsFilter.addEventListener('change', () => {
+                currentFilters.has_uncommitted_commands = uncommittedCommandsFilter.checked;
+            });
+
+            // Delegated orders filter change
+            delegatedOrdersFilter.addEventListener('change', () => {
+                currentFilters.has_delegated_orders = delegatedOrdersFilter.checked;
+            });
+
+            if (patientSearchInput) {
+                patientSearchInput.addEventListener('input', () => {
+                    currentFilters.patient_search = patientSearchInput.value.trim();
+                });
+
+                patientSearchInput.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        currentFilters.patient_search = patientSearchInput.value.trim();
+                        applyFilters();
+                    }
+                });
+            }
+
+            if (dosStartInput) {
+                dosStartInput.addEventListener('change', () => {
+                    currentFilters.dos_start = dosStartInput.value;
+                });
+            }
+
+            if (dosEndInput) {
+                dosEndInput.addEventListener('change', () => {
+                    currentFilters.dos_end = dosEndInput.value;
+                });
+            }
+
+            // Clear All button
+            clearFiltersButton.addEventListener('click', () => {
+                // Reset all filters first
+                currentFilters.provider_ids = [];
+                currentFilters.location_ids = [];
+                currentFilters.note_type_names = [];
+                currentFilters.claim_queue_names = [];
+                currentFilters.insurance_names = [];
+                currentFilters.tag_ids = [];
+                currentFilters.billable_only = false;
+                currentFilters.has_uncommitted_commands = false;
+                currentFilters.has_delegated_orders = false;
+                currentFilters.patient_search = '';
+                currentFilters.dos_start = '';
+                currentFilters.dos_end = '';
+
+                // Reset UI elements
+                billableFilter.checked = false;
+                uncommittedCommandsFilter.checked = false;
+                delegatedOrdersFilter.checked = false;
+                if (patientSearchInput) {
+                    patientSearchInput.value = '';
+                }
+                if (dosStartInput) {
+                    dosStartInput.value = '';
+                }
+                if (dosEndInput) {
+                    dosEndInput.value = '';
+                }
+
+                // Helper function to reset dropdown checkboxes
+                const resetDropdownCheckboxes = (optionsId, filterKey) => {
+                    const options = document.getElementById(optionsId);
+                    if (options) {
+                        const checkboxes = options.querySelectorAll('input[type="checkbox"]');
+                        checkboxes.forEach(checkbox => {
+                            if (checkbox.id === `${filterKey}-all`) {
+                                checkbox.checked = true;
+                            } else {
+                                checkbox.checked = false;
+                            }
+                        });
+                    }
+                };
+
+                // Helper function to reset dropdown display
+                const resetDropdownDisplay = (dropdownId, placeholderText) => {
+                    const dropdown = document.getElementById(dropdownId);
+                    if (dropdown) {
+                        const selectedValue = dropdown.querySelector('.selected-value');
+                        if (selectedValue) {
+                            selectedValue.innerHTML = `<span class="placeholder-text">${placeholderText}</span>`;
+                        }
+                    }
+                };
+
+                // Reset provider dropdown
+                resetDropdownCheckboxes('provider-options', 'provider_ids');
+                resetDropdownDisplay('providerFilter', 'All Owners');
+
+                // Reset location dropdown
+                resetDropdownCheckboxes('location-options', 'location_ids');
+                resetDropdownDisplay('locationFilter', 'All Locations');
+
+                // Reset note type dropdown
+                resetDropdownCheckboxes('note-type-options', 'note_type_names');
+                resetDropdownDisplay('noteTypeFilter', 'All Note Types');
+
+                // Reset claim queue dropdown
+                resetDropdownCheckboxes('claim-queue-options', 'claim_queue_names');
+                resetDropdownDisplay('claimQueueFilter', 'All Statuses');
+
+                // Reset insurance dropdown
+                resetDropdownCheckboxes('insurance-options', 'insurance_names');
+                resetDropdownDisplay('insuranceFilter', 'All Insurances');
+
+                // Reset tags dropdown
+                resetDropdownCheckboxes('tag-options', 'tag_ids');
+                resetDropdownDisplay('tagFilter', 'All Tags');
+
+                // Apply cleared filters
+                applyFilters();
+            });
+
+            // Apply Filters button
+            applyFiltersButton.addEventListener('click', () => {
+                const patientSearchInput = document.getElementById('patientSearchInput');
+                const dosStartInput = document.getElementById('dosStartInput');
+                const dosEndInput = document.getElementById('dosEndInput');
+                if (patientSearchInput) {
+                    currentFilters.patient_search = patientSearchInput.value.trim();
+                }
+                if (dosStartInput) {
+                    currentFilters.dos_start = dosStartInput.value;
+                }
+                if (dosEndInput) {
+                    currentFilters.dos_end = dosEndInput.value;
+                }
+                applyFilters();
+            });
+
+            // Refresh button
+            refreshButton.addEventListener('click', async () => {
+                try {
+                    // Show loading state
+                    showLoadingSpinner();
+                    document.getElementById('encounterCount').textContent = 'Loading encounters...';
+                    
+                    const patientSearchInput = document.getElementById('patientSearchInput');
+                    const dosStartInput = document.getElementById('dosStartInput');
+                    const dosEndInput = document.getElementById('dosEndInput');
+                    if (patientSearchInput) {
+                        currentFilters.patient_search = patientSearchInput.value.trim();
+                    }
+                    if (dosStartInput) {
+                        currentFilters.dos_start = dosStartInput.value;
+                    }
+                    if (dosEndInput) {
+                        currentFilters.dos_end = dosEndInput.value;
+                    }
+
+                    // Refresh data with current filters and sorting
+                    await fetchEncounters(currentFilters, paginationData.current_page);
+                    
+                    // Re-render the table
+                    renderTable();
+                    updateEncounterCount();
+                    updatePaginationControls();
+                    updateSortIndicators();
+                    hideLoadingSpinner();
+                } catch (error) {
+                    console.error('Error refreshing encounters:', error);
+                    document.getElementById('encounterCount').textContent = 'Error loading encounters';
+                    hideLoadingSpinner();
+                }
+            });
+        }
+
+        async function applyFilters() {
+            try {
+                // Show loading state
+                showLoadingSpinner();
+                document.getElementById('encounterCount').textContent = 'Loading encounters...';
+                
+                const patientSearchInput = document.getElementById('patientSearchInput');
+                const dosStartInput = document.getElementById('dosStartInput');
+                const dosEndInput = document.getElementById('dosEndInput');
+                if (patientSearchInput) {
+                    currentFilters.patient_search = patientSearchInput.value.trim();
+                }
+                if (dosStartInput) {
+                    currentFilters.dos_start = dosStartInput.value;
+                }
+                if (dosEndInput) {
+                    currentFilters.dos_end = dosEndInput.value;
+                }
+                
+                // Reset to page 1 when applying filters
+                await fetchEncounters(currentFilters, 1);
+                
+                // Re-render the table with filtered data
+                renderTable();
+                updateEncounterCount();
+                updatePaginationControls();
+                updateSortIndicators();
+                hideLoadingSpinner();
+            } catch (error) {
+                console.error('Error applying filters:', error);
+                document.getElementById('encounterCount').textContent = 'Error loading encounters';
+                hideLoadingSpinner();
+            }
+        }
+
+        // Pagination functions
+        function updatePaginationControls() {
+            const prevButton = document.getElementById('prevButton');
+            const nextButton = document.getElementById('nextButton');
+            const pageNumbers = document.getElementById('pageNumbers');
+            const paginationInfo = document.getElementById('paginationInfo');
+
+            // Update button states
+            prevButton.disabled = !paginationData.has_previous;
+            nextButton.disabled = !paginationData.has_next;
+            
+            // Update button styles based on state
+            prevButton.style.opacity = paginationData.has_previous ? '1' : '0.5';
+            nextButton.style.opacity = paginationData.has_next ? '1' : '0.5';
+            prevButton.style.cursor = paginationData.has_previous ? 'pointer' : 'not-allowed';
+            nextButton.style.cursor = paginationData.has_next ? 'pointer' : 'not-allowed';
+
+            // Update page numbers display
+            pageNumbers.textContent = `Page ${paginationData.current_page} of ${paginationData.total_pages}`;
+
+            // Update pagination info
+            if (paginationData.total_count === 0) {
+                paginationInfo.textContent = 'No encounters found';
+            } else {
+                const start = (paginationData.current_page - 1) * paginationData.page_size + 1;
+                const end = Math.min(start + encounterData.length - 1, paginationData.total_count);
+                paginationInfo.textContent = `Showing ${start}-${end} of ${paginationData.total_count} encounters`;
+            }
+        }
+
+        async function goToPage(page) {
+            if (page < 1 || page > paginationData.total_pages) {
+                return;
+            }
+
+            try {
+                // Show loading state
+                showLoadingSpinner();
+                document.getElementById('encounterCount').textContent = 'Loading encounters...';
+                
+                await fetchEncounters(currentFilters, page);
+                renderTable();
+                updateEncounterCount();
+                updatePaginationControls();
+                updateSortIndicators();
+                hideLoadingSpinner();
+            } catch (error) {
+                console.error('Error loading page:', error);
+                document.getElementById('encounterCount').textContent = 'Error loading encounters';
+                hideLoadingSpinner();
+            }
+        }
+
+        function setupPaginationEventListeners() {
+            const prevButton = document.getElementById('prevButton');
+            const nextButton = document.getElementById('nextButton');
+            const pageSizeSelect = document.getElementById('pageSizeSelect');
+
+            prevButton.addEventListener('click', () => {
+                if (paginationData.has_previous) {
+                    goToPage(paginationData.current_page - 1);
+                }
+            });
+
+            nextButton.addEventListener('click', () => {
+                if (paginationData.has_next) {
+                    goToPage(paginationData.current_page + 1);
+                }
+            });
+
+            // Page size change handler
+            pageSizeSelect.addEventListener('change', async () => {
+                paginationData.current_page = 1; // Reset to first page when changing page size
+                await fetchEncounters(1);
+                renderTable();
+                updateEncounterCount();
+                updatePaginationControls();
+                updateSortIndicators();
+            });
+        }
+
+        // Loading spinner helper functions
+        function showLoadingSpinner() {
+            const spinner = document.getElementById('loadingSpinner');
+            const tableBody = document.getElementById('worklistBody');
+            if (spinner && tableBody) {
+                spinner.style.display = 'block';
+                tableBody.innerHTML = ''; // Clear table content
+            }
+        }
+
+        function hideLoadingSpinner() {
+            const spinner = document.getElementById('loadingSpinner');
+            if (spinner) {
+                spinner.style.display = 'none';
+            }
+        }
+
+        // Initialize the worklist
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Load initial data from APIs
+                await Promise.all([
+                    fetchProviders(),
+                    fetchLocations(),
+                    fetchNoteTypes(),
+                    fetchClaimQueues(),
+                    fetchInsurances(),
+                    fetchTags(),
+                ]);
+
+                // Populate all filter dropdowns
+                populateProviderDropdown();
+                populateLocationDropdown();
+                populateNoteTypeDropdown();
+                populateClaimQueueDropdown();
+                populateInsuranceDropdown();
+                populateTagDropdown();
+
+                // Initialize page size dropdown
+                const pageSizeSelect = document.getElementById('pageSizeSelect');
+                if (pageSizeSelect) {
+                    pageSizeSelect.value = '25'; // Default to 25 records per page
+                }
+
+                // Show loading spinner for initial load
+                showLoadingSpinner();
+                document.getElementById('encounterCount').textContent = 'Loading encounters...';
+                
+                await fetchEncounters();
+                
+                // Setup filter event listeners
+                setupFilterEventListeners();
+
+                // Setup sorting listeners
+                setupSortingListeners();
+
+                // Setup pagination listeners
+                setupPaginationEventListeners();
+
+                // Render the initial table
+                renderTable();
+                updateEncounterCount();
+                updatePaginationControls();
+                updateSortIndicators();
+                hideLoadingSpinner();
+                
+                // Setup refresh functionality
+                window.refreshEncounters = async () => {
+                    await fetchEncounters(currentFilters, paginationData.current_page);
+                    renderTable();
+                    updateEncounterCount();
+                    updatePaginationControls();
+                    updateSortIndicators();
+                };
+
+                // Global click listener to close dropdowns when clicking outside
+                document.addEventListener('click', (e) => {
+                    // Check if the click was on a dropdown or its children
+                    const clickedDropdown = e.target.closest('.filter-dropdown');
+                    const isDropdownClick = clickedDropdown !== null;
+                    
+                    if (!isDropdownClick) {
+                        closeAllDropdowns();
+                    }
+                });
+
+            } catch (error) {
+                console.error('Error initializing encounter worklist:', error);
+                // Show error state in the UI
+                document.getElementById('worklistBody').innerHTML = 
+                    '<tr><td colspan="12" class="error-row">Error loading encounters. Please refresh the page.</td></tr>';
+                document.getElementById('encounterCount').textContent = 'Error loading data';
+                hideLoadingSpinner();
+            }
+        });
+    </script>
+</body>
+</html>

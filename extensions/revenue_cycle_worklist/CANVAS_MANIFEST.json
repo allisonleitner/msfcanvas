@@ -1,0 +1,39 @@
+{
+    "sdk_version": "0.112.0",
+    "plugin_version": "canvas-1.0.0",
+    "name": "revenue_cycle_worklist",
+    "description": "Revenue Cycle Worklist with claims queue management, insurance filtering, tagging, and CSV export",
+    "url_permissions": [],
+    "components": {
+        "applications": [
+            {
+                "class": "revenue_cycle_worklist.applications.my_application:MyApplication",
+                "name": "Revenue Cycle Worklist",
+                "description": "A comprehensive worklist for managing open encounters, claims queues, insurance, and billing workflow.",
+                "scope": "global",
+                "icon": "assets/logo.png"
+            }
+        ],
+        "protocols": [
+            {
+                "class": "revenue_cycle_worklist.applications.my_application:RevenueCycleApi",
+                "description": "Provides api to fetch, filter, sort, and export open encounters with claims data",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
