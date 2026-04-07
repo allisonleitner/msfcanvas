@@ -309,6 +309,161 @@
             cursor: pointer;
         }
 
+        .reviewed-checkbox {
+            transform: scale(1.2);
+            cursor: pointer;
+            accent-color: #2e7d32;
+        }
+
+        .balance-cell {
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .balance-cell .patient-bal { color: #c62828; }
+        .balance-cell .insurance-bal { color: #1565c0; }
+
+        .adj-codes {
+            font-size: 11px;
+            color: #555;
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .remit-date {
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .column-manager-btn {
+            padding: 6px 12px;
+            background-color: #6b7280;
+            color: white;
+            border: none;
+            border-radius: 0.375rem;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .column-manager-btn:hover {
+            background-color: #4b5563;
+        }
+
+        .column-manager-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.3);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .column-manager-overlay.show {
+            display: flex;
+        }
+
+        .column-manager-panel {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            padding: 20px;
+            width: 420px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .column-manager-panel h3 {
+            margin: 0 0 16px 0;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .column-toggle-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .column-toggle-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .column-toggle-item:hover {
+            background: #f3f4f6;
+        }
+
+        .column-toggle-item input[type="checkbox"] {
+            transform: scale(1.15);
+        }
+
+        .view-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .view-name-input {
+            padding: 6px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 13px;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .view-save-btn, .view-load-btn, .view-delete-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .view-save-btn { background: #2384D0; color: white; }
+        .view-save-btn:hover { background: #1D6FAF; }
+        .view-load-btn { background: #e5e7eb; color: #333; }
+        .view-load-btn:hover { background: #d1d5db; }
+        .view-delete-btn { background: #ffebee; color: #c62828; }
+        .view-delete-btn:hover { background: #ffcdd2; }
+
+        .saved-views-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .saved-view-chip {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid #d1d5db;
+            background: white;
+            color: #333;
+            transition: all 0.15s;
+        }
+
+        .saved-view-chip:hover { border-color: #1d4ed8; color: #1d4ed8; }
+        .saved-view-chip.active { background: #dbeafe; border-color: #1d4ed8; color: #1d4ed8; }
+
         a.encounter-link {
             font-weight: 600;
             color: #1d4ed8;
@@ -816,7 +971,10 @@
 <body>
     <div class="worklist-container">
         <div class="worklist-header">
-            <h1 class="worklist-title">Revenue Cycle Worklist</h1>
+            <div style="display:flex;align-items:center;gap:12px;">
+                <h1 class="worklist-title">Revenue Cycle Worklist</h1>
+                <button class="column-manager-btn" id="columnManagerBtn">Columns</button>
+            </div>
             <span class="encounter-count" id="encounterCount">Loading encounters...</span>
         </div>
         
@@ -993,37 +1151,47 @@
         <table class="worklist-table" id="worklistTable">
             <thead>
                 <tr>
-                    <th>Patient Name</th>
-                    <th>Owner</th>
-                    <th>Location</th>
-                    <th>Insurance</th>
-                    <th>Note</th>
-                    <th>DOS</th>
-                    <th>Billable</th>
-                    <th class="compact">Uncommitted<br>Commands</th>
-                    <th class="compact">Delegated<br>Orders</th>
-                    <th>Claim Queue</th>
-                    <th class="compact">Days in<br>Queue</th>
-                    <th>Tags</th>
+                    <th data-col="reviewed" class="compact">Reviewed</th>
+                    <th data-col="patientName">Patient Name</th>
+                    <th data-col="provider">Owner</th>
+                    <th data-col="location">Location</th>
+                    <th data-col="insurance">Insurance</th>
+                    <th data-col="noteTitle">Note</th>
+                    <th data-col="dos">DOS</th>
+                    <th data-col="billable">Billable</th>
+                    <th data-col="uncommittedCommands" class="compact">Uncommitted<br>Commands</th>
+                    <th data-col="delegatedOrders" class="compact">Delegated<br>Orders</th>
+                    <th data-col="claimQueue">Claim Queue</th>
+                    <th data-col="daysInQueue" class="compact">Days in<br>Queue</th>
+                    <th data-col="balance">Balance</th>
+                    <th data-col="latestRemit">Latest Remit</th>
+                    <th data-col="adjustmentCodes">Adj Codes</th>
+                    <th data-col="lastTouched">Last Touched</th>
+                    <th data-col="tags">Tags</th>
                 </tr>
                 <tr class="header-filters">
-                    <th><input type="text" class="header-filter-input" id="hf-patient" placeholder="Filter..."></th>
-                    <th><select class="header-filter-select" id="hf-owner"><option value="">All</option></select></th>
-                    <th><select class="header-filter-select" id="hf-location"><option value="">All</option></select></th>
-                    <th><select class="header-filter-select" id="hf-insurance"><option value="">All</option></select></th>
-                    <th><select class="header-filter-select" id="hf-note-type"><option value="">All</option></select></th>
-                    <th>
+                    <th data-col="reviewed"></th>
+                    <th data-col="patientName"><input type="text" class="header-filter-input" id="hf-patient" placeholder="Filter..."></th>
+                    <th data-col="provider"><select class="header-filter-select" id="hf-owner"><option value="">All</option></select></th>
+                    <th data-col="location"><select class="header-filter-select" id="hf-location"><option value="">All</option></select></th>
+                    <th data-col="insurance"><select class="header-filter-select" id="hf-insurance"><option value="">All</option></select></th>
+                    <th data-col="noteTitle"><select class="header-filter-select" id="hf-note-type"><option value="">All</option></select></th>
+                    <th data-col="dos">
                         <div style="display:flex;gap:2px;align-items:center;">
                             <input type="date" class="header-filter-input" id="hf-dos-start" style="font-size:10px;padding:3px 2px;">
                             <input type="date" class="header-filter-input" id="hf-dos-end" style="font-size:10px;padding:3px 2px;">
                         </div>
                     </th>
-                    <th style="text-align:center;"><input type="checkbox" class="header-filter-checkbox" id="hf-billable" title="Billable Only"></th>
-                    <th style="text-align:center;"><input type="checkbox" class="header-filter-checkbox" id="hf-uncommitted" title="Has Uncommitted Commands"></th>
-                    <th style="text-align:center;"><input type="checkbox" class="header-filter-checkbox" id="hf-delegated" title="Has Delegated Orders"></th>
-                    <th><select class="header-filter-select" id="hf-claim-queue"><option value="">All</option></select></th>
-                    <th></th>
-                    <th><select class="header-filter-select" id="hf-tags"><option value="">All</option></select></th>
+                    <th data-col="billable" style="text-align:center;"><input type="checkbox" class="header-filter-checkbox" id="hf-billable" title="Billable Only"></th>
+                    <th data-col="uncommittedCommands" style="text-align:center;"><input type="checkbox" class="header-filter-checkbox" id="hf-uncommitted" title="Has Uncommitted Commands"></th>
+                    <th data-col="delegatedOrders" style="text-align:center;"><input type="checkbox" class="header-filter-checkbox" id="hf-delegated" title="Has Delegated Orders"></th>
+                    <th data-col="claimQueue"><select class="header-filter-select" id="hf-claim-queue"><option value="">All</option></select></th>
+                    <th data-col="daysInQueue"></th>
+                    <th data-col="balance"></th>
+                    <th data-col="latestRemit"></th>
+                    <th data-col="adjustmentCodes"></th>
+                    <th data-col="lastTouched"></th>
+                    <th data-col="tags"><select class="header-filter-select" id="hf-tags"><option value="">All</option></select></th>
                 </tr>
             </thead>
             <tbody id="worklistBody">
@@ -1055,6 +1223,23 @@
         </div>
     </div>
 
+    <!-- Column Manager Overlay -->
+    <div class="column-manager-overlay" id="columnManagerOverlay">
+        <div class="column-manager-panel">
+            <h3>Manage Columns</h3>
+            <div class="saved-views-list" id="savedViewsList"></div>
+            <div class="view-controls">
+                <input type="text" class="view-name-input" id="viewNameInput" placeholder="View name...">
+                <button class="view-save-btn" id="viewSaveBtn">Save View</button>
+                <button class="view-delete-btn" id="viewDeleteBtn">Delete</button>
+            </div>
+            <div class="column-toggle-list" id="columnToggleList"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
+                <button class="clear-filters-btn" id="columnManagerClose">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // API base URL
         const API_BASE_URL = '/plugin-io/api/revenue_cycle_worklist';
@@ -1068,6 +1253,35 @@
         let claimQueues = [];
         let insurances = [];
         let tags = [];
+        let reviewedMap = {};  // { claim_id: reviewed_at_iso }
+        let savedViews = [];
+        let activeViewName = null;
+
+        // All available columns with defaults
+        const ALL_COLUMNS = [
+            { key: 'reviewed', label: 'Reviewed', visible: true, sortable: false },
+            { key: 'patientName', label: 'Patient Name', visible: true, sortable: true },
+            { key: 'provider', label: 'Owner', visible: true, sortable: true },
+            { key: 'location', label: 'Location', visible: true, sortable: true },
+            { key: 'insurance', label: 'Insurance', visible: true, sortable: true },
+            { key: 'noteTitle', label: 'Note', visible: true, sortable: true },
+            { key: 'dos', label: 'DOS', visible: true, sortable: true },
+            { key: 'billable', label: 'Billable', visible: true, sortable: true },
+            { key: 'uncommittedCommands', label: 'Uncommitted Commands', visible: true, sortable: true },
+            { key: 'delegatedOrders', label: 'Delegated Orders', visible: true, sortable: true },
+            { key: 'claimQueue', label: 'Claim Queue', visible: true, sortable: true },
+            { key: 'daysInQueue', label: 'Days in Queue', visible: true, sortable: true },
+            { key: 'balance', label: 'Balance', visible: false, sortable: false },
+            { key: 'latestRemit', label: 'Latest Remit', visible: false, sortable: false },
+            { key: 'adjustmentCodes', label: 'Adjustment Codes', visible: false, sortable: false },
+            { key: 'lastTouched', label: 'Last Touched', visible: false, sortable: false },
+            { key: 'tags', label: 'Tags', visible: true, sortable: false },
+        ];
+
+        // Current column visibility state
+        let columnVisibility = {};
+        ALL_COLUMNS.forEach(c => { columnVisibility[c.key] = c.visible; });
+
         let currentFilters = {
             provider_ids: [],
             location_ids: [],
@@ -1191,6 +1405,11 @@
                     claimQueue: encounter.claim_queue,
                     daysInQueue: encounter.days_in_queue,
                     insurance: encounter.insurance,
+                    patientBalance: encounter.patient_balance,
+                    insuranceBalance: encounter.insurance_balance,
+                    latestRemitDate: encounter.latest_remit_date,
+                    latestRemitEra: encounter.latest_remit_era,
+                    adjustmentCodes: encounter.adjustment_codes || [],
                     tags: encounter.tags || [],
                     created: encounter.created
                 }));
@@ -1296,6 +1515,83 @@
         }
 
 
+        async function fetchReviewedState() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/reviewed`);
+                if (!response.ok) return;
+                const data = await response.json();
+                reviewedMap = data.reviewed || {};
+            } catch (error) {
+                console.error('Error fetching reviewed state:', error);
+            }
+        }
+
+        async function fetchSavedViews() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/views`);
+                if (!response.ok) return;
+                const data = await response.json();
+                savedViews = data.views || [];
+                // Load default view if one exists
+                const defaultView = savedViews.find(v => v.is_default);
+                if (defaultView) {
+                    applyViewConfig(defaultView);
+                }
+            } catch (error) {
+                console.error('Error fetching saved views:', error);
+            }
+        }
+
+        async function toggleReviewed(claimId, checkbox) {
+            const reviewed = checkbox.checked;
+            try {
+                const response = await fetch(`${API_BASE_URL}/reviewed`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ claim_id: claimId, reviewed }),
+                });
+                if (!response.ok) throw new Error('Failed to update');
+                const data = await response.json();
+                if (reviewed) {
+                    reviewedMap[claimId] = data.reviewed_at;
+                } else {
+                    delete reviewedMap[claimId];
+                }
+            } catch (error) {
+                console.error('Error toggling reviewed:', error);
+                checkbox.checked = !reviewed; // rollback
+            }
+        }
+
+        // Column visibility helpers
+        function applyColumnVisibility() {
+            ALL_COLUMNS.forEach(col => {
+                const display = columnVisibility[col.key] ? '' : 'none';
+                // Header row cells
+                document.querySelectorAll(`th[data-col="${col.key}"]`).forEach(th => {
+                    th.style.display = display;
+                });
+                // Body row cells
+                document.querySelectorAll(`td[data-col="${col.key}"]`).forEach(td => {
+                    td.style.display = display;
+                });
+            });
+        }
+
+        function applyViewConfig(view) {
+            activeViewName = view.config_name;
+            if (view.columns && view.columns.length > 0) {
+                // Reset all to hidden, then show only those in the view
+                ALL_COLUMNS.forEach(c => { columnVisibility[c.key] = false; });
+                view.columns.forEach(vc => {
+                    if (vc.key && vc.visible !== undefined) {
+                        columnVisibility[vc.key] = vc.visible;
+                    }
+                });
+            }
+            applyColumnVisibility();
+        }
+
         // Simple utility functions
         function escapeHtml(text) {
             const div = document.createElement('div');
@@ -1389,6 +1685,38 @@
             }).join('');
         }
 
+        function createBalanceCell(patientBal, insuranceBal) {
+            if (patientBal === null && insuranceBal === null) return '<span class="empty-cell">—</span>';
+            const pb = patientBal !== null ? `<span class="patient-bal">P: $${Number(patientBal).toFixed(2)}</span>` : '';
+            const ib = insuranceBal !== null ? `<span class="insurance-bal">I: $${Number(insuranceBal).toFixed(2)}</span>` : '';
+            return `<div class="balance-cell">${pb}${pb && ib ? '<br>' : ''}${ib}</div>`;
+        }
+
+        function createRemitCell(remitDate, remitEra) {
+            if (!remitDate) return '<span class="empty-cell">—</span>';
+            const formatted = new Date(remitDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            return `<span class="remit-date" title="${remitEra || ''}">${formatted}</span>`;
+        }
+
+        function createAdjCodesCell(codes) {
+            if (!codes || codes.length === 0) return '<span class="empty-cell">—</span>';
+            return `<span class="adj-codes" title="${codes.join(', ')}">${codes.join(', ')}</span>`;
+        }
+
+        function createReviewedCheckbox(encounter) {
+            if (!encounter.claimId) return '<span class="empty-cell">—</span>';
+            const checked = reviewedMap[encounter.claimId] ? 'checked' : '';
+            return `<input type="checkbox" class="reviewed-checkbox" data-claim-id="${encounter.claimId}" ${checked} onchange="toggleReviewed('${encounter.claimId}', this)">`;
+        }
+
+        function createLastTouchedCell(encounter) {
+            if (!encounter.claimId) return '<span class="empty-cell">—</span>';
+            const reviewedAt = reviewedMap[encounter.claimId];
+            if (!reviewedAt) return '<span class="empty-cell">—</span>';
+            const formatted = new Date(reviewedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            return `<span class="remit-date">${formatted}</span>`;
+        }
+
         async function handleClaimQueueChange(selectEl) {
             const claimId = selectEl.dataset.claimId;
             const encounterId = selectEl.dataset.encounterId;
@@ -1442,22 +1770,28 @@
                 const patientLink = `/patient/${encounter.patientId}`;
 
                 row.innerHTML = `
-                    <td><a href="${patientLink}" target="_top">${escapeHtml(encounter.patientName)}${encounter.patientDob ? ` (${escapeHtml(encounter.patientDob)})` : ''}</a></td>
-                    <td>${escapeHtml(encounter.provider)}</td>
-                    <td>${escapeHtml(encounter.location)}</td>
-                    <td>${encounter.insurance ? escapeHtml(encounter.insurance) : '<span class="empty-cell">—</span>'}</td>
-                    <td><a href="${patientLink}#noteId=${encounter.dbid}" target="_top">${escapeHtml(encounter.noteTitle)}</a></td>
-                    <td>${escapeHtml(encounter.dos)}</td>
-                    <td>${createBillableStatus(encounter.billable)}</td>
-                    <td class="compact">${createCountBadge(encounter.uncommittedCommands)}</td>
-                    <td class="compact">${createCountBadge(encounter.delegatedOrders, 'blue')}</td>
-                    <td>${createClaimQueueDropdown(encounter)}</td>
-                    <td class="compact">${createDaysInQueue(encounter.daysInQueue)}</td>
-                    <td>${createTagBadges(encounter.tags)}</td>
+                    <td data-col="reviewed" class="compact">${createReviewedCheckbox(encounter)}</td>
+                    <td data-col="patientName"><a href="${patientLink}" target="_top">${escapeHtml(encounter.patientName)}${encounter.patientDob ? ` (${escapeHtml(encounter.patientDob)})` : ''}</a></td>
+                    <td data-col="provider">${escapeHtml(encounter.provider)}</td>
+                    <td data-col="location">${escapeHtml(encounter.location)}</td>
+                    <td data-col="insurance">${encounter.insurance ? escapeHtml(encounter.insurance) : '<span class="empty-cell">—</span>'}</td>
+                    <td data-col="noteTitle"><a href="${patientLink}#noteId=${encounter.dbid}" target="_top">${escapeHtml(encounter.noteTitle)}</a></td>
+                    <td data-col="dos">${escapeHtml(encounter.dos)}</td>
+                    <td data-col="billable">${createBillableStatus(encounter.billable)}</td>
+                    <td data-col="uncommittedCommands" class="compact">${createCountBadge(encounter.uncommittedCommands)}</td>
+                    <td data-col="delegatedOrders" class="compact">${createCountBadge(encounter.delegatedOrders, 'blue')}</td>
+                    <td data-col="claimQueue">${createClaimQueueDropdown(encounter)}</td>
+                    <td data-col="daysInQueue" class="compact">${createDaysInQueue(encounter.daysInQueue)}</td>
+                    <td data-col="balance">${createBalanceCell(encounter.patientBalance, encounter.insuranceBalance)}</td>
+                    <td data-col="latestRemit">${createRemitCell(encounter.latestRemitDate, encounter.latestRemitEra)}</td>
+                    <td data-col="adjustmentCodes">${createAdjCodesCell(encounter.adjustmentCodes)}</td>
+                    <td data-col="lastTouched">${createLastTouchedCell(encounter)}</td>
+                    <td data-col="tags">${createTagBadges(encounter.tags)}</td>
                 `;
 
                 tbody.appendChild(row);
             });
+            applyColumnVisibility();
         }
 
         function updateEncounterCount() {
@@ -1469,7 +1803,7 @@
 
         // Sorting functionality
         async function sortEncounters(columnIndex) {
-            const columns = ['patientName', 'provider', 'location', 'insurance', 'noteTitle', 'dos', 'billable', 'uncommittedCommands', 'delegatedOrders', 'claimQueue', 'daysInQueue', 'tags'];
+            const columns = ['reviewed', 'patientName', 'provider', 'location', 'insurance', 'noteTitle', 'dos', 'billable', 'uncommittedCommands', 'delegatedOrders', 'claimQueue', 'daysInQueue', 'balance', 'latestRemit', 'adjustmentCodes', 'lastTouched', 'tags'];
             const key = columns[columnIndex];
 
             if (sortConfig.key === key) {
@@ -1507,7 +1841,7 @@
         function updateSortIndicators() {
             const headerRow = document.querySelector('.worklist-table thead tr:first-child');
             const headers = headerRow.querySelectorAll('th');
-            const columns = ['patientName', 'provider', 'location', 'insurance', 'noteTitle', 'dos', 'billable', 'uncommittedCommands', 'delegatedOrders', 'claimQueue', 'daysInQueue', 'tags'];
+            const columns = ['reviewed', 'patientName', 'provider', 'location', 'insurance', 'noteTitle', 'dos', 'billable', 'uncommittedCommands', 'delegatedOrders', 'claimQueue', 'daysInQueue', 'balance', 'latestRemit', 'adjustmentCodes', 'lastTouched', 'tags'];
             
             headers.forEach((header, index) => {
                 const column = columns[index];
@@ -2341,6 +2675,109 @@
             }
         }
 
+        function setupColumnManager() {
+            const overlay = document.getElementById('columnManagerOverlay');
+            const openBtn = document.getElementById('columnManagerBtn');
+            const closeBtn = document.getElementById('columnManagerClose');
+            const toggleList = document.getElementById('columnToggleList');
+            const saveBtn = document.getElementById('viewSaveBtn');
+            const deleteBtn = document.getElementById('viewDeleteBtn');
+            const nameInput = document.getElementById('viewNameInput');
+
+            openBtn.addEventListener('click', () => {
+                renderColumnToggles();
+                renderSavedViewChips();
+                overlay.classList.add('show');
+            });
+
+            closeBtn.addEventListener('click', () => {
+                overlay.classList.remove('show');
+            });
+
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) overlay.classList.remove('show');
+            });
+
+            // Save view
+            saveBtn.addEventListener('click', async () => {
+                const name = nameInput.value.trim() || 'Default';
+                const cols = ALL_COLUMNS.map(c => ({ key: c.key, visible: columnVisibility[c.key] }));
+                try {
+                    const response = await fetch(`${API_BASE_URL}/views`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ config_name: name, columns: cols, is_default: true }),
+                    });
+                    if (response.ok) {
+                        await fetchSavedViews();
+                        activeViewName = name;
+                        renderSavedViewChips();
+                    }
+                } catch (error) {
+                    console.error('Error saving view:', error);
+                }
+            });
+
+            // Delete view
+            deleteBtn.addEventListener('click', async () => {
+                const name = nameInput.value.trim();
+                if (!name) return;
+                try {
+                    await fetch(`${API_BASE_URL}/views/delete`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ config_name: name }),
+                    });
+                    await fetchSavedViews();
+                    if (activeViewName === name) {
+                        activeViewName = null;
+                        ALL_COLUMNS.forEach(c => { columnVisibility[c.key] = c.visible; });
+                        applyColumnVisibility();
+                    }
+                    renderSavedViewChips();
+                    nameInput.value = '';
+                } catch (error) {
+                    console.error('Error deleting view:', error);
+                }
+            });
+        }
+
+        function renderColumnToggles() {
+            const toggleList = document.getElementById('columnToggleList');
+            toggleList.innerHTML = '';
+            ALL_COLUMNS.forEach(col => {
+                const item = document.createElement('label');
+                item.className = 'column-toggle-item';
+                item.innerHTML = `
+                    <input type="checkbox" data-col-key="${col.key}" ${columnVisibility[col.key] ? 'checked' : ''}>
+                    <span>${col.label}</span>
+                `;
+                item.querySelector('input').addEventListener('change', (e) => {
+                    columnVisibility[col.key] = e.target.checked;
+                    applyColumnVisibility();
+                    renderTable();
+                });
+                toggleList.appendChild(item);
+            });
+        }
+
+        function renderSavedViewChips() {
+            const container = document.getElementById('savedViewsList');
+            container.innerHTML = '';
+            savedViews.forEach(view => {
+                const chip = document.createElement('span');
+                chip.className = `saved-view-chip${view.config_name === activeViewName ? ' active' : ''}`;
+                chip.textContent = view.config_name;
+                chip.addEventListener('click', () => {
+                    applyViewConfig(view);
+                    renderTable();
+                    document.getElementById('viewNameInput').value = view.config_name;
+                    renderSavedViewChips();
+                });
+                container.appendChild(chip);
+            });
+        }
+
         // Initialize the worklist
         document.addEventListener('DOMContentLoaded', async () => {
             try {
@@ -2352,6 +2789,8 @@
                     fetchClaimQueues(),
                     fetchInsurances(),
                     fetchTags(),
+                    fetchReviewedState(),
+                    fetchSavedViews(),
                 ]);
 
                 // Populate all filter dropdowns
@@ -2365,6 +2804,9 @@
                 // Populate and setup inline header filters
                 populateHeaderFilters();
                 setupHeaderFilterListeners();
+
+                // Setup column manager
+                setupColumnManager();
 
                 // Initialize page size dropdown
                 const pageSizeSelect = document.getElementById('pageSizeSelect');
@@ -2418,7 +2860,7 @@
                 console.error('Error initializing encounter worklist:', error);
                 // Show error state in the UI
                 document.getElementById('worklistBody').innerHTML = 
-                    '<tr><td colspan="12" class="error-row">Error loading encounters. Please refresh the page.</td></tr>';
+                    '<tr><td colspan="17" class="error-row">Error loading encounters. Please refresh the page.</td></tr>';
                 document.getElementById('encounterCount').textContent = 'Error loading data';
                 hideLoadingSpinner();
             }

@@ -15,8 +15,11 @@ from canvas_sdk.templates import render_to_string
 from canvas_sdk.v1.data import Note, Command, Referral, ImagingOrder, Staff
 from canvas_sdk.v1.data.claim import Claim, ClaimLabel, ClaimQueue
 from canvas_sdk.v1.data.coverage import Coverage, Transactor
+from canvas_sdk.v1.data.line_item_transaction import NewLineItemAdjustment
 from canvas_sdk.v1.data.note import NoteStates, NoteTypeCategories, NoteType
+from canvas_sdk.v1.data.posting import BasePosting, CoveragePosting
 from canvas_sdk.v1.data.task import TaskLabel, TaskStatus
+from revenue_cycle_worklist.models.custom_data import ColumnViewConfig, ReviewedClaim
 
 
 class MyApplication(Application):
@@ -174,11 +177,48 @@ class RevenueCycleApi(StaffSessionAuthMixin, SimpleAPI):
                         "color": cl.label.color if cl.label.color else None,
                     })
 
+            # Get balance data
+            patient_balance = None
+            insurance_balance = None
+            if claim:
+                patient_balance = float(claim.patient_balance) if claim.patient_balance else 0.0
+                insurance_balance = float(claim.aggregate_coverage_balance) if claim.aggregate_coverage_balance else 0.0
+
+            # Get latest remit
+            latest_remit_date = None
+            latest_remit_era = None
+            if claim:
+                latest_coverage_posting = (
+                    CoveragePosting.objects.filter(
+                        claim=claim,
+                        entered_in_error__isnull=True,
+                        remittance__isnull=False,
+                    )
+                    .select_related("remittance")
+                    .order_by("-remittance__created")
+                    .first()
+                )
+                if latest_coverage_posting and latest_coverage_posting.remittance:
+                    remit = latest_coverage_posting.remittance
+                    latest_remit_date = remit.created.isoformat() if remit.created else None
+                    latest_remit_era = remit.era_id or None
+
+            # Get adjustment codes
+            adjustment_codes = []
+            if claim:
+                adjustments = NewLineItemAdjustment.objects.filter(
+                    posting__claim=claim,
+                    posting__entered_in_error__isnull=True,
+                ).values("group", "code").distinct()[:10]
+                for adj in adjustments:
+                    if adj["group"] or adj["code"]:
+                        adjustment_codes.append(f"{adj['group']}-{adj['code']}")
+
             delegated_commands = self._calculate_delegated_orders_count(note)
 
             try:
                 note_title = note.note_type_version.name or "Untitled Note"
-            except:
+            except Exception:
                 note_title = "Untitled Note"
 
             encounter_data = {
@@ -202,6 +242,11 @@ class RevenueCycleApi(StaffSessionAuthMixin, SimpleAPI):
                 "days_in_queue": days_in_queue,
                 "insurance": insurance,
                 "tags": tags,
+                "patient_balance": patient_balance,
+                "insurance_balance": insurance_balance,
+                "latest_remit_date": latest_remit_date,
+                "latest_remit_era": latest_remit_era,
+                "adjustment_codes": adjustment_codes,
                 "location": note.location.full_name if note.location else "Unknown Location",
                 "location_id": str(note.location.id) if note.location else None,
                 "created": note.created.isoformat() if note.created else None,
@@ -342,6 +387,150 @@ class RevenueCycleApi(StaffSessionAuthMixin, SimpleAPI):
             label["id"] = str(label["id"])
         return [JSONResponse({"tags": labels}, status_code=HTTPStatus.OK)]
 
+    # --- Reviewed state endpoints ---
+
+    @api.get("/reviewed")
+    def get_reviewed(self) -> list[Response | Effect]:
+        """Get all reviewed claim IDs for the logged-in user."""
+        staff_id = self.request.headers.get("canvas-logged-in-user-id")
+        if not staff_id:
+            return [JSONResponse({"reviewed": {}}, status_code=HTTPStatus.OK)]
+
+        staff = Staff.objects.filter(id=staff_id).first()
+        if not staff:
+            return [JSONResponse({"reviewed": {}}, status_code=HTTPStatus.OK)]
+
+        records = ReviewedClaim.objects.filter(staff=staff, reviewed=True)
+        reviewed_map = {}
+        for r in records:
+            reviewed_map[r.claim_id] = r.reviewed_at.isoformat() if r.reviewed_at else None
+
+        return [JSONResponse({"reviewed": reviewed_map}, status_code=HTTPStatus.OK)]
+
+    @api.post("/reviewed")
+    def set_reviewed(self) -> list[Response | Effect]:
+        """Mark or unmark a claim as reviewed for the logged-in user."""
+        try:
+            body = json.loads(self.request.body)
+        except (json.JSONDecodeError, TypeError):
+            return [JSONResponse({"error": "Invalid JSON body"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+        claim_id = body.get("claim_id")
+        reviewed = body.get("reviewed", True)
+
+        if not claim_id:
+            return [JSONResponse({"error": "claim_id is required"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+        staff_id = self.request.headers.get("canvas-logged-in-user-id")
+        staff = Staff.objects.filter(id=staff_id).first()
+        if not staff:
+            return [JSONResponse({"error": "Staff not found"}, status_code=HTTPStatus.NOT_FOUND)]
+
+        if reviewed:
+            obj, created = ReviewedClaim.objects.get_or_create(
+                staff=staff,
+                claim_id=claim_id,
+                defaults={"reviewed": True, "reviewed_at": datetime.now(timezone.utc)},
+            )
+            if not created:
+                obj.reviewed = True
+                obj.reviewed_at = datetime.now(timezone.utc)
+                obj.save()
+            return [JSONResponse({
+                "claim_id": claim_id,
+                "reviewed": True,
+                "reviewed_at": obj.reviewed_at.isoformat(),
+            }, status_code=HTTPStatus.OK)]
+        else:
+            ReviewedClaim.objects.filter(staff=staff, claim_id=claim_id).delete()
+            return [JSONResponse({
+                "claim_id": claim_id,
+                "reviewed": False,
+            }, status_code=HTTPStatus.OK)]
+
+    # --- Saved views endpoints ---
+
+    @api.get("/views")
+    def get_views(self) -> list[Response | Effect]:
+        """Get all saved column views for the logged-in user."""
+        staff_id = self.request.headers.get("canvas-logged-in-user-id")
+        staff = Staff.objects.filter(id=staff_id).first()
+        if not staff:
+            return [JSONResponse({"views": []}, status_code=HTTPStatus.OK)]
+
+        views = ColumnViewConfig.objects.filter(staff=staff).order_by("config_name")
+        result = []
+        for v in views:
+            result.append({
+                "id": v.dbid,
+                "config_name": v.config_name,
+                "columns": v.columns,
+                "is_default": v.is_default,
+            })
+
+        return [JSONResponse({"views": result}, status_code=HTTPStatus.OK)]
+
+    @api.post("/views")
+    def save_view(self) -> list[Response | Effect]:
+        """Save or update a column view configuration."""
+        try:
+            body = json.loads(self.request.body)
+        except (json.JSONDecodeError, TypeError):
+            return [JSONResponse({"error": "Invalid JSON body"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+        config_name = body.get("config_name", "Default")
+        columns = body.get("columns", [])
+        is_default = body.get("is_default", False)
+
+        staff_id = self.request.headers.get("canvas-logged-in-user-id")
+        staff = Staff.objects.filter(id=staff_id).first()
+        if not staff:
+            return [JSONResponse({"error": "Staff not found"}, status_code=HTTPStatus.NOT_FOUND)]
+
+        # If setting as default, clear other defaults
+        if is_default:
+            ColumnViewConfig.objects.filter(staff=staff, is_default=True).update(is_default=False)
+
+        obj, created = ColumnViewConfig.objects.get_or_create(
+            staff=staff,
+            config_name=config_name,
+            defaults={"columns": columns, "is_default": is_default},
+        )
+        if not created:
+            obj.columns = columns
+            obj.is_default = is_default
+            obj.save()
+
+        return [JSONResponse({
+            "id": obj.dbid,
+            "config_name": obj.config_name,
+            "columns": obj.columns,
+            "is_default": obj.is_default,
+        }, status_code=HTTPStatus.OK)]
+
+    @api.post("/views/delete")
+    def delete_view(self) -> list[Response | Effect]:
+        """Delete a saved view by name."""
+        try:
+            body = json.loads(self.request.body)
+        except (json.JSONDecodeError, TypeError):
+            return [JSONResponse({"error": "Invalid JSON body"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+        config_name = body.get("config_name")
+        if not config_name:
+            return [JSONResponse({"error": "config_name is required"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+        staff_id = self.request.headers.get("canvas-logged-in-user-id")
+        staff = Staff.objects.filter(id=staff_id).first()
+        if not staff:
+            return [JSONResponse({"error": "Staff not found"}, status_code=HTTPStatus.NOT_FOUND)]
+
+        deleted_count, _ = ColumnViewConfig.objects.filter(
+            staff=staff, config_name=config_name
+        ).delete()
+
+        return [JSONResponse({"deleted": deleted_count > 0}, status_code=HTTPStatus.OK)]
+
     @api.get("/export_csv")
     def export_csv(self) -> list[Response | Effect]:
         """Export all encounters matching current filters as CSV."""
@@ -422,7 +611,9 @@ class RevenueCycleApi(StaffSessionAuthMixin, SimpleAPI):
         rows.append(",".join([
             "Patient Name", "DOB", "Provider", "Location", "Insurance",
             "Note Type", "Date of Service", "Billable", "Uncommitted Commands",
-            "Delegated Orders", "Claim Queue", "Days in Queue", "Tags",
+            "Delegated Orders", "Claim Queue", "Days in Queue",
+            "Patient Balance", "Insurance Balance", "Latest Remit",
+            "Adjustment Codes", "Tags",
         ]))
 
         for note in note_queryset:
@@ -445,6 +636,27 @@ class RevenueCycleApi(StaffSessionAuthMixin, SimpleAPI):
             if claim:
                 for cl in claim.claim_labels.select_related("label").all():
                     tag_names.append(cl.label.name)
+
+            csv_patient_bal = ""
+            csv_insurance_bal = ""
+            csv_latest_remit = ""
+            csv_adj_codes = ""
+            if claim:
+                csv_patient_bal = str(float(claim.patient_balance)) if claim.patient_balance else "0.00"
+                csv_insurance_bal = str(float(claim.aggregate_coverage_balance)) if claim.aggregate_coverage_balance else "0.00"
+                cp = (
+                    CoveragePosting.objects.filter(
+                        claim=claim, entered_in_error__isnull=True, remittance__isnull=False,
+                    ).select_related("remittance").order_by("-remittance__created").first()
+                )
+                if cp and cp.remittance and cp.remittance.created:
+                    csv_latest_remit = arrow.get(cp.remittance.created).format("YYYY-MM-DD")
+                adjs = NewLineItemAdjustment.objects.filter(
+                    posting__claim=claim, posting__entered_in_error__isnull=True,
+                ).values("group", "code").distinct()[:10]
+                csv_adj_codes = "; ".join(
+                    f"{a['group']}-{a['code']}" for a in adjs if a["group"] or a["code"]
+                )
 
             patient_name = "Unknown Patient"
             if note.patient:
@@ -470,6 +682,10 @@ class RevenueCycleApi(StaffSessionAuthMixin, SimpleAPI):
                 csv_escape(str(delegated_count)),
                 csv_escape(claim_queue),
                 csv_escape(days_in_queue),
+                csv_escape(csv_patient_bal),
+                csv_escape(csv_insurance_bal),
+                csv_escape(csv_latest_remit),
+                csv_escape(csv_adj_codes),
                 csv_escape("; ".join(tag_names)),
             ]
             rows.append(",".join(row))
