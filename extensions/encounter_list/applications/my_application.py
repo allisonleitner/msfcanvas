@@ -1,5 +1,3 @@
-import csv
-import io
 import json
 from datetime import datetime, timezone
 from http import HTTPStatus
@@ -413,20 +411,26 @@ class EncounterListApi(StaffSessionAuthMixin, SimpleAPI):
 
         note_queryset = note_queryset.order_by("datetime_of_service")
 
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow([
+        def csv_escape(val: str) -> str:
+            """Escape a value for CSV output."""
+            s = str(val) if val is not None else ""
+            if '"' in s or ',' in s or '\n' in s:
+                return '"' + s.replace('"', '""') + '"'
+            return s
+
+        rows = []
+        rows.append(",".join([
             "Patient Name", "DOB", "Provider", "Location", "Insurance",
             "Note Type", "Date of Service", "Billable", "Uncommitted Commands",
             "Delegated Orders", "Claim Queue", "Days in Queue", "Tags",
-        ])
+        ]))
 
         for note in note_queryset:
             claim = note.get_claim()
             claim_queue = claim.current_queue.name if claim else ""
             days_in_queue = ""
             if claim and claim.modified:
-                days_in_queue = (datetime.now(timezone.utc) - claim.modified).days
+                days_in_queue = str((datetime.now(timezone.utc) - claim.modified).days)
 
             insurance = ""
             if note.patient:
@@ -437,10 +441,10 @@ class EncounterListApi(StaffSessionAuthMixin, SimpleAPI):
                 if primary_cov and primary_cov.issuer:
                     insurance = primary_cov.issuer.name
 
-            tags = []
+            tag_names = []
             if claim:
                 for cl in claim.claim_labels.select_related("label").all():
-                    tags.append(cl.label.name)
+                    tag_names.append(cl.label.name)
 
             patient_name = "Unknown Patient"
             if note.patient:
@@ -453,23 +457,24 @@ class EncounterListApi(StaffSessionAuthMixin, SimpleAPI):
 
             delegated_count = self._calculate_delegated_orders_count(note)
 
-            writer.writerow([
-                patient_name,
-                arrow.get(note.patient.birth_date).format("YYYY-MM-DD") if note.patient and note.patient.birth_date else "",
-                note.provider.credentialed_name if note.provider else "",
-                note.location.full_name if note.location else "",
-                insurance,
-                note_title,
-                arrow.get(note.datetime_of_service).format("YYYY-MM-DD") if note.datetime_of_service else "",
-                "Yes" if self._get_billable_status(note) else "No",
-                note.staged_commands_count,
-                delegated_count,
-                claim_queue,
-                days_in_queue,
-                "; ".join(tags),
-            ])
+            row = [
+                csv_escape(patient_name),
+                csv_escape(arrow.get(note.patient.birth_date).format("YYYY-MM-DD") if note.patient and note.patient.birth_date else ""),
+                csv_escape(note.provider.credentialed_name if note.provider else ""),
+                csv_escape(note.location.full_name if note.location else ""),
+                csv_escape(insurance),
+                csv_escape(note_title),
+                csv_escape(arrow.get(note.datetime_of_service).format("YYYY-MM-DD") if note.datetime_of_service else ""),
+                csv_escape("Yes" if self._get_billable_status(note) else "No"),
+                csv_escape(str(note.staged_commands_count)),
+                csv_escape(str(delegated_count)),
+                csv_escape(claim_queue),
+                csv_escape(days_in_queue),
+                csv_escape("; ".join(tag_names)),
+            ]
+            rows.append(",".join(row))
 
-        csv_content = output.getvalue()
+        csv_content = "\n".join(rows)
         return [Response(
             status_code=HTTPStatus.OK,
             body=csv_content,
