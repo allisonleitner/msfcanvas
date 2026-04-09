@@ -13,6 +13,8 @@ from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.application import Application
 from canvas_sdk.handlers.simple_api import SimpleAPI, StaffSessionAuthMixin, api
 from canvas_sdk.templates import render_to_string
+from django.db.models import Q
+
 from canvas_sdk.v1.data import Staff
 from canvas_sdk.v1.data.appointment import Appointment
 
@@ -502,9 +504,9 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
         """Idempotent seed of Elle Medicine rooms, resources, and audio presets."""
         from floor_plan_viewer.models.custom_data import AudioPreset, Resource, Room
 
-        rooms_created = 0
+        rooms_updated = 0
         for r in ELLE_MEDICINE_ROOMS:
-            _, was_created = Room.objects.get_or_create(
+            Room.objects.update_or_create(
                 key=r["key"],
                 defaults={
                     "name": r["name"],
@@ -514,12 +516,11 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                     "equipment": r["equipment"],
                 },
             )
-            if was_created:
-                rooms_created += 1
+            rooms_updated = rooms_updated + 1
 
-        resources_created = 0
+        resources_updated = 0
         for res in ELLE_MEDICINE_RESOURCES:
-            _, was_created = Resource.objects.get_or_create(
+            Resource.objects.update_or_create(
                 key=res["key"],
                 defaults={
                     "name": res["name"],
@@ -532,8 +533,7 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                     "description": res.get("description", ""),
                 },
             )
-            if was_created:
-                resources_created += 1
+            resources_updated = resources_updated + 1
 
         presets_created = 0
         for p in ELLE_MEDICINE_AUDIO_PRESETS:
@@ -552,8 +552,8 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
 
         return [JSONResponse({
             "success": True,
-            "rooms_created": rooms_created,
-            "resources_created": resources_created,
+            "rooms_updated": rooms_updated,
+            "resources_updated": resources_updated,
             "presets_created": presets_created,
         }, status_code=HTTPStatus.OK)]
 
@@ -1019,8 +1019,6 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
             return [JSONResponse({"patients": []}, status_code=HTTPStatus.OK)]
 
         qs = Patient.objects.filter(active=True)
-        # Search by first or last name
-        from django.db.models import Q
         qs = qs.filter(Q(first_name__icontains=q) | Q(last_name__icontains=q))
         qs = qs.order_by("last_name", "first_name")[:20]
 
