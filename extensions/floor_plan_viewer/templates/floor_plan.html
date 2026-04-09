@@ -132,34 +132,30 @@
   @keyframes softPulse{0%,100%{opacity:1}50%{opacity:.5}}
   .room-occupied .pulse-dot{animation:softPulse 3s ease-in-out infinite}
 
-  /* SCHEDULE TAB */
-  .sched-person{margin-bottom:16px;background:var(--warm-white);border:1px solid var(--border);border-radius:12px;overflow:hidden}
-  .sched-person-header{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer}
-  .sched-person-header:hover{background:var(--ivory)}
-  .sched-person-name{font-family:'Cormorant Garamond',Georgia,serif;font-size:17px;font-weight:600;color:var(--navy)}
-  .sched-person-count{font-size:11px;color:var(--taupe);background:var(--cream);padding:2px 8px;border-radius:10px}
-  .sched-person-room{font-size:11px;color:var(--sage-dark);background:var(--sage-light);padding:2px 8px;border-radius:10px;margin-left:6px}
-  .sched-appts{border-top:1px solid var(--border)}
-  .sched-appt{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-  .sched-appt:last-child{border-bottom:none}
-  .sched-appt-info{flex:1}
-  .sched-appt-time{font-size:11px;font-weight:600;color:var(--charcoal)}
-  .sched-appt-patient{font-size:14px;color:var(--navy);margin-top:1px}
-  .sched-appt-room{display:flex;align-items:center;gap:6px}
-  .sched-room-badge{padding:4px 10px;border-radius:8px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--warm-white);color:var(--charcoal)}
-  .sched-room-badge.assigned{background:var(--sage-light);border-color:var(--sage);color:var(--sage-dark)}
-  .sched-room-select{padding:4px 8px;border-radius:8px;border:1px solid var(--gold);background:var(--gold-light);font-size:11px;color:var(--gold-dark);cursor:pointer;font-family:'Inter',sans-serif}
-  .sched-room-select:focus{outline:none;box-shadow:0 0 0 2px var(--gold-light)}
-  .sched-actions{display:flex;gap:4px;margin-top:4px}
-  .sched-btn{padding:3px 8px;border-radius:6px;border:1px solid var(--border);background:var(--warm-white);font-size:10px;font-weight:600;cursor:pointer;transition:all .2s}
-  .sched-btn:hover{background:var(--cream)}
-  .sched-btn.checkin{color:var(--sage-dark);border-color:var(--sage)}
-  .sched-btn.checkin:hover{background:var(--sage-light)}
-  .sched-btn.checkout{color:var(--blush-dark);border-color:var(--blush)}
-  .sched-btn.checkout:hover{background:var(--blush-light)}
-  .sched-status{font-size:10px;font-weight:600;padding:2px 6px;border-radius:6px;margin-left:6px}
-  .sched-status.checked-in{background:var(--sage-light);color:var(--sage-dark)}
-  .sched-status.fulfilled{background:var(--sand);color:var(--taupe)}
+  /* SCHEDULE TAB - Calendar Grid */
+  .cal-wrapper{display:flex;flex:1;overflow:auto;background:var(--warm-white)}
+  .cal-time-col{width:60px;flex-shrink:0;border-right:1px solid var(--border);background:var(--cream);position:sticky;left:0;z-index:2}
+  .cal-time-label{height:60px;display:flex;align-items:flex-start;justify-content:flex-end;padding:2px 8px 0 0;font-size:10px;color:var(--taupe);font-weight:500}
+  .cal-grid{display:flex;flex:1;min-width:0}
+  .cal-col{flex:1;min-width:140px;border-right:1px solid var(--border);position:relative}
+  .cal-col:last-child{border-right:none}
+  .cal-col-header{position:sticky;top:0;z-index:3;background:var(--cream);border-bottom:1px solid var(--border);padding:8px 6px;text-align:center;font-size:11px;font-weight:600;color:var(--navy);min-height:50px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .cal-col-header.provider{border-top:3px solid var(--sage)}
+  .cal-col-header.resource{border-top:3px solid var(--gold)}
+  .cal-col-header .cal-col-sub{font-size:9px;font-weight:400;color:var(--taupe);margin-top:2px}
+  .cal-col-body{position:relative;height:720px}
+  .cal-hour-line{position:absolute;left:0;right:0;height:1px;background:var(--border)}
+  .cal-half-line{position:absolute;left:0;right:0;height:1px;background:var(--border);opacity:.4}
+  .cal-block{position:absolute;left:3px;right:3px;border-radius:6px;padding:4px 6px;overflow:hidden;cursor:pointer;transition:box-shadow .2s;z-index:1;font-size:10px;line-height:1.3}
+  .cal-block:hover{box-shadow:0 2px 8px rgba(44,51,69,.15);z-index:2}
+  .cal-block.provider-block{background:var(--sage-light);border:1px solid var(--sage);color:var(--sage-dark)}
+  .cal-block.resource-block{background:var(--gold-light);border:1px solid var(--gold);color:var(--gold-dark)}
+  .cal-block.conflict{background:var(--blush-light);border:1px solid var(--blush);color:var(--blush-dark)}
+  .cal-block .cal-block-patient{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cal-block .cal-block-time{opacity:.8;font-size:9px}
+  .cal-block .cal-block-room{font-size:9px;opacity:.7}
+  .cal-now-line{position:absolute;left:0;right:0;height:2px;background:var(--blush);z-index:5}
+  .cal-now-dot{position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:50%;background:var(--blush)}
   /* Booking segments */
   .book-segment{background:var(--ivory);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;position:relative}
   .book-segment-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
@@ -360,21 +356,15 @@
 
     <!-- SCHEDULE TAB -->
     <div class="tab-content" id="tab-schedule" style="flex-direction:column">
-      <div style="padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--warm-white)">
+      <div style="padding:10px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--warm-white);flex-shrink:0">
         <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:20px;font-weight:600;color:var(--navy)">Today's Schedule</div>
         <button class="btn active" onclick="openBookingModal()">Book Visit</button>
       </div>
-      <div style="padding:20px 24px;flex:1;overflow:auto">
-        <div style="display:flex;gap:24px;min-height:100%">
-          <div style="flex:1;min-width:280px">
-            <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:18px;font-weight:600;color:var(--navy);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--sage)">Providers</div>
-            <div id="scheduleProviders"></div>
-          </div>
-          <div style="flex:1;min-width:280px">
-            <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:18px;font-weight:600;color:var(--navy);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--gold)">Resources</div>
-            <div id="scheduleResources"></div>
-          </div>
-        </div>
+      <div class="cal-wrapper" id="calWrapper">
+        <!-- Time column -->
+        <div class="cal-time-col" id="calTimeCol"></div>
+        <!-- Provider + Resource columns -->
+        <div class="cal-grid" id="calGrid"></div>
       </div>
     </div>
 
@@ -819,121 +809,123 @@ async function addToCalendar(key){
 }
 
 // === Schedule Tab ===
-function renderSchedule() {
-  const bookableRooms = Object.values(rooms).filter(r => r.bookable);
-  const roomOpts = bookableRooms.map(r => `<option value="${r.key}">${r.name}</option>`).join('');
+// === Calendar Grid ===
+const CAL_START_HOUR = 7;  // 7 AM
+const CAL_END_HOUR = 19;   // 7 PM
+const CAL_HOURS = CAL_END_HOUR - CAL_START_HOUR; // 12 hours
+const PX_PER_HOUR = 60;
+const CAL_HEIGHT = CAL_HOURS * PX_PER_HOUR; // 720px
 
-  // Group appointments by provider
+function timeToY(isoStr) {
+  const d = new Date(isoStr);
+  const hours = d.getHours() + d.getMinutes() / 60;
+  return (hours - CAL_START_HOUR) * PX_PER_HOUR;
+}
+
+function renderSchedule() {
+  // Time column
+  const timeCol = document.getElementById('calTimeCol');
+  let timeHtml = '<div style="height:50px"></div>'; // header spacer
+  for (let h = CAL_START_HOUR; h < CAL_END_HOUR; h++) {
+    const label = h === 0 ? '12 AM' : h < 12 ? h + ' AM' : h === 12 ? '12 PM' : (h - 12) + ' PM';
+    timeHtml += `<div class="cal-time-label">${label}</div>`;
+  }
+  timeCol.innerHTML = timeHtml;
+
+  // Build columns: active providers + resources
   const providerAppts = {};
   providers.forEach(p => { providerAppts[p.id] = []; });
   appointments.forEach(a => {
-    if (a.provider_id && providerAppts[a.provider_id]) {
-      providerAppts[a.provider_id].push(a);
-    }
+    if (a.provider_id && providerAppts[a.provider_id]) providerAppts[a.provider_id].push(a);
   });
-
-  // Find room assignment for an appointment
-  function getAssignedRoom(apptId) {
-    const a = assignments.find(x => x.appointment_id === apptId && x.status !== 'cancelled');
-    return a ? a.room_key : '';
-  }
-  function getAssignmentId(apptId) {
-    const a = assignments.find(x => x.appointment_id === apptId && x.status !== 'cancelled');
-    return a ? a.id : null;
-  }
-
-  // Render providers
-  const provCol = document.getElementById('scheduleProviders');
   const activeProviders = providers.filter(p => providerAppts[p.id] && providerAppts[p.id].length > 0);
-  if (!activeProviders.length) {
-    provCol.innerHTML = '<div style="color:var(--taupe);font-style:italic;padding:20px">No provider appointments today</div>';
-  } else {
-    provCol.innerHTML = activeProviders.map(p => {
-      const appts = providerAppts[p.id].sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
-      return `<div class="sched-person">
-        <div class="sched-person-header">
-          <span class="sched-person-name">${p.name}</span>
-          <span class="sched-person-count">${appts.length} appt${appts.length !== 1 ? 's' : ''}</span>
-        </div>
-        <div class="sched-appts">${appts.map(a => {
-          const assignedRoom = getAssignedRoom(a.id);
-          const assignId = getAssignmentId(a.id);
-          const roomName = assignedRoom ? (rooms[assignedRoom]?.name || assignedRoom) : '';
-          const apptStatus = (a.status || '').toLowerCase();
-          const isCheckedIn = apptStatus.includes('check');
-          const isFulfilled = apptStatus.includes('fulfil');
-          let statusBadge = '';
-          if (isCheckedIn) statusBadge = '<span class="sched-status checked-in">Checked In</span>';
-          else if (isFulfilled) statusBadge = '<span class="sched-status fulfilled">Complete</span>';
-          let actionBtns = '';
-          if (!isFulfilled && !isCheckedIn) actionBtns = `<button class="sched-btn checkin" onclick="checkinPatient('${a.id}','${a.patient_name.replace(/'/g,"\\'")}')">Check In</button>`;
-          else if (isCheckedIn) actionBtns = `<button class="sched-btn checkout" onclick="checkoutPatient('${a.id}','${a.patient_name.replace(/'/g,"\\'")}')">Check Out</button>`;
-          return `<div class="sched-appt">
-            <div class="sched-appt-info">
-              <div class="sched-appt-time">${formatTime(a.start_time)} - ${formatTime(a.end_time)}${statusBadge}</div>
-              <div class="sched-appt-patient">${a.patient_name}</div>
-              <div class="sched-actions">${actionBtns}</div>
-            </div>
-            <div class="sched-appt-room">
-              ${assignedRoom
-                ? '<span class="sched-room-badge assigned">' + roomName + '</span>'
-                : '<select class="sched-room-select" onchange="schedAssignRoom(this.value,\'' + a.id + '\',\'' + a.patient_name.replace(/'/g, "\\'") + '\',\'' + a.provider_name.replace(/'/g, "\\'") + '\',\'' + a.start_time + '\',\'' + a.end_time + '\')"><option value="">Assign room...</option>' + roomOpts + '</select>'
-              }
-            </div>
-          </div>`;
-        }).join('')}</div>
-      </div>`;
-    }).join('');
+
+  const grid = document.getElementById('calGrid');
+  let gridHtml = '';
+
+  // Helper: render hour lines
+  function hourLines() {
+    let h = '';
+    for (let i = 0; i < CAL_HOURS; i++) {
+      h += `<div class="cal-hour-line" style="top:${i * PX_PER_HOUR}px"></div>`;
+      h += `<div class="cal-half-line" style="top:${i * PX_PER_HOUR + 30}px"></div>`;
+    }
+    // Current time line
+    const now = new Date();
+    const nowHours = now.getHours() + now.getMinutes() / 60;
+    if (nowHours >= CAL_START_HOUR && nowHours <= CAL_END_HOUR) {
+      const y = (nowHours - CAL_START_HOUR) * PX_PER_HOUR;
+      h += `<div class="cal-now-line" style="top:${y}px"><div class="cal-now-dot"></div></div>`;
+    }
+    return h;
   }
 
-  // Render resources with their assignments
-  const resCol = document.getElementById('scheduleResources');
-  if (!resources.length) {
-    resCol.innerHTML = '<div style="color:var(--taupe);font-style:italic;padding:20px">No resources configured</div>';
-  } else {
-    resCol.innerHTML = resources.map(r => {
-      const resAssignments = assignments.filter(a => (a.resource_keys || []).includes(r.key) && a.status !== 'cancelled');
-      const roomName = rooms[r.room_key]?.name || '';
-      return `<div class="sched-person">
-        <div class="sched-person-header">
-          <div>
-            <span class="sched-person-name">${r.name}</span>
-            ${roomName ? '<span class="sched-person-room">' + roomName + '</span>' : ''}
-          </div>
-          <span class="sched-person-count">${resAssignments.length} session${resAssignments.length !== 1 ? 's' : ''}</span>
-        </div>
-        ${resAssignments.length > 0 ? '<div class="sched-appts">' + resAssignments.sort((a, b) => new Date(a.start_time) - new Date(b.start_time)).map(a => {
-          const assignedRoom = a.room_key ? (rooms[a.room_key]?.name || a.room_key) : '';
-          return `<div class="sched-appt">
-            <div class="sched-appt-info">
-              <div class="sched-appt-time">${formatTime(a.start_time)} - ${formatTime(a.end_time)}</div>
-              <div class="sched-appt-patient">${a.patient_name || 'Unassigned'}</div>
-            </div>
-            ${assignedRoom ? '<span class="sched-room-badge assigned">' + assignedRoom + '</span>' : ''}
-          </div>`;
-        }).join('') + '</div>' : '<div style="padding:12px 16px;color:var(--taupe);font-size:12px;font-style:italic;border-top:1px solid var(--border)">No sessions scheduled</div>'}
-      </div>`;
-    }).join('');
+  // Helper: render appointment block
+  function renderBlock(appt, type, roomKey) {
+    const top = Math.max(0, timeToY(appt.start_time));
+    const bottom = Math.min(CAL_HEIGHT, timeToY(appt.end_time));
+    const height = Math.max(18, bottom - top);
+    const roomName = roomKey ? (rooms[roomKey]?.name || roomKey) : '';
+    const isConflict = type === 'conflict';
+    const cls = isConflict ? 'conflict' : (type === 'resource' ? 'resource-block' : 'provider-block');
+    const showRoom = height > 30 && roomName;
+    return `<div class="cal-block ${cls}" style="top:${top}px;height:${height}px" title="${appt.patient_name || ''} ${formatTime(appt.start_time)}-${formatTime(appt.end_time)}${roomName ? ' @ ' + roomName : ''}">
+      <div class="cal-block-patient">${appt.patient_name || appt.appointment_type || ''}</div>
+      ${height > 22 ? '<div class="cal-block-time">' + formatTime(appt.start_time) + ' - ' + formatTime(appt.end_time) + '</div>' : ''}
+      ${showRoom ? '<div class="cal-block-room">' + roomName + '</div>' : ''}
+    </div>`;
   }
-}
 
-async function schedAssignRoom(roomKey, apptId, patientName, providerName, startTime, endTime) {
-  if (!roomKey) return;
-  await apiFetch('/assignments', {
-    method: 'POST',
-    body: JSON.stringify({
-      room_key: roomKey,
-      appointment_id: apptId,
-      patient_name: patientName,
-      provider_name: providerName,
-      start_time: startTime,
-      end_time: endTime,
-      status: 'scheduled',
-      resource_keys: [],
-    }),
+  // Provider columns
+  activeProviders.forEach(p => {
+    const appts = providerAppts[p.id];
+    let blocks = '';
+    appts.forEach(a => {
+      const assign = assignments.find(x => x.appointment_id === a.id && x.status !== 'cancelled');
+      blocks += renderBlock(a, 'provider', assign ? assign.room_key : '');
+    });
+    gridHtml += `<div class="cal-col"><div class="cal-col-header provider">${p.name}<div class="cal-col-sub">${appts.length} appt${appts.length !== 1 ? 's' : ''}</div></div><div class="cal-col-body">${hourLines()}${blocks}</div></div>`;
   });
-  showToast(patientName + ' assigned to ' + (rooms[roomKey]?.name || roomKey));
-  await refreshData();
+
+  // Resource columns
+  resources.forEach(r => {
+    const resAssignments = assignments.filter(a => (a.resource_keys || []).includes(r.key) && a.status !== 'cancelled');
+    let blocks = '';
+    // Check for conflicts (overlapping assignments when max_concurrent = 1)
+    const maxC = r.max_concurrent || 1;
+    resAssignments.forEach(a => {
+      let isConflict = false;
+      if (maxC > 0) {
+        const aStart = new Date(a.start_time).getTime();
+        const aEnd = new Date(a.end_time).getTime();
+        const concurrent = resAssignments.filter(b => {
+          if (b === a) return false;
+          const bStart = new Date(b.start_time).getTime();
+          const bEnd = new Date(b.end_time).getTime();
+          return aStart < bEnd && aEnd > bStart;
+        });
+        if (concurrent.length >= maxC) isConflict = true;
+      }
+      blocks += renderBlock(a, isConflict ? 'conflict' : 'resource', a.room_key);
+    });
+    const roomName = rooms[r.room_key]?.name || '';
+    const maxLabel = maxC === 0 ? 'Unlimited' : maxC === 1 ? 'No double-book' : 'Max ' + maxC;
+    gridHtml += `<div class="cal-col"><div class="cal-col-header resource">${r.name}<div class="cal-col-sub">${roomName ? roomName + ' · ' : ''}${maxLabel}</div></div><div class="cal-col-body">${hourLines()}${blocks}</div></div>`;
+  });
+
+  if (!activeProviders.length && !resources.length) {
+    gridHtml = '<div style="padding:40px;color:var(--taupe);font-style:italic">No providers or resources to display</div>';
+  }
+
+  grid.innerHTML = gridHtml;
+
+  // Auto-scroll to current time
+  const now = new Date();
+  const nowH = now.getHours() + now.getMinutes() / 60;
+  if (nowH >= CAL_START_HOUR && nowH <= CAL_END_HOUR) {
+    const scrollY = (nowH - CAL_START_HOUR) * PX_PER_HOUR - 100;
+    document.getElementById('calWrapper').scrollTop = Math.max(0, scrollY);
+  }
 }
 
 // === Check-in / Check-out ===

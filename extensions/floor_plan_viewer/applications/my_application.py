@@ -337,13 +337,13 @@ ELLE_MEDICINE_ROOMS = [
 ]
 
 ELLE_MEDICINE_RESOURCES = [
-    # Treatment services - Restore
-    {"key": "hyperbaric", "name": "Hyperbaric Oxygen Therapy", "resource_type": "service", "room_key": "restore", "portable": False, "price_cents": 20000, "credit_amount": 1, "default_duration_minutes": 60, "description": "Hyperbaric oxygen therapy session"},
-    # Treatment services - Float
-    {"key": "dry-float", "name": "Zero Gravity Dry Float", "resource_type": "service", "room_key": "float", "portable": False, "price_cents": 10000, "credit_amount": 1, "default_duration_minutes": 60, "description": "Zero gravity dry float for nervous system recovery"},
-    # Clinical services - Thrive (Dietician)
-    {"key": "inbody", "name": "InBody Scan", "resource_type": "service", "room_key": "thrive", "portable": False, "price_cents": 5000, "credit_amount": 0, "default_duration_minutes": 15, "description": "InBody composition analysis"},
-    {"key": "nutrition-consult", "name": "Nutrition Consult", "resource_type": "service", "room_key": "thrive", "portable": False, "price_cents": 15000, "credit_amount": 1, "default_duration_minutes": 45, "description": "Lifestyle & performance nutrition consultation"},
+    # Treatment services - Restore (1 chamber, no double-booking)
+    {"key": "hyperbaric", "name": "Hyperbaric Oxygen Therapy", "resource_type": "service", "room_key": "restore", "portable": False, "price_cents": 20000, "credit_amount": 1, "default_duration_minutes": 60, "max_concurrent": 1, "description": "Hyperbaric oxygen therapy session"},
+    # Treatment services - Float (1 float pod, no double-booking)
+    {"key": "dry-float", "name": "Zero Gravity Dry Float", "resource_type": "service", "room_key": "float", "portable": False, "price_cents": 10000, "credit_amount": 1, "default_duration_minutes": 60, "max_concurrent": 1, "description": "Zero gravity dry float for nervous system recovery"},
+    # Clinical services - Thrive (Dietician - can overlap with InBody)
+    {"key": "inbody", "name": "InBody Scan", "resource_type": "service", "room_key": "thrive", "portable": False, "price_cents": 5000, "credit_amount": 0, "default_duration_minutes": 15, "max_concurrent": 1, "description": "InBody composition analysis"},
+    {"key": "nutrition-consult", "name": "Nutrition Consult", "resource_type": "service", "room_key": "thrive", "portable": False, "price_cents": 15000, "credit_amount": 1, "default_duration_minutes": 45, "max_concurrent": 1, "description": "Lifestyle & performance nutrition consultation"},
 ]
 
 # Demo data for testing without Sonos OAuth credentials
@@ -544,6 +544,7 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                     "price_cents": res.get("price_cents", 0),
                     "credit_amount": res.get("credit_amount", 0),
                     "default_duration_minutes": res.get("default_duration_minutes", 30),
+                    "max_concurrent": res.get("max_concurrent", 1),
                     "description": res.get("description", ""),
                 },
             )
@@ -593,6 +594,7 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                     "price_cents": r.price_cents or 0,
                     "credit_amount": r.credit_amount or 0,
                     "default_duration_minutes": r.default_duration_minutes or 30,
+                    "max_concurrent": r.max_concurrent if r.max_concurrent is not None else 1,
                     "practice_location_id": r.practice_location_id or "",
                     "practitioner_id": r.practitioner_id or "",
                 }
@@ -623,6 +625,7 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
             price_cents=body.get("price_cents", 0),
             credit_amount=body.get("credit_amount", 0),
             default_duration_minutes=body.get("default_duration_minutes", 30),
+            max_concurrent=body.get("max_concurrent", 1),
         )
         return [JSONResponse({"success": True, "id": resource.pk}, status_code=HTTPStatus.CREATED)]
 
@@ -641,7 +644,7 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
             return [JSONResponse({"error": "Resource not found"}, status_code=HTTPStatus.NOT_FOUND)]
 
         for field in ("name", "resource_type", "room_key", "description", "portable",
-                       "price_cents", "credit_amount", "default_duration_minutes", "active"):
+                       "price_cents", "credit_amount", "default_duration_minutes", "max_concurrent", "active"):
             if field in body:
                 setattr(resource, field, body[field])
         resource.save()

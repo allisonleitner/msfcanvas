@@ -49,6 +49,7 @@ class Resource(CustomModel):
     price_cents: Any = IntegerField(default=0)  # session price in cents ($45.00 = 4500)
     credit_amount: Any = IntegerField(default=0)  # credits per session
     default_duration_minutes: Any = IntegerField(default=30)
+    max_concurrent: Any = IntegerField(default=1)  # 1 = no double-booking, 0 = unlimited
     practice_location_id: Any = CharField(max_length=256, blank=True, default="")
     practitioner_id: Any = CharField(max_length=256, blank=True, default="")  # Canvas Practitioner UUID
 
