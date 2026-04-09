@@ -1,10 +1,10 @@
 import json
-import logging
 from datetime import datetime, time, timedelta, timezone
 from http import HTTPStatus
 from typing import Any
 
 import requests as http_requests  # type: ignore[import-untyped]
+from logger import log
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
@@ -14,8 +14,6 @@ from canvas_sdk.handlers.simple_api import SimpleAPI, StaffSessionAuthMixin, api
 from canvas_sdk.templates import render_to_string
 from canvas_sdk.v1.data import Staff
 from canvas_sdk.v1.data.appointment import Appointment
-
-log = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
