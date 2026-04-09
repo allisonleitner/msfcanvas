@@ -1223,8 +1223,6 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
         results = []
         errors = []
         extra_effects: list[Effect] = []
-        current_start = start_time  # ISO string
-
         for seg in segments:
             provider_id = seg.get("provider_id", "")
             resource_key = seg.get("resource_key", "")
@@ -1232,7 +1230,8 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
             room_key = seg.get("room_key", "")
             seg_name = seg.get("name", "")
 
-            # Calculate end time
+            # Use the segment's own start time if provided, otherwise fall back to visit start
+            current_start = seg.get("start_iso", "") or start_time
             start_dt = datetime.fromisoformat(current_start.replace("Z", "+00:00"))
             end_dt = start_dt + timedelta(minutes=duration)
             end_iso = end_dt.isoformat()
@@ -1341,7 +1340,7 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
             })
 
             # Next segment starts where this one ends
-            current_start = end_iso
+            # Each segment uses its own start time from the cart click position
 
         response_list: list[Response | Effect] = list(extra_effects)
         response_list.append(JSONResponse({
