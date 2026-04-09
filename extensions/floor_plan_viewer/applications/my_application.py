@@ -843,23 +843,20 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                     errors.append(f"Resource {resource.key}: {e}")
                     continue
 
-            # Create calendar if practitioner has none
+            # Always ensure a calendar exists for this practitioner
             if pract_id:
-                has_calendar = Calendar.objects.filter(
-                    title__startswith=resource.name
-                ).exists()
-                if not has_calendar:
-                    try:
-                        cal_effect = CalendarEffect(
-                            id=str(uuid4()),
-                            provider=pract_id,
-                            type=CalendarType.Clinic,
-                            location=loc_id,
-                            description=f"{resource.name} schedule",
-                        ).create()
-                        cal_effects.append(cal_effect)
-                    except Exception as e:
-                        errors.append(f"Calendar for {resource.key}: {e}")
+                try:
+                    cal_effect = CalendarEffect(
+                        id=str(uuid4()),
+                        provider=pract_id,
+                        type=CalendarType.Clinic,
+                        location=loc_id,
+                        description=f"{resource.name} schedule",
+                    ).create()
+                    cal_effects.append(cal_effect)
+                    log.info("[floor_plan] created calendar for resource '%s' practitioner %s", resource.key, pract_id)
+                except Exception as e:
+                    errors.append(f"Calendar for {resource.key}: {e}")
 
         response_list: list[Response | Effect] = list(cal_effects)
         response_list.append(JSONResponse({
