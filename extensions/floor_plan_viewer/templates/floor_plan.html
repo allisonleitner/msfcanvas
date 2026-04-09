@@ -1304,11 +1304,14 @@ function showApptDetail(blockIdx) {
   const apptStatus = (blk.status || (appt ? appt.status : '') || '').toLowerCase();
   const assignStatus = assign ? assign.status : '';
   const isCheckedIn = apptStatus.includes('check');
-  const isFulfilled = apptStatus.includes('fulfil') || apptStatus.includes('cancel');
+  const isFulfilled = apptStatus.includes('fulfil');
   const isCancelled = apptStatus.includes('cancel');
   const resKeys = blk.resource_keys || (assign ? assign.resource_keys : []) || [];
-  const fhirApptId = blk.appointment_id || (appt ? appt.id : '');
+  // Get the real FHIR appointment ID (not manual- fallback IDs)
+  const rawApptId = blk.appointment_id || (assign ? assign.appointment_id : '') || (appt ? appt.id : '');
+  const fhirApptId = (rawApptId && !rawApptId.startsWith('manual-')) ? rawApptId : (appt ? appt.id : '');
   const assignId = assign ? assign.id : null;
+  console.log('[floor_plan] showApptDetail:', {fhirApptId, assignId, rawApptId, blk});
 
   // Status badge
   let statusHtml = '';
@@ -1411,9 +1414,12 @@ async function checkoutAppt(apptId) {
   else { showToast(r.error || 'Check-out failed', 'error'); }
 }
 async function cancelAppt(apptId, assignId) {
+  console.log('[floor_plan] cancelAppt:', {apptId, assignId});
+  if (!apptId) { showToast('No FHIR appointment ID - try Remove Assignment instead', 'error'); return; }
   if (!confirm('Cancel this appointment? This cannot be undone.')) return;
-  // Cancel via FHIR
+  showToast('Cancelling...');
   const r = await apiFetch('/cancel/' + apptId, { method: 'POST' });
+  console.log('[floor_plan] cancel response:', r);
   // Also cancel room assignment if exists
   if (assignId) {
     await apiFetch('/assignments/' + assignId, { method: 'PUT', body: JSON.stringify({ status: 'cancelled' }) });
