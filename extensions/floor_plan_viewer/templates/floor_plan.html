@@ -397,18 +397,18 @@
       <div class="cart-panel hidden" id="cartPanel">
         <div class="cart-header">
           <h3>Booking Cart</h3>
-          <div class="cart-sub" id="cartSummary">Click on the calendar to add segments</div>
-        </div>
-        <div class="cart-body" id="cartBody">
-          <div style="text-align:center;padding:30px 10px;color:var(--taupe);font-size:12px;font-style:italic">Click on a provider or resource column at the desired time to add a visit segment</div>
-        </div>
-        <div class="cart-footer">
-          <div class="cart-patient-row">
-            <input class="cart-patient-input" id="cart-patient-search" placeholder="Search patient..." oninput="searchCartPatients()">
+          <div style="margin-top:10px">
+            <input class="cart-patient-input" id="cart-patient-search" placeholder="Search patient name..." oninput="searchCartPatients()">
             <div class="cart-patient-results" id="cart-patient-results"></div>
             <input type="hidden" id="cart-patient-id">
             <div class="cart-patient-selected" id="cart-patient-selected" style="display:none"></div>
           </div>
+          <div class="cart-sub" id="cartSummary" style="margin-top:8px">Select a patient, then click on the calendar</div>
+        </div>
+        <div class="cart-body" id="cartBody">
+          <div style="text-align:center;padding:30px 10px;color:var(--taupe);font-size:12px;font-style:italic">Select a patient above, then click &amp; drag on the calendar to add visit segments</div>
+        </div>
+        <div class="cart-footer">
           <button class="cart-book-btn" id="cartBookBtn" disabled onclick="submitCartBooking()">Book All Segments</button>
           <button class="cart-clear-btn" onclick="clearCart()">Clear Cart</button>
         </div>
@@ -892,29 +892,92 @@ function toggleBookingMode() {
   renderSchedule();
 }
 
-function onCalColClick(e, colType, colId, colName, resourceKey, roomKey, defaultDur) {
+// Drag state
+let dragState = null; // {colType, colId, colName, resourceKey, roomKey, defaultDur, startY, startHour, body}
+
+function yToHour(y) {
+  const raw = CAL_START_HOUR + y / PX_PER_HOUR;
+  return Math.round(raw * 4) / 4; // snap to 15-min
+}
+
+function onCalColMouseDown(e, colType, colId, colName, resourceKey, roomKey, defaultDur) {
   if (!bookingMode) return;
+  if (e.target.closest('.cal-block')) return;
+  // Must select patient first
+  if (!document.getElementById('cart-patient-id').value) {
+    showToast('Select a patient first', 'error');
+    document.getElementById('cart-patient-search').focus();
+    return;
+  }
+  e.preventDefault();
   const body = e.currentTarget;
   const rect = body.getBoundingClientRect();
-  const y = e.clientY - rect.top + body.parentElement.parentElement.parentElement.scrollTop;
-  // Snap to nearest 15-min
-  const rawHour = CAL_START_HOUR + y / PX_PER_HOUR;
-  const snapped = Math.round(rawHour * 4) / 4; // 15-min increments
-  const hour = Math.max(CAL_START_HOUR, Math.min(CAL_END_HOUR - 0.25, snapped));
+  const y = e.clientY - rect.top;
+  const hour = Math.max(CAL_START_HOUR, Math.min(CAL_END_HOUR, yToHour(y)));
+  dragState = { colType, colId, colName, resourceKey, roomKey, defaultDur, startY: y, startHour: hour, body };
+
+  // Show preview element
+  let preview = document.getElementById('drag-preview');
+  if (!preview) {
+    preview = document.createElement('div');
+    preview.id = 'drag-preview';
+    preview.style.cssText = 'position:absolute;left:3px;right:3px;border-radius:6px;border:2px dashed var(--navy);background:rgba(44,51,69,.1);z-index:10;pointer-events:none;transition:none;';
+    body.appendChild(preview);
+  } else {
+    body.appendChild(preview);
+  }
+  const top = (hour - CAL_START_HOUR) * PX_PER_HOUR;
+  preview.style.top = top + 'px';
+  preview.style.height = '15px';
+  preview.style.display = 'block';
+}
+
+document.addEventListener('mousemove', function(e) {
+  if (!dragState) return;
+  const rect = dragState.body.getBoundingClientRect();
+  const y = Math.max(0, Math.min(CAL_HEIGHT, e.clientY - rect.top));
+  const currentHour = Math.max(CAL_START_HOUR, Math.min(CAL_END_HOUR, yToHour(y)));
+  const topHour = Math.min(dragState.startHour, currentHour);
+  const bottomHour = Math.max(dragState.startHour, currentHour);
+  const top = (topHour - CAL_START_HOUR) * PX_PER_HOUR;
+  const height = Math.max(15, (bottomHour - topHour) * PX_PER_HOUR);
+  const preview = document.getElementById('drag-preview');
+  if (preview) {
+    preview.style.top = top + 'px';
+    preview.style.height = height + 'px';
+  }
+});
+
+document.addEventListener('mouseup', function(e) {
+  if (!dragState) return;
+  const rect = dragState.body.getBoundingClientRect();
+  const y = Math.max(0, Math.min(CAL_HEIGHT, e.clientY - rect.top));
+  const endHour = Math.max(CAL_START_HOUR, Math.min(CAL_END_HOUR, yToHour(y)));
+
+  const topHour = Math.min(dragState.startHour, endHour);
+  const bottomHour = Math.max(dragState.startHour, endHour);
+  const durationMin = Math.round((bottomHour - topHour) * 60);
+  const finalDuration = durationMin >= 10 ? durationMin : (dragState.defaultDur || 30); // if tiny drag, use default
 
   cart.push({
-    colType: colType,
-    colId: colId,
-    colName: colName,
-    hour: hour,
-    duration: defaultDur || 30,
-    room_key: roomKey || '',
-    resource_key: resourceKey || '',
-    provider_id: colType === 'provider' ? colId : '',
+    colType: dragState.colType,
+    colId: dragState.colId,
+    colName: dragState.colName,
+    hour: topHour,
+    duration: finalDuration,
+    room_key: dragState.roomKey || '',
+    resource_key: dragState.resourceKey || '',
+    provider_id: dragState.colType === 'provider' ? dragState.colId : '',
   });
+
+  // Clean up preview
+  const preview = document.getElementById('drag-preview');
+  if (preview) preview.style.display = 'none';
+  dragState = null;
+
   renderSchedule();
   renderCart();
-}
+});
 
 function removeCartItem(idx) {
   cart.splice(idx, 1);
@@ -1130,7 +1193,7 @@ function renderSchedule() {
     });
     blocks += pendingBlocks(p.id);
     const escapedName = p.name.replace(/'/g, "\\'");
-    gridHtml += `<div class="cal-col"><div class="cal-col-header provider">${p.name}<div class="cal-col-sub">${appts.length} appt${appts.length !== 1 ? 's' : ''}</div></div><div class="cal-col-body${bmClass}" onclick="onCalColClick(event,'provider','${p.id}','${escapedName}','','',30)">${hourLines()}${blocks}</div></div>`;
+    gridHtml += `<div class="cal-col"><div class="cal-col-header provider">${p.name}<div class="cal-col-sub">${appts.length} appt${appts.length !== 1 ? 's' : ''}</div></div><div class="cal-col-body${bmClass}" onmousedown="onCalColMouseDown(event,'provider','${p.id}','${escapedName}','','',30)">${hourLines()}${blocks}</div></div>`;
   });
 
   // Resource columns
@@ -1157,7 +1220,7 @@ function renderSchedule() {
     const roomName = rooms[r.room_key]?.name || '';
     const maxLabel = maxC === 0 ? 'Unlimited' : maxC === 1 ? 'No double-book' : 'Max ' + maxC;
     const escapedName = r.name.replace(/'/g, "\\'");
-    gridHtml += `<div class="cal-col"><div class="cal-col-header resource">${r.name}<div class="cal-col-sub">${roomName ? roomName + ' · ' : ''}${maxLabel}</div></div><div class="cal-col-body${bmClass}" onclick="onCalColClick(event,'resource','${r.key}','${escapedName}','${r.key}','${r.room_key}',${r.default_duration_minutes || 30})">${hourLines()}${blocks}</div></div>`;
+    gridHtml += `<div class="cal-col"><div class="cal-col-header resource">${r.name}<div class="cal-col-sub">${roomName ? roomName + ' · ' : ''}${maxLabel}</div></div><div class="cal-col-body${bmClass}" onmousedown="onCalColMouseDown(event,'resource','${r.key}','${escapedName}','${r.key}','${r.room_key}',${r.default_duration_minutes || 30})">${hourLines()}${blocks}</div></div>`;
   });
 
   if (!activeProviders.length && !resources.length) {
