@@ -1280,7 +1280,8 @@ function renderSchedule() {
   appointments.forEach(a => {
     if (a.provider_id && providerAppts[a.provider_id]) providerAppts[a.provider_id].push(a);
   });
-  const activeProviders = providers.filter(p => providerAppts[p.id] && providerAppts[p.id].length > 0);
+  // Show all schedulable providers (not just those with appointments)
+  const activeProviders = providers;
 
   const grid = document.getElementById('calGrid');
   let gridHtml = '';
