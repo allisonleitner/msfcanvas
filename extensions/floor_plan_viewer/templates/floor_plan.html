@@ -137,13 +137,13 @@
   .cal-time-col{width:60px;flex-shrink:0;border-right:1px solid var(--border);background:var(--cream);position:sticky;left:0;z-index:2}
   .cal-time-label{height:60px;display:flex;align-items:flex-start;justify-content:flex-end;padding:2px 8px 0 0;font-size:10px;color:var(--taupe);font-weight:500}
   .cal-grid{display:flex;flex:1;min-width:0}
-  .cal-col{flex:1;min-width:140px;border-right:1px solid var(--border);position:relative}
+  .cal-col{flex:1;min-width:120px;border-right:1px solid var(--border);display:flex;flex-direction:column}
   .cal-col:last-child{border-right:none}
-  .cal-col-header{position:sticky;top:0;z-index:3;background:var(--cream);border-bottom:1px solid var(--border);padding:8px 6px;text-align:center;font-size:11px;font-weight:600;color:var(--navy);min-height:50px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .cal-col-header{position:sticky;top:0;z-index:3;background:var(--cream);border-bottom:1px solid var(--border);padding:6px 4px;text-align:center;font-size:10px;font-weight:600;color:var(--navy);height:50px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
   .cal-col-header.provider{border-top:3px solid var(--sage)}
   .cal-col-header.resource{border-top:3px solid var(--gold)}
-  .cal-col-header .cal-col-sub{font-size:9px;font-weight:400;color:var(--taupe);margin-top:2px}
-  .cal-col-body{position:relative;height:720px}
+  .cal-col-header .cal-col-sub{font-size:8px;font-weight:400;color:var(--taupe);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .cal-col-body{position:relative;height:720px;flex-shrink:0}
   .cal-hour-line{position:absolute;left:0;right:0;height:1px;background:var(--border)}
   .cal-half-line{position:absolute;left:0;right:0;height:1px;background:var(--border);opacity:.4}
   .cal-block{position:absolute;left:3px;right:3px;border-radius:6px;padding:4px 6px;overflow:hidden;cursor:pointer;transition:box-shadow .2s;z-index:1;font-size:10px;line-height:1.3}
@@ -1156,7 +1156,9 @@ function renderSchedule() {
     const isConflict = type === 'conflict';
     const cls = isConflict ? 'conflict' : (type === 'resource' ? 'resource-block' : 'provider-block');
     const showRoom = height > 30 && roomName;
-    return `<div class="cal-block ${cls}" style="top:${top}px;height:${height}px" title="${appt.patient_name || ''} ${formatTime(appt.start_time)}-${formatTime(appt.end_time)}${roomName ? ' @ ' + roomName : ''}">
+    const safeId = (appt.id || '').replace(/'/g, "\\'");
+    const safeName = (appt.patient_name || '').replace(/'/g, "\\'");
+    return `<div class="cal-block ${cls}" style="top:${top}px;height:${height}px" title="${appt.patient_name || ''} ${formatTime(appt.start_time)}-${formatTime(appt.end_time)}${roomName ? ' @ ' + roomName : ''}" onclick="event.stopPropagation();showApptDetail('${safeId}','${safeName}','${type}','${roomKey || ''}')">
       <div class="cal-block-patient">${appt.patient_name || appt.appointment_type || ''}</div>
       ${height > 22 ? '<div class="cal-block-time">' + formatTime(appt.start_time) + ' - ' + formatTime(appt.end_time) + '</div>' : ''}
       ${showRoom ? '<div class="cal-block-room">' + roomName + '</div>' : ''}
@@ -1236,6 +1238,113 @@ function renderSchedule() {
     const scrollY = (nowH - CAL_START_HOUR) * PX_PER_HOUR - 100;
     document.getElementById('calWrapper').scrollTop = Math.max(0, scrollY);
   }
+}
+
+// === Appointment Detail (sidebar) ===
+function showApptDetail(apptId, patientName, type, roomKey) {
+  // Find in appointments or assignments
+  const appt = appointments.find(a => a.id === apptId);
+  const assign = assignments.find(a => a.appointment_id === apptId && a.status !== 'cancelled');
+  const detail = document.getElementById('roomDetail');
+  detail.classList.remove('empty-state');
+
+  const pName = appt ? appt.patient_name : (assign ? assign.patient_name : patientName);
+  const provName = appt ? appt.provider_name : (assign ? assign.provider_name : '');
+  const startTime = appt ? appt.start_time : (assign ? assign.start_time : '');
+  const endTime = appt ? appt.end_time : (assign ? assign.end_time : '');
+  const apptType = assign ? assign.appointment_type : '';
+  const currentRoom = assign ? assign.room_key : roomKey;
+  const currentRoomName = currentRoom ? (rooms[currentRoom]?.name || currentRoom) : 'Not assigned';
+  const apptStatus = appt ? (appt.status || '').toLowerCase() : '';
+  const assignStatus = assign ? assign.status : '';
+  const isCheckedIn = apptStatus.includes('check');
+  const isFulfilled = apptStatus.includes('fulfil');
+  const resKeys = assign ? (assign.resource_keys || []) : [];
+
+  // Status badge
+  let statusHtml = '';
+  if (isFulfilled) statusHtml = '<div class="detail-status" style="background:var(--sand);color:var(--taupe)">Complete</div>';
+  else if (isCheckedIn) statusHtml = '<div class="detail-status available">Checked In</div>';
+  else if (assignStatus === 'in-progress') statusHtml = '<div class="detail-status occupied">In Session</div>';
+  else statusHtml = '<div class="detail-status partial">Scheduled</div>';
+
+  // Room dropdown
+  const bookableRooms = Object.values(rooms).filter(r => r.bookable);
+  const roomOpts = bookableRooms.map(r => `<option value="${r.key}" ${r.key === currentRoom ? 'selected' : ''}>${r.name}</option>`).join('');
+
+  // Resource tags
+  let resHtml = '';
+  if (resKeys.length) {
+    resHtml = '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">' +
+      resKeys.map(rk => { const r = resources.find(x => x.key === rk); return `<span class="equipment-tag">${r ? r.name : rk}</span>`; }).join('') + '</div>';
+  }
+
+  // Action buttons
+  let actionsHtml = '<div class="action-row" style="flex-wrap:wrap">';
+  if (!isFulfilled && !isCheckedIn && apptId) {
+    actionsHtml += `<button class="action-btn primary" onclick="checkinPatient('${apptId}','${pName.replace(/'/g,"\\'")}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>Check In</button>`;
+  }
+  if (isCheckedIn && apptId) {
+    actionsHtml += `<button class="action-btn" onclick="checkoutPatient('${apptId}','${pName.replace(/'/g,"\\'")}')">Check Out</button>`;
+  }
+  if (assign && assignStatus === 'scheduled') {
+    actionsHtml += `<button class="action-btn" onclick="updateStatus(${assign.id},'in-progress')">Start Session</button>`;
+  }
+  if (assign && assignStatus === 'in-progress') {
+    actionsHtml += `<button class="action-btn" onclick="updateStatus(${assign.id},'completed')">Complete</button>`;
+  }
+  if (assign) {
+    actionsHtml += `<button class="action-btn danger" onclick="if(confirm('Remove this assignment?'))removeAssignment(${assign.id})">Remove</button>`;
+  }
+  actionsHtml += '</div>';
+
+  // Room change
+  let roomChangeHtml = '';
+  if (assign) {
+    roomChangeHtml = `<div style="margin-top:12px"><div class="section-title">Change Room</div><select class="form-input" style="font-size:12px" onchange="changeAssignmentRoom(${assign.id},this.value)"><option value="">-- Select --</option>${roomOpts}</select></div>`;
+  } else if (apptId) {
+    roomChangeHtml = `<div style="margin-top:12px"><div class="section-title">Assign Room</div><select class="form-input" style="font-size:12px" onchange="schedAssignRoom(this.value,'${apptId}','${pName.replace(/'/g,"\\'")}','${provName.replace(/'/g,"\\'")}','${startTime}','${endTime}')"><option value="">-- Select --</option>${roomOpts}</select></div>`;
+  }
+
+  detail.innerHTML = `
+    <div class="detail-header">
+      <div class="detail-room-name">${pName}</div>
+      <div class="detail-room-type">${provName}${apptType ? ' · ' + apptType : ''}</div>
+      ${statusHtml}
+      ${resHtml}
+    </div>
+    <div style="margin-bottom:12px">
+      <div class="section-title">Time</div>
+      <div style="font-size:14px;color:var(--navy)">${startTime ? formatTime(startTime) : '?'} - ${endTime ? formatTime(endTime) : '?'}</div>
+      <div style="font-size:12px;color:var(--taupe);margin-top:2px">Room: ${currentRoomName}</div>
+    </div>
+    ${actionsHtml}
+    ${roomChangeHtml}
+  `;
+}
+
+async function changeAssignmentRoom(assignId, newRoomKey) {
+  if (!newRoomKey) return;
+  await apiFetch('/assignments/' + assignId, {
+    method: 'PUT',
+    body: JSON.stringify({ room_key: newRoomKey }),
+  });
+  showToast('Room changed to ' + (rooms[newRoomKey]?.name || newRoomKey));
+  await refreshData();
+}
+
+async function schedAssignRoom(roomKey, apptId, patientName, providerName, startTime, endTime) {
+  if (!roomKey) return;
+  await apiFetch('/assignments', {
+    method: 'POST',
+    body: JSON.stringify({
+      room_key: roomKey, appointment_id: apptId, patient_name: patientName,
+      provider_name: providerName, start_time: startTime, end_time: endTime,
+      status: 'scheduled', resource_keys: [],
+    }),
+  });
+  showToast(patientName + ' assigned to ' + (rooms[roomKey]?.name || roomKey));
+  await refreshData();
 }
 
 // === Check-in / Check-out ===
