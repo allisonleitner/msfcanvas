@@ -1181,8 +1181,20 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
             resource_obj = None
             if resource_key:
                 resource_obj = Resource.objects.filter(key=resource_key).first()
-                if resource_obj and resource_obj.practitioner_id and not provider_id:
-                    practitioner_id = resource_obj.practitioner_id
+                if resource_obj and not provider_id:
+                    if resource_obj.practitioner_id:
+                        practitioner_id = resource_obj.practitioner_id
+                    elif fhir:
+                        # Auto-create practitioner for this resource
+                        try:
+                            pract_resp = fhir.create_practitioner(resource_obj.name, resource_key=resource_obj.key)
+                            pract_id = pract_resp.get("id", "")
+                            if pract_id:
+                                Resource.objects.filter(key=resource_key).update(practitioner_id=pract_id)
+                                practitioner_id = pract_id
+                                log.info("[floor_plan] auto-created practitioner for '%s' -> %s", resource_key, pract_id)
+                        except Exception as e:
+                            log.warning("[floor_plan] auto-create practitioner failed: %s", e)
 
             # Auto-resolve room from resource's home room if not specified
             if not room_key and resource_obj and resource_obj.room_key:
@@ -1196,21 +1208,21 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                 if room and room.practice_location_id:
                     location_id = room.practice_location_id
 
-            # If no location, try to find one from the room or fall back to first bookable room
+            # If no location, try to auto-sync the room to Canvas
             if not location_id and room_key:
-                # Room exists but isn't synced to Canvas yet - auto-sync it
                 if fhir:
-                    room_obj = Room.objects.filter(key=room_key).first()
-                    if room_obj and not room_obj.practice_location_id:
+                    room_qs = Room.objects.filter(key=room_key, practice_location_id="")
+                    room_obj = room_qs.first()
+                    if room_obj:
                         try:
                             loc_resp = fhir.create_location(room_obj.name, physical_type="ro")
                             loc_id_new = loc_resp.get("id", "")
                             if loc_id_new:
-                                room_obj.practice_location_id = loc_id_new
-                                room_obj.save()
+                                room_qs.update(practice_location_id=loc_id_new)
                                 location_id = loc_id_new
-                        except Exception:
-                            pass
+                                log.info("[floor_plan] auto-synced room '%s' -> location %s", room_key, loc_id_new)
+                        except Exception as e:
+                            log.warning("[floor_plan] auto-sync room failed: %s", e)
 
             log.info("[floor_plan] segment '%s': practitioner=%s location=%s start=%s end=%s",
                      seg_name, practitioner_id, location_id, current_start, end_iso)
