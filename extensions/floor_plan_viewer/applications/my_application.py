@@ -1091,12 +1091,28 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                 if room and room.practice_location_id:
                     location_id = room.practice_location_id
 
+            # If no location, try to find one from the room or fall back to first bookable room
+            if not location_id and room_key:
+                # Room exists but isn't synced to Canvas yet - auto-sync it
+                if fhir:
+                    room_obj = Room.objects.filter(key=room_key).first()
+                    if room_obj and not room_obj.practice_location_id:
+                        try:
+                            loc_resp = fhir.create_location(room_obj.name, physical_type="ro")
+                            loc_id_new = loc_resp.get("id", "")
+                            if loc_id_new:
+                                room_obj.practice_location_id = loc_id_new
+                                room_obj.save()
+                                location_id = loc_id_new
+                        except Exception:
+                            pass
+
             log.info("[floor_plan] segment '%s': practitioner=%s location=%s start=%s end=%s",
                      seg_name, practitioner_id, location_id, current_start, end_iso)
 
             # Create appointment via FHIR if we have credentials and a practitioner
             appt_id = ""
-            if fhir and practitioner_id:
+            if fhir and practitioner_id and location_id:
                 try:
                     resp = fhir.create_appointment(
                         patient_id=patient_id,
@@ -1113,25 +1129,31 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                     log.warning("[floor_plan] FHIR exception: %s", e)
                     errors.append(f"Segment '{seg_name}': {e}")
             elif not practitioner_id:
-                log.info("[floor_plan] segment '%s': no practitioner, skipping FHIR", seg_name)
-                errors.append(f"Segment '{seg_name}': No provider or resource practitioner selected")
+                log.info("[floor_plan] segment '%s': no practitioner - add resource to calendar first", seg_name)
+                errors.append(f"Segment '{seg_name}': No practitioner. Use 'Add to Calendar' on this resource first.")
+            elif not location_id:
+                log.info("[floor_plan] segment '%s': no location - select a room or sync rooms first", seg_name)
+                errors.append(f"Segment '{seg_name}': No room selected. Canvas requires a room for appointments.")
 
-            # Create room assignment
+            # Create room assignment (skip if duplicate)
             if room_key:
                 resource_keys = [resource_key] if resource_key else []
-                RoomAssignment.objects.create(
-                    room_key=room_key,
-                    appointment_id=appt_id,
-                    patient_id=patient_id,
-                    patient_name=patient_name,
-                    appointment_type=seg_name,
-                    provider_name=seg.get("provider_name", ""),
-                    start_time=current_start,
-                    end_time=end_iso,
-                    status="scheduled",
-                    resource_keys=resource_keys,
-                    assigned_by_id=staff_dbid,
-                )
+                try:
+                    RoomAssignment.objects.create(
+                        room_key=room_key,
+                        appointment_id=appt_id or f"manual-{current_start}",
+                        patient_id=patient_id,
+                        patient_name=patient_name,
+                        appointment_type=seg_name,
+                        provider_name=seg.get("provider_name", ""),
+                        start_time=current_start,
+                        end_time=end_iso,
+                        status="scheduled",
+                        resource_keys=resource_keys,
+                        assigned_by_id=staff_dbid,
+                    )
+                except Exception as e:
+                    log.warning("[floor_plan] room assignment error: %s", e)
 
             results.append({
                 "segment": seg_name,
