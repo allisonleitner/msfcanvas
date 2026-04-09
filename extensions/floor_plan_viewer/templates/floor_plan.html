@@ -1347,12 +1347,8 @@ function showApptDetail(blockIdx) {
     if (assignId && assignStatus === 'in-progress') {
       actionsHtml += '<button class="action-btn" onclick="updateStatus(' + assignId + ',\'completed\')">Complete</button>';
     }
-    if (fhirApptId) {
-      actionsHtml += '<button class="action-btn danger" onclick="cancelAppt(\'' + fhirApptId + '\',' + (assignId || 'null') + ')">Cancel Appointment</button>';
-    }
-  }
-  if (assignId) {
-    actionsHtml += '<button class="action-btn danger" onclick="if(confirm(\'Remove room assignment?\'))removeAssignment(' + assignId + ')">Remove Assignment</button>';
+    // Cancel -- works for FHIR appointments, assignments, or both
+    actionsHtml += '<button class="action-btn danger" onclick="cancelAppt(\'' + fhirApptId + '\',' + (assignId || 'null') + ')">Cancel</button>';
   }
   actionsHtml += '</div>';
 
@@ -1414,18 +1410,20 @@ async function checkoutAppt(apptId) {
   else { showToast(r.error || 'Check-out failed', 'error'); }
 }
 async function cancelAppt(apptId, assignId) {
-  console.log('[floor_plan] cancelAppt:', {apptId, assignId});
-  if (!apptId) { showToast('No FHIR appointment ID - try Remove Assignment instead', 'error'); return; }
   if (!confirm('Cancel this appointment? This cannot be undone.')) return;
   showToast('Cancelling...');
-  const r = await apiFetch('/cancel/' + apptId, { method: 'POST' });
-  console.log('[floor_plan] cancel response:', r);
-  // Also cancel room assignment if exists
-  if (assignId) {
+  let fhirOk = true;
+  // Cancel FHIR appointment if we have a real ID
+  if (apptId && !apptId.startsWith('manual-')) {
+    const r = await apiFetch('/cancel/' + apptId, { method: 'POST' });
+    fhirOk = !!r.success;
+    if (!fhirOk) console.warn('[floor_plan] FHIR cancel:', r);
+  }
+  // Cancel room assignment
+  if (assignId && assignId !== 'null') {
     await apiFetch('/assignments/' + assignId, { method: 'PUT', body: JSON.stringify({ status: 'cancelled' }) });
   }
-  if (r.success) { showToast('Appointment cancelled'); }
-  else { showToast(r.error || 'Cancel may have failed', 'error'); }
+  showToast('Cancelled');
   await refreshData();
 }
 // Keep legacy names for floor plan tab
