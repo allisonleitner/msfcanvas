@@ -200,7 +200,7 @@
   .config-section{margin-bottom:30px}
   .config-section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
   .config-section-title{font-family:'Cormorant Garamond',Georgia,serif;font-size:22px;font-weight:600;color:var(--navy)}
-  .resource-table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--warm-white)}
+  .resource-table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--border);border-radius:12px;overflow-x:auto;background:var(--warm-white);table-layout:auto}
   .resource-table th{background:var(--cream);padding:10px 14px;font-size:11px;font-weight:600;color:var(--taupe);text-transform:uppercase;letter-spacing:.8px;text-align:left;border-bottom:1px solid var(--border)}
   .resource-table td{padding:10px 14px;font-size:13px;border-bottom:1px solid var(--border);white-space:nowrap}
   .resource-table tr:last-child td{border-bottom:none}
@@ -434,7 +434,7 @@
           </div>
           <table class="resource-table" id="resourceTable">
             <thead><tr>
-              <th>Name</th><th>Type</th><th>Room</th><th>Duration</th><th>Price</th><th>Credits</th><th>Calendar</th><th>Actions</th>
+              <th style="min-width:160px">Name</th><th>Type</th><th>Room</th><th>Duration</th><th>Price</th><th>Credits</th><th style="min-width:120px">Calendar</th><th style="min-width:120px">Actions</th>
             </tr></thead>
             <tbody id="resourceTableBody"></tbody>
           </table>
