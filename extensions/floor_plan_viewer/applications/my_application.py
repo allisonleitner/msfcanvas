@@ -1237,6 +1237,25 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
         except Exception as e:
             return [JSONResponse({"error": str(e)}, status_code=HTTPStatus.BAD_GATEWAY)]
 
+    @api.post("/cancel/<appointment_id>")
+    def cancel_appointment(self) -> list[Response | Effect]:
+        """Cancel an appointment via FHIR."""
+        appt_id = self.request.path_params["appointment_id"]
+        fhir = self._fhir_client()
+        if not fhir:
+            return [JSONResponse({"error": "FHIR not configured"}, status_code=HTTPStatus.BAD_REQUEST)]
+        try:
+            headers = fhir._headers()
+            resp = http_requests.get(f"{fhir.fhir_url}/Appointment/{appt_id}", headers=headers, timeout=15)
+            if resp.status_code != 200:
+                return [JSONResponse({"error": f"Appointment not found: {resp.status_code}"}, status_code=HTTPStatus.NOT_FOUND)]
+            appt = resp.json()
+            appt["status"] = "cancelled"
+            resp = http_requests.put(f"{fhir.fhir_url}/Appointment/{appt_id}", json=appt, headers=headers, timeout=15)
+            return [JSONResponse({"success": True, "status": "cancelled"}, status_code=HTTPStatus.OK)]
+        except Exception as e:
+            return [JSONResponse({"error": str(e)}, status_code=HTTPStatus.BAD_GATEWAY)]
+
     # ------------------------------------------------------------------
     # Sonos - Discovery & Configuration
     # ------------------------------------------------------------------

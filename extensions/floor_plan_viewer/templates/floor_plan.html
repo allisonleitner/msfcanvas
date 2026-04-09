@@ -1148,6 +1148,9 @@ function renderSchedule() {
   }
 
   // Helper: render appointment block
+  // Block data registry - avoids escaping issues in onclick attributes
+  window._calBlocks = [];
+
   function renderBlock(appt, type, roomKey) {
     const top = Math.max(0, timeToY(appt.start_time));
     const bottom = Math.min(CAL_HEIGHT, timeToY(appt.end_time));
@@ -1156,9 +1159,24 @@ function renderSchedule() {
     const isConflict = type === 'conflict';
     const cls = isConflict ? 'conflict' : (type === 'resource' ? 'resource-block' : 'provider-block');
     const showRoom = height > 30 && roomName;
-    const apptId = String(appt.id || appt.appointment_id || '').replace(/'/g, '');
-    const pName = String(appt.patient_name || appt.appointment_type || '').replace(/'/g, '').replace(/"/g, '');
-    return `<div class="cal-block ${cls}" style="top:${top}px;height:${height}px" title="${pName} ${formatTime(appt.start_time)}-${formatTime(appt.end_time)}" onclick="event.stopPropagation();showApptDetail('${apptId}','${pName}','${type}','${roomKey || ''}')">
+    const pName = appt.patient_name || appt.appointment_type || '';
+
+    // Store full data for click handler
+    const idx = window._calBlocks.length;
+    window._calBlocks.push({
+      appt_id: appt.id || '',
+      appointment_id: appt.appointment_id || appt.id || '',
+      patient_name: pName,
+      provider_name: appt.provider_name || '',
+      start_time: appt.start_time,
+      end_time: appt.end_time,
+      type: type,
+      room_key: roomKey || appt.room_key || '',
+      resource_keys: appt.resource_keys || [],
+      status: appt.status || '',
+    });
+
+    return `<div class="cal-block ${cls}" style="top:${top}px;height:${height}px" title="${pName.replace(/"/g,'')} ${formatTime(appt.start_time)}-${formatTime(appt.end_time)}" onclick="event.stopPropagation();showApptDetail(${idx})">
       <div class="cal-block-patient">${pName}</div>
       ${height > 22 ? '<div class="cal-block-time">' + formatTime(appt.start_time) + ' - ' + formatTime(appt.end_time) + '</div>' : ''}
       ${showRoom ? '<div class="cal-block-room">' + roomName + '</div>' : ''}
@@ -1241,29 +1259,39 @@ function renderSchedule() {
 }
 
 // === Appointment Detail (sidebar) ===
-function showApptDetail(apptId, patientName, type, roomKey) {
-  // Find in appointments or assignments
-  const appt = appointments.find(a => a.id === apptId);
-  const assign = assignments.find(a => a.appointment_id === apptId && a.status !== 'cancelled');
+function showApptDetail(blockIdx) {
+  const blk = window._calBlocks[blockIdx];
+  if (!blk) return;
+
+  // Look up full objects
+  const appt = appointments.find(a => a.id === blk.appointment_id);
+  const assign = assignments.find(a =>
+    (a.appointment_id === blk.appointment_id || a.id === blk.appt_id) && a.status !== 'cancelled'
+  );
+
   const detail = document.getElementById('roomDetail');
   detail.classList.remove('empty-state');
 
-  const pName = appt ? appt.patient_name : (assign ? assign.patient_name : patientName);
-  const provName = appt ? appt.provider_name : (assign ? assign.provider_name : '');
-  const startTime = appt ? appt.start_time : (assign ? assign.start_time : '');
-  const endTime = appt ? appt.end_time : (assign ? assign.end_time : '');
+  const pName = blk.patient_name;
+  const provName = blk.provider_name;
+  const startTime = blk.start_time;
+  const endTime = blk.end_time;
   const apptType = assign ? assign.appointment_type : '';
-  const currentRoom = assign ? assign.room_key : roomKey;
+  const currentRoom = blk.room_key || (assign ? assign.room_key : '');
   const currentRoomName = currentRoom ? (rooms[currentRoom]?.name || currentRoom) : 'Not assigned';
-  const apptStatus = appt ? (appt.status || '').toLowerCase() : '';
+  const apptStatus = (blk.status || (appt ? appt.status : '') || '').toLowerCase();
   const assignStatus = assign ? assign.status : '';
   const isCheckedIn = apptStatus.includes('check');
-  const isFulfilled = apptStatus.includes('fulfil');
-  const resKeys = assign ? (assign.resource_keys || []) : [];
+  const isFulfilled = apptStatus.includes('fulfil') || apptStatus.includes('cancel');
+  const isCancelled = apptStatus.includes('cancel');
+  const resKeys = blk.resource_keys || (assign ? assign.resource_keys : []) || [];
+  const fhirApptId = blk.appointment_id || (appt ? appt.id : '');
+  const assignId = assign ? assign.id : null;
 
   // Status badge
   let statusHtml = '';
-  if (isFulfilled) statusHtml = '<div class="detail-status" style="background:var(--sand);color:var(--taupe)">Complete</div>';
+  if (isCancelled) statusHtml = '<div class="detail-status" style="background:var(--blush-light);color:var(--blush-dark)">Cancelled</div>';
+  else if (isFulfilled) statusHtml = '<div class="detail-status" style="background:var(--sand);color:var(--taupe)">Complete</div>';
   else if (isCheckedIn) statusHtml = '<div class="detail-status available">Checked In</div>';
   else if (assignStatus === 'in-progress') statusHtml = '<div class="detail-status occupied">In Session</div>';
   else statusHtml = '<div class="detail-status partial">Scheduled</div>';
@@ -1276,51 +1304,53 @@ function showApptDetail(apptId, patientName, type, roomKey) {
   let resHtml = '';
   if (resKeys.length) {
     resHtml = '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">' +
-      resKeys.map(rk => { const r = resources.find(x => x.key === rk); return `<span class="equipment-tag">${r ? r.name : rk}</span>`; }).join('') + '</div>';
+      resKeys.map(rk => { const r = resources.find(x => x.key === rk); return '<span class="equipment-tag">' + (r ? r.name : rk) + '</span>'; }).join('') + '</div>';
   }
 
   // Action buttons
   let actionsHtml = '<div class="action-row" style="flex-wrap:wrap">';
-  if (!isFulfilled && !isCheckedIn && apptId) {
-    actionsHtml += `<button class="action-btn primary" onclick="checkinPatient('${apptId}','${pName.replace(/'/g,"\\'")}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>Check In</button>`;
+  if (!isFulfilled && !isCancelled) {
+    if (!isCheckedIn && fhirApptId) {
+      actionsHtml += '<button class="action-btn primary" onclick="checkinAppt(\'' + fhirApptId + '\')">Check In</button>';
+    }
+    if (isCheckedIn && fhirApptId) {
+      actionsHtml += '<button class="action-btn" onclick="checkoutAppt(\'' + fhirApptId + '\')">Check Out</button>';
+    }
+    if (assignId && assignStatus === 'scheduled') {
+      actionsHtml += '<button class="action-btn" onclick="updateStatus(' + assignId + ',\'in-progress\')">Start Session</button>';
+    }
+    if (assignId && assignStatus === 'in-progress') {
+      actionsHtml += '<button class="action-btn" onclick="updateStatus(' + assignId + ',\'completed\')">Complete</button>';
+    }
+    if (fhirApptId) {
+      actionsHtml += '<button class="action-btn danger" onclick="cancelAppt(\'' + fhirApptId + '\',' + (assignId || 'null') + ')">Cancel Appointment</button>';
+    }
   }
-  if (isCheckedIn && apptId) {
-    actionsHtml += `<button class="action-btn" onclick="checkoutPatient('${apptId}','${pName.replace(/'/g,"\\'")}')">Check Out</button>`;
-  }
-  if (assign && assignStatus === 'scheduled') {
-    actionsHtml += `<button class="action-btn" onclick="updateStatus(${assign.id},'in-progress')">Start Session</button>`;
-  }
-  if (assign && assignStatus === 'in-progress') {
-    actionsHtml += `<button class="action-btn" onclick="updateStatus(${assign.id},'completed')">Complete</button>`;
-  }
-  if (assign) {
-    actionsHtml += `<button class="action-btn danger" onclick="if(confirm('Remove this assignment?'))removeAssignment(${assign.id})">Remove</button>`;
+  if (assignId) {
+    actionsHtml += '<button class="action-btn danger" onclick="if(confirm(\'Remove room assignment?\'))removeAssignment(' + assignId + ')">Remove Assignment</button>';
   }
   actionsHtml += '</div>';
 
   // Room change
   let roomChangeHtml = '';
-  if (assign) {
-    roomChangeHtml = `<div style="margin-top:12px"><div class="section-title">Change Room</div><select class="form-input" style="font-size:12px" onchange="changeAssignmentRoom(${assign.id},this.value)"><option value="">-- Select --</option>${roomOpts}</select></div>`;
-  } else if (apptId) {
-    roomChangeHtml = `<div style="margin-top:12px"><div class="section-title">Assign Room</div><select class="form-input" style="font-size:12px" onchange="schedAssignRoom(this.value,'${apptId}','${pName.replace(/'/g,"\\'")}','${provName.replace(/'/g,"\\'")}','${startTime}','${endTime}')"><option value="">-- Select --</option>${roomOpts}</select></div>`;
+  if (assignId) {
+    roomChangeHtml = '<div style="margin-top:12px"><div class="section-title">Change Room</div><select class="form-input" style="font-size:12px" onchange="changeAssignmentRoom(' + assignId + ',this.value)"><option value="">-- Select --</option>' + roomOpts + '</select></div>';
+  } else if (fhirApptId) {
+    roomChangeHtml = '<div style="margin-top:12px"><div class="section-title">Assign Room</div><select class="form-input" style="font-size:12px" onchange="schedAssignRoom(this.value,\'' + fhirApptId + '\',\'' + pName.replace(/'/g,'') + '\',\'' + provName.replace(/'/g,'') + '\',\'' + startTime + '\',\'' + endTime + '\')"><option value="">-- Select --</option>' + roomOpts + '</select></div>';
   }
 
-  detail.innerHTML = `
-    <div class="detail-header">
-      <div class="detail-room-name">${pName}</div>
-      <div class="detail-room-type">${provName}${apptType ? ' · ' + apptType : ''}</div>
-      ${statusHtml}
-      ${resHtml}
-    </div>
-    <div style="margin-bottom:12px">
-      <div class="section-title">Time</div>
-      <div style="font-size:14px;color:var(--navy)">${startTime ? formatTime(startTime) : '?'} - ${endTime ? formatTime(endTime) : '?'}</div>
-      <div style="font-size:12px;color:var(--taupe);margin-top:2px">Room: ${currentRoomName}</div>
-    </div>
-    ${actionsHtml}
-    ${roomChangeHtml}
-  `;
+  detail.innerHTML =
+    '<div class="detail-header">' +
+      '<div class="detail-room-name">' + pName + '</div>' +
+      '<div class="detail-room-type">' + provName + (apptType ? ' &middot; ' + apptType : '') + '</div>' +
+      statusHtml + resHtml +
+    '</div>' +
+    '<div style="margin-bottom:12px">' +
+      '<div class="section-title">Time</div>' +
+      '<div style="font-size:14px;color:var(--navy)">' + formatTime(startTime) + ' - ' + formatTime(endTime) + '</div>' +
+      '<div style="font-size:12px;color:var(--taupe);margin-top:2px">Room: ' + currentRoomName + '</div>' +
+    '</div>' +
+    actionsHtml + roomChangeHtml;
 }
 
 async function changeAssignmentRoom(assignId, newRoomKey) {
@@ -1347,17 +1377,32 @@ async function schedAssignRoom(roomKey, apptId, patientName, providerName, start
   await refreshData();
 }
 
-// === Check-in / Check-out ===
-async function checkinPatient(apptId, name) {
+// === Check-in / Check-out / Cancel ===
+async function checkinAppt(apptId) {
   const r = await apiFetch('/checkin/' + apptId, { method: 'POST' });
-  if (r.success) { showToast(name + ' checked in'); await refreshData(); }
+  if (r.success) { showToast('Checked in'); await refreshData(); }
   else { showToast(r.error || 'Check-in failed', 'error'); }
 }
-async function checkoutPatient(apptId, name) {
+async function checkoutAppt(apptId) {
   const r = await apiFetch('/checkout/' + apptId, { method: 'POST' });
-  if (r.success) { showToast(name + ' checked out'); await refreshData(); }
+  if (r.success) { showToast('Checked out'); await refreshData(); }
   else { showToast(r.error || 'Check-out failed', 'error'); }
 }
+async function cancelAppt(apptId, assignId) {
+  if (!confirm('Cancel this appointment? This cannot be undone.')) return;
+  // Cancel via FHIR
+  const r = await apiFetch('/cancel/' + apptId, { method: 'POST' });
+  // Also cancel room assignment if exists
+  if (assignId) {
+    await apiFetch('/assignments/' + assignId, { method: 'PUT', body: JSON.stringify({ status: 'cancelled' }) });
+  }
+  if (r.success) { showToast('Appointment cancelled'); }
+  else { showToast(r.error || 'Cancel may have failed', 'error'); }
+  await refreshData();
+}
+// Keep legacy names for floor plan tab
+async function checkinPatient(id, name) { return checkinAppt(id); }
+async function checkoutPatient(id, name) { return checkoutAppt(id); }
 
 // (Legacy booking modal functions kept for backward compat)
 let bookingSegmentCount = 0;
