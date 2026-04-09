@@ -268,6 +268,25 @@
   .appt-option.assigned { opacity: 0.4; pointer-events: none; }
   .appt-option.assigned::after { content: " (assigned)"; font-size: 10px; color: var(--taupe-light); }
 
+  /* Resource checkboxes in modal */
+  .resource-section { margin-bottom: 16px; }
+  .resource-section-title { font-size: 11px; font-weight: 600; color: var(--taupe); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .resource-check { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; cursor: pointer; transition: all 0.2s; }
+  .resource-check:hover { background: var(--gold-light); border-color: var(--gold); }
+  .resource-check.checked { background: var(--gold-light); border-color: var(--gold); }
+  .resource-check input[type="checkbox"] { accent-color: var(--gold-dark); width: 16px; height: 16px; cursor: pointer; }
+  .resource-check label { font-size: 13px; color: var(--navy); cursor: pointer; flex: 1; }
+  .resource-check .res-room { font-size: 10px; color: var(--taupe); }
+
+  /* Resource tags in assignment cards */
+  .assigned-resources { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .res-tag { padding: 2px 6px; background: var(--gold-light); border-radius: 4px; font-size: 10px; color: var(--gold-dark); font-weight: 500; }
+
+  /* Sync status indicator */
+  .sync-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 4px; }
+  .sync-dot.synced { background: var(--sage); }
+  .sync-dot.unsynced { background: var(--blush); }
+
   /* Loading */
   .loading { text-align: center; padding: 40px; color: var(--taupe); font-style: italic; font-size: 13px; }
 
@@ -328,6 +347,7 @@
       </div>
       <div class="toolbar-right">
         <button class="btn" onclick="refreshData()">Refresh</button>
+        <button class="btn" onclick="syncToCanvas()">Sync to Calendar</button>
         <button class="btn" id="seedBtn" onclick="seedRooms()">Setup Rooms</button>
       </div>
     </div>
@@ -379,6 +399,11 @@
       <button class="modal-close" onclick="closeAssignModal()">&times;</button>
     </div>
     <div class="modal-body">
+      <div class="resource-section" id="resourceSection" style="display:none">
+        <div class="resource-section-title">Resources / Equipment</div>
+        <div id="resourceChecks"></div>
+      </div>
+      <div class="resource-section-title" style="margin-bottom:8px">Select Appointment</div>
       <input type="text" class="search-box" id="apptSearch" placeholder="Search by patient name..." oninput="filterAppointments()">
       <div id="apptList"><div class="loading">Loading appointments...</div></div>
     </div>
@@ -393,6 +418,7 @@ const API = '/plugin-io/api/floor_plan_viewer';
 
 // ----- State -----
 let rooms = {};          // key -> room data
+let resources = [];      // all resources
 let assignments = [];    // today's assignments
 let appointments = [];   // today's Canvas appointments
 let selectedRoom = null;
@@ -430,16 +456,43 @@ async function loadAppointments() {
   appointments = data.appointments || [];
 }
 
+async function loadResources() {
+  const data = await apiFetch('/resources');
+  resources = data.resources || [];
+}
+
 async function refreshData() {
-  await Promise.all([loadRooms(), loadAssignments(), loadAppointments()]);
+  await Promise.all([loadRooms(), loadAssignments(), loadAppointments(), loadResources()]);
   updateFloorPlan();
   if (selectedRoom) showRoomDetail(selectedRoom);
 }
 
 async function seedRooms() {
   await apiFetch('/rooms/seed', { method: 'POST' });
-  showToast('Rooms configured successfully');
+  showToast('Rooms & resources configured');
   await refreshData();
+}
+
+async function syncToCanvas() {
+  showToast('Syncing rooms & resources to Canvas calendar...', 'success');
+  const result = await apiFetch('/sync-to-canvas', { method: 'POST' });
+  if (result.error) {
+    showToast(result.error, 'error');
+  } else {
+    const total = (result.rooms_synced || 0) + (result.resources_synced || 0);
+    if (total > 0) {
+      showToast(`Synced ${total} items to Canvas calendar`);
+    } else if (result.errors?.length) {
+      showToast(`Sync errors: ${result.errors[0]}`, 'error');
+    } else {
+      showToast('Everything already synced');
+    }
+    await refreshData();
+  }
+}
+
+function getRoomResources(roomKey) {
+  return resources.filter(r => r.room_key === roomKey);
 }
 
 // ----- Room status -----
@@ -529,8 +582,18 @@ function showRoomDetail(roomKey) {
   const detail = document.getElementById('roomDetail');
   detail.classList.remove('empty-state');
 
+  const roomResources = getRoomResources(roomKey);
   let equipHtml = '';
-  if (room.equipment?.length) {
+  if (roomResources.length > 0) {
+    equipHtml = '<div class="equipment-list">' +
+      roomResources.map(r => {
+        const syncDot = r.practice_location_id
+          ? '<span class="sync-dot synced" title="Synced to Calendar"></span>'
+          : '<span class="sync-dot unsynced" title="Not synced"></span>';
+        return `<span class="equipment-tag">${syncDot}${r.name}</span>`;
+      }).join('') +
+    '</div>';
+  } else if (room.equipment?.length) {
     equipHtml = '<div class="equipment-list">' +
       room.equipment.map(e => `<span class="equipment-tag">${e}</span>`).join('') +
     '</div>';
@@ -574,6 +637,7 @@ function showRoomDetail(roomKey) {
           <div class="appt-patient">${a.patient_name || 'Walk-in'}</div>
           <div class="appt-type">${a.appointment_type || ''}</div>
           <div class="appt-provider">${a.provider_name || ''}</div>
+          ${(a.resource_keys?.length) ? '<div class="assigned-resources">' + a.resource_keys.map(rk => { const res = resources.find(r => r.key === rk); return `<span class="res-tag">${res ? res.name : rk}</span>`; }).join('') + '</div>' : ''}
           ${actionBtns}
         </div>`;
     });
@@ -586,7 +650,7 @@ function showRoomDetail(roomKey) {
   detail.innerHTML = `
     <div class="detail-header">
       <div class="detail-room-name">${room.name}</div>
-      <div class="detail-room-type">${room.room_type}${room.number ? ' &middot; Room ' + room.number : ''}</div>
+      <div class="detail-room-type">${room.room_type}${room.number ? ' &middot; Room ' + room.number : ''}${room.practice_location_id ? ' &middot; <span class="sync-dot synced"></span>On Calendar' : ''}</div>
       <div class="detail-status ${status}">${statusLabels[status]}</div>
       ${equipHtml}
     </div>
@@ -630,7 +694,29 @@ function openAssignModal(roomKey) {
   document.getElementById('assignModalTitle').textContent = `Assign to ${room.name || roomKey}`;
   document.getElementById('assignModal').classList.add('visible');
   document.getElementById('apptSearch').value = '';
+
+  // Show resource checkboxes for this room
+  const roomRes = getRoomResources(roomKey);
+  const resSection = document.getElementById('resourceSection');
+  const resChecks = document.getElementById('resourceChecks');
+  if (roomRes.length > 0) {
+    resSection.style.display = 'block';
+    resChecks.innerHTML = roomRes.map(r => `
+      <div class="resource-check" onclick="this.querySelector('input').click()">
+        <input type="checkbox" value="${r.key}" id="res-${r.key}" onclick="event.stopPropagation(); this.parentElement.classList.toggle('checked', this.checked)">
+        <label for="res-${r.key}" onclick="event.preventDefault()">${r.name}</label>
+        <span class="res-room">${r.resource_type}</span>
+      </div>
+    `).join('');
+  } else {
+    resSection.style.display = 'none';
+  }
+
   renderAppointmentList();
+}
+
+function getSelectedResources() {
+  return Array.from(document.querySelectorAll('#resourceChecks input:checked')).map(cb => cb.value);
 }
 
 function closeAssignModal() {
@@ -671,6 +757,8 @@ async function assignAppointment(apptId) {
   const appt = appointments.find(a => a.id === apptId);
   if (!appt || !assigningRoomKey) return;
 
+  const selectedResources = getSelectedResources();
+
   await apiFetch('/assignments', {
     method: 'POST',
     body: JSON.stringify({
@@ -683,11 +771,15 @@ async function assignAppointment(apptId) {
       start_time: appt.start_time,
       end_time: appt.end_time,
       status: 'scheduled',
+      resource_keys: selectedResources,
     }),
   });
 
   closeAssignModal();
-  showToast(`${appt.patient_name} assigned to ${rooms[assigningRoomKey]?.name || assigningRoomKey}`);
+  const resNames = selectedResources.map(k => { const r = resources.find(x => x.key === k); return r ? r.name : k; });
+  let msg = `${appt.patient_name} assigned to ${rooms[assigningRoomKey]?.name || assigningRoomKey}`;
+  if (resNames.length) msg += ` with ${resNames.join(', ')}`;
+  showToast(msg);
   await refreshData();
 }
 

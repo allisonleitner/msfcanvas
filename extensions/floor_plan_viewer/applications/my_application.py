@@ -1,6 +1,10 @@
 import json
+import logging
 from datetime import datetime, time, timedelta, timezone
 from http import HTTPStatus
+from typing import Any
+
+import requests as http_requests  # type: ignore[import-untyped]
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
@@ -11,9 +15,16 @@ from canvas_sdk.templates import render_to_string
 from canvas_sdk.v1.data import Staff
 from canvas_sdk.v1.data.appointment import Appointment
 
+log = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Application
+# ---------------------------------------------------------------------------
+
 
 class MyApplication(Application):
-    """Elle Medicine Floor Plan Viewer – interactive room status dashboard."""
+    """Elle Medicine Floor Plan Viewer - interactive room & resource dashboard."""
 
     def on_open(self) -> Effect:
         return LaunchModalEffect(
@@ -23,7 +34,99 @@ class MyApplication(Application):
 
 
 # ---------------------------------------------------------------------------
-# API
+# FHIR helper
+# ---------------------------------------------------------------------------
+
+
+class FHIRClient:
+    """Lightweight client for Canvas FHIR API calls."""
+
+    def __init__(self, instance: str, client_id: str, client_secret: str):
+        self.base_url = f"https://{instance}.canvasmedical.com"
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self._token: str | None = None
+
+    def _get_token(self) -> str:
+        if self._token:
+            return self._token
+        resp = http_requests.post(
+            f"{self.base_url}/auth/token/",
+            data={
+                "grant_type": "client_credentials",
+                "client_id": self.client_id,
+                "client_secret": self.client_secret,
+            },
+            timeout=15,
+        )
+        resp.raise_for_status()
+        self._token = resp.json()["access_token"]
+        return self._token
+
+    def _headers(self) -> dict:
+        return {
+            "Authorization": f"Bearer {self._get_token()}",
+            "Content-Type": "application/json",
+        }
+
+    def create_location(self, name: str, physical_type: str = "ro") -> dict:
+        """Create a FHIR Location resource. physical_type: 'ro' (room) or 'area'."""
+        display = "Room" if physical_type == "ro" else "Area"
+        payload = {
+            "resourceType": "Location",
+            "name": name,
+            "status": "active",
+            "mode": "instance",
+            "physicalType": {
+                "coding": [
+                    {
+                        "system": "http://terminology.hl7.org/CodeSystem/location-physical-type",
+                        "code": physical_type,
+                        "display": display,
+                    }
+                ]
+            },
+        }
+        resp = http_requests.post(
+            f"{self.base_url}/Location",
+            json=payload,
+            headers=self._headers(),
+            timeout=15,
+        )
+        return dict(resp.json())
+
+    def update_appointment_location(self, appointment_id: str, location_id: str) -> dict:
+        """Update an appointment's supportingInformation with a Location reference."""
+        headers = self._headers()
+        # GET current state
+        resp = http_requests.get(
+            f"{self.base_url}/Appointment/{appointment_id}",
+            headers=headers,
+            timeout=15,
+        )
+        if resp.status_code != 200:
+            return {"error": f"Could not fetch appointment: {resp.status_code}"}
+        appt = resp.json()
+
+        # Merge location into supportingInformation
+        ref = {"reference": f"Location/{location_id}"}
+        si = appt.get("supportingInformation", [])
+        # Replace any existing Location refs
+        si = [r for r in si if not r.get("reference", "").startswith("Location/")]
+        si.append(ref)
+        appt["supportingInformation"] = si
+
+        resp = http_requests.put(
+            f"{self.base_url}/Appointment/{appointment_id}",
+            json=appt,
+            headers=headers,
+            timeout=15,
+        )
+        return dict(resp.json())
+
+
+# ---------------------------------------------------------------------------
+# Seed data
 # ---------------------------------------------------------------------------
 
 ELLE_MEDICINE_ROOMS = [
@@ -46,9 +149,24 @@ ELLE_MEDICINE_ROOMS = [
     {"key": "workroom", "name": "Workroom", "room_type": "utility", "number": "112", "bookable": False, "equipment": []},
 ]
 
+ELLE_MEDICINE_RESOURCES = [
+    {"key": "iv-station-1", "name": "IV Station 1", "resource_type": "equipment", "room_key": "studio-one", "portable": False},
+    {"key": "iv-station-2", "name": "IV Station 2", "resource_type": "equipment", "room_key": "studio-two", "portable": False},
+    {"key": "infusion-chair-1", "name": "Infusion Chair", "resource_type": "equipment", "room_key": "studio-one", "portable": False},
+    {"key": "hyperbaric-1", "name": "Hyperbaric Chamber", "resource_type": "equipment", "room_key": "float", "portable": False},
+    {"key": "acupuncture-table-1", "name": "Acupuncture Table", "resource_type": "equipment", "room_key": "restore", "portable": False},
+    {"key": "centrifuge-1", "name": "Centrifuge", "resource_type": "equipment", "room_key": "lab", "portable": False},
+    {"key": "phlebotomy-1", "name": "Phlebotomy Station", "resource_type": "equipment", "room_key": "lab", "portable": False},
+]
+
+
+# ---------------------------------------------------------------------------
+# API
+# ---------------------------------------------------------------------------
+
 
 class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
-    """REST API for rooms, assignments, and appointments."""
+    """REST API for rooms, resources, assignments, and Canvas integration."""
 
     # ------------------------------------------------------------------
     # Helpers
@@ -67,6 +185,14 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
         start = datetime.combine(now.date(), time.min, tzinfo=timezone.utc)
         end = start + timedelta(days=1)
         return start, end
+
+    def _fhir_client(self) -> FHIRClient | None:
+        instance = self.environment.get("CUSTOMER_IDENTIFIER", "")
+        client_id = self.secrets.get("FHIR_CLIENT_ID", "")
+        client_secret = self.secrets.get("FHIR_CLIENT_SECRET", "")
+        if not all([instance, client_id, client_secret]):
+            return None
+        return FHIRClient(instance, client_id, client_secret)
 
     # ------------------------------------------------------------------
     # Rooms
@@ -87,6 +213,7 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                     "number": r.number,
                     "bookable": r.bookable,
                     "equipment": r.equipment or [],
+                    "practice_location_id": r.practice_location_id or "",
                 }
                 for r in rooms
             ]
@@ -101,8 +228,7 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
         except (json.JSONDecodeError, TypeError):
             return [JSONResponse({"error": "Invalid JSON"}, status_code=HTTPStatus.BAD_REQUEST)]
 
-        required = ["key", "name", "room_type"]
-        for field in required:
+        for field in ("key", "name", "room_type"):
             if not body.get(field):
                 return [JSONResponse({"error": f"{field} is required"}, status_code=HTTPStatus.BAD_REQUEST)]
 
@@ -133,7 +259,7 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
         if not room:
             return [JSONResponse({"error": "Room not found"}, status_code=HTTPStatus.NOT_FOUND)]
 
-        for field in ("name", "room_type", "number", "bookable", "equipment"):
+        for field in ("name", "room_type", "number", "bookable", "equipment", "practice_location_id"):
             if field in body:
                 setattr(room, field, body[field])
         room.save()
@@ -141,10 +267,10 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
 
     @api.post("/rooms/seed")
     def seed_rooms(self) -> list[Response | Effect]:
-        """Idempotent seed of Elle Medicine rooms."""
-        from floor_plan_viewer.models.custom_data import Room
+        """Idempotent seed of Elle Medicine rooms and resources."""
+        from floor_plan_viewer.models.custom_data import Resource, Room
 
-        created = 0
+        rooms_created = 0
         for r in ELLE_MEDICINE_ROOMS:
             _, was_created = Room.objects.get_or_create(
                 key=r["key"],
@@ -157,8 +283,124 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                 },
             )
             if was_created:
-                created += 1
-        return [JSONResponse({"success": True, "created": created}, status_code=HTTPStatus.OK)]
+                rooms_created += 1
+
+        resources_created = 0
+        for res in ELLE_MEDICINE_RESOURCES:
+            _, was_created = Resource.objects.get_or_create(
+                key=res["key"],
+                defaults={
+                    "name": res["name"],
+                    "resource_type": res["resource_type"],
+                    "room_key": res["room_key"],
+                    "portable": res["portable"],
+                },
+            )
+            if was_created:
+                resources_created += 1
+
+        return [JSONResponse({
+            "success": True,
+            "rooms_created": rooms_created,
+            "resources_created": resources_created,
+        }, status_code=HTTPStatus.OK)]
+
+    # ------------------------------------------------------------------
+    # Resources
+    # ------------------------------------------------------------------
+
+    @api.get("/resources")
+    def get_resources(self) -> list[Response | Effect]:
+        from floor_plan_viewer.models.custom_data import Resource
+
+        resources = Resource.objects.filter(active=True).order_by("key")
+        return [JSONResponse({
+            "resources": [
+                {
+                    "id": r.pk,
+                    "key": r.key,
+                    "name": r.name,
+                    "resource_type": r.resource_type,
+                    "room_key": r.room_key,
+                    "portable": r.portable,
+                    "practice_location_id": r.practice_location_id or "",
+                }
+                for r in resources
+            ]
+        }, status_code=HTTPStatus.OK)]
+
+    @api.post("/resources")
+    def create_resource(self) -> list[Response | Effect]:
+        from floor_plan_viewer.models.custom_data import Resource
+
+        try:
+            body = json.loads(self.request.body)
+        except (json.JSONDecodeError, TypeError):
+            return [JSONResponse({"error": "Invalid JSON"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+        for field in ("key", "name", "resource_type"):
+            if not body.get(field):
+                return [JSONResponse({"error": f"{field} is required"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+        resource = Resource.objects.create(
+            key=body["key"],
+            name=body["name"],
+            resource_type=body["resource_type"],
+            room_key=body.get("room_key", ""),
+            portable=body.get("portable", False),
+        )
+        return [JSONResponse({"success": True, "id": resource.pk}, status_code=HTTPStatus.CREATED)]
+
+    # ------------------------------------------------------------------
+    # Canvas sync - create PracticeLocations for rooms & resources
+    # ------------------------------------------------------------------
+
+    @api.post("/sync-to-canvas")
+    def sync_to_canvas(self) -> list[Response | Effect]:
+        """Create PracticeLocations in Canvas for all bookable rooms and resources."""
+        from floor_plan_viewer.models.custom_data import Resource, Room
+
+        fhir = self._fhir_client()
+        if not fhir:
+            return [JSONResponse({
+                "error": "FHIR credentials not configured. Set FHIR_CLIENT_ID and FHIR_CLIENT_SECRET secrets.",
+            }, status_code=HTTPStatus.BAD_REQUEST)]
+
+        results: dict[str, Any] = {"rooms_synced": 0, "resources_synced": 0, "errors": []}
+
+        # Sync bookable rooms
+        for room in Room.objects.filter(active=True, bookable=True):
+            if room.practice_location_id:
+                continue
+            try:
+                resp = fhir.create_location(room.name, physical_type="ro")
+                loc_id = resp.get("id", "")
+                if loc_id:
+                    room.practice_location_id = loc_id
+                    room.save()
+                    results["rooms_synced"] += 1
+                else:
+                    results["errors"].append(f"Room {room.key}: {resp}")
+            except Exception as e:
+                results["errors"].append(f"Room {room.key}: {e}")
+
+        # Sync resources
+        for resource in Resource.objects.filter(active=True):
+            if resource.practice_location_id:
+                continue
+            try:
+                resp = fhir.create_location(resource.name, physical_type="ro")
+                loc_id = resp.get("id", "")
+                if loc_id:
+                    resource.practice_location_id = loc_id
+                    resource.save()
+                    results["resources_synced"] += 1
+                else:
+                    results["errors"].append(f"Resource {resource.key}: {resp}")
+            except Exception as e:
+                results["errors"].append(f"Resource {resource.key}: {e}")
+
+        return [JSONResponse(results, status_code=HTTPStatus.OK)]
 
     # ------------------------------------------------------------------
     # Assignments
@@ -173,7 +415,7 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
             try:
                 day = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
             except ValueError:
-                return [JSONResponse({"error": "Invalid date format, use YYYY-MM-DD"}, status_code=HTTPStatus.BAD_REQUEST)]
+                return [JSONResponse({"error": "Invalid date format"}, status_code=HTTPStatus.BAD_REQUEST)]
             start = datetime.combine(day.date(), time.min, tzinfo=timezone.utc)
             end = start + timedelta(days=1)
         else:
@@ -198,6 +440,7 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                     "end_time": a.end_time.isoformat(),
                     "status": a.status,
                     "notes": a.notes,
+                    "resource_keys": a.resource_keys or [],
                 }
                 for a in assignments
             ]
@@ -205,15 +448,14 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
 
     @api.post("/assignments")
     def create_assignment(self) -> list[Response | Effect]:
-        from floor_plan_viewer.models.custom_data import RoomAssignment
+        from floor_plan_viewer.models.custom_data import Room, RoomAssignment
 
         try:
             body = json.loads(self.request.body)
         except (json.JSONDecodeError, TypeError):
             return [JSONResponse({"error": "Invalid JSON"}, status_code=HTTPStatus.BAD_REQUEST)]
 
-        required = ["room_key", "start_time", "end_time"]
-        for field in required:
+        for field in ("room_key", "start_time", "end_time"):
             if not body.get(field):
                 return [JSONResponse({"error": f"{field} is required"}, status_code=HTTPStatus.BAD_REQUEST)]
 
@@ -230,9 +472,31 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
             end_time=body["end_time"],
             status=body.get("status", "scheduled"),
             notes=body.get("notes", ""),
+            resource_keys=body.get("resource_keys", []),
             assigned_by_id=staff_dbid,
         )
-        return [JSONResponse({"success": True, "id": assignment.pk}, status_code=HTTPStatus.CREATED)]
+
+        # Update appointment location in Canvas if we have FHIR creds and a location ID
+        canvas_result = None
+        appointment_id = body.get("appointment_id", "")
+        if appointment_id:
+            room = Room.objects.filter(key=body["room_key"]).first()
+            if room and room.practice_location_id:
+                fhir = self._fhir_client()
+                if fhir:
+                    try:
+                        canvas_result = fhir.update_appointment_location(
+                            appointment_id, room.practice_location_id
+                        )
+                    except Exception as e:
+                        log.warning("Failed to update appointment location in Canvas: %s", e)
+                        canvas_result = {"error": str(e)}
+
+        return [JSONResponse({
+            "success": True,
+            "id": assignment.pk,
+            "canvas_sync": canvas_result,
+        }, status_code=HTTPStatus.CREATED)]
 
     @api.put("/assignments/<id>")
     def update_assignment(self) -> list[Response | Effect]:
@@ -248,7 +512,8 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
         if not assignment:
             return [JSONResponse({"error": "Assignment not found"}, status_code=HTTPStatus.NOT_FOUND)]
 
-        for field in ("room_key", "status", "notes", "start_time", "end_time", "patient_name", "appointment_type", "provider_name"):
+        for field in ("room_key", "status", "notes", "start_time", "end_time",
+                       "patient_name", "appointment_type", "provider_name", "resource_keys"):
             if field in body:
                 setattr(assignment, field, body[field])
         assignment.save()
@@ -285,7 +550,10 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
 
             provider_name = ""
             if appt.provider:
-                provider_name = getattr(appt.provider, "credentialed_name", "") or f"{appt.provider.first_name} {appt.provider.last_name}".strip()
+                provider_name = (
+                    getattr(appt.provider, "credentialed_name", "")
+                    or f"{appt.provider.first_name} {appt.provider.last_name}".strip()
+                )
 
             duration = appt.duration_minutes or 30
             end_time = appt.start_time + timedelta(minutes=duration)

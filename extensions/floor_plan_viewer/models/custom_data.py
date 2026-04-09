@@ -17,17 +17,38 @@ from canvas_sdk.v1.data.base import CustomModel
 class Room(CustomModel):
     """A physical room in the office floor plan."""
 
-    key: Any = CharField(max_length=50)  # matches data-room attr in SVG; uniqueness enforced via UniqueConstraint
+    key: Any = CharField(max_length=50)  # matches data-room attr in SVG
     name: Any = CharField(max_length=100)
     room_type: Any = CharField(max_length=50)  # exam, wellness, treatment, lab, conference, office, utility
     number: Any = CharField(max_length=20, blank=True, default="")
     bookable: Any = BooleanField(default=True)
     active: Any = BooleanField(default=True)
-    equipment: Any = JSONField(default=list)  # ["IV Station", "Hyperbaric Chamber"]
+    equipment: Any = JSONField(default=list)  # legacy display list
+    practice_location_id: Any = CharField(max_length=256, blank=True, default="")  # Canvas PracticeLocation UUID
 
     class Meta:
         constraints = [
             UniqueConstraint(fields=["key"], name="uq_fp_room_key"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.key})"
+
+
+class Resource(CustomModel):
+    """A schedulable resource / piece of equipment (e.g., hyperbaric chamber, IV station)."""
+
+    key: Any = CharField(max_length=50)
+    name: Any = CharField(max_length=100)
+    resource_type: Any = CharField(max_length=50)  # equipment, device, room_feature
+    room_key: Any = CharField(max_length=50, blank=True, default="")  # home room
+    portable: Any = BooleanField(default=False)
+    active: Any = BooleanField(default=True)
+    practice_location_id: Any = CharField(max_length=256, blank=True, default="")  # Canvas Location UUID for calendar
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(fields=["key"], name="uq_fp_resource_key"),
         ]
 
     def __str__(self) -> str:
@@ -45,8 +66,9 @@ class RoomAssignment(CustomModel):
     provider_name: Any = CharField(max_length=256, blank=True, default="")
     start_time: Any = DateTimeField()
     end_time: Any = DateTimeField()
-    status: Any = CharField(max_length=50, default="scheduled")  # scheduled, in-progress, completed, cancelled
+    status: Any = CharField(max_length=50, default="scheduled")
     notes: Any = TextField(blank=True, default="")
+    resource_keys: Any = JSONField(default=list)  # ["hyperbaric-1", "iv-station-1"]
     assigned_by: Any = ForeignKey(
         Staff,
         to_field="dbid",

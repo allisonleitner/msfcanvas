@@ -1,15 +1,20 @@
 {
     "sdk_version": "0.112.0",
-    "plugin_version": "0.1.3",
+    "plugin_version": "0.2.0",
     "name": "floor_plan_viewer",
-    "description": "Interactive floor plan viewer with room status tracking, appointment-to-room assignment, and equipment management.",
-    "url_permissions": [],
+    "description": "Interactive floor plan viewer with room & resource scheduling, Canvas calendar integration, and equipment management.",
+    "url_permissions": [
+        {
+            "url": "https://*.canvasmedical.com/*",
+            "permissions": []
+        }
+    ],
     "components": {
         "applications": [
             {
                 "class": "floor_plan_viewer.applications.my_application:MyApplication",
                 "name": "Floor Plan",
-                "description": "Interactive floor plan showing real-time room availability, assignments, and equipment.",
+                "description": "Interactive floor plan with real-time room availability, resource scheduling, and Canvas calendar integration.",
                 "scope": "global",
                 "icon": "assets/logo.png"
             }
@@ -17,7 +22,7 @@
         "protocols": [
             {
                 "class": "floor_plan_viewer.applications.my_application:FloorPlanApi",
-                "description": "REST API for rooms, room assignments, and appointment queries.",
+                "description": "REST API for rooms, resources, assignments, and Canvas FHIR integration.",
                 "data_access": {
                     "event": "",
                     "read": ["Appointment", "Patient", "Staff"],
@@ -34,7 +39,10 @@
         "namespace": "floor__plan__viewer",
         "access": "read_write"
     },
-    "secrets": [],
+    "secrets": [
+        "FHIR_CLIENT_ID",
+        "FHIR_CLIENT_SECRET"
+    ],
     "tags": {},
     "references": [],
     "license": "",
