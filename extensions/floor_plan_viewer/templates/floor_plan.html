@@ -132,6 +132,25 @@
   @keyframes softPulse{0%,100%{opacity:1}50%{opacity:.5}}
   .room-occupied .pulse-dot{animation:softPulse 3s ease-in-out infinite}
 
+  /* SCHEDULE TAB */
+  .sched-person{margin-bottom:16px;background:var(--warm-white);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .sched-person-header{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+  .sched-person-header:hover{background:var(--ivory)}
+  .sched-person-name{font-family:'Cormorant Garamond',Georgia,serif;font-size:17px;font-weight:600;color:var(--navy)}
+  .sched-person-count{font-size:11px;color:var(--taupe);background:var(--cream);padding:2px 8px;border-radius:10px}
+  .sched-person-room{font-size:11px;color:var(--sage-dark);background:var(--sage-light);padding:2px 8px;border-radius:10px;margin-left:6px}
+  .sched-appts{border-top:1px solid var(--border)}
+  .sched-appt{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .sched-appt:last-child{border-bottom:none}
+  .sched-appt-info{flex:1}
+  .sched-appt-time{font-size:11px;font-weight:600;color:var(--charcoal)}
+  .sched-appt-patient{font-size:14px;color:var(--navy);margin-top:1px}
+  .sched-appt-room{display:flex;align-items:center;gap:6px}
+  .sched-room-badge{padding:4px 10px;border-radius:8px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--warm-white);color:var(--charcoal)}
+  .sched-room-badge.assigned{background:var(--sage-light);border-color:var(--sage);color:var(--sage-dark)}
+  .sched-room-select{padding:4px 8px;border-radius:8px;border:1px solid var(--gold);background:var(--gold-light);font-size:11px;color:var(--gold-dark);cursor:pointer;font-family:'Inter',sans-serif}
+  .sched-room-select:focus{outline:none;box-shadow:0 0 0 2px var(--gold-light)}
+
   /* CONFIGURE TAB */
   .config-panel{flex:1;padding:30px;overflow-y:auto;max-width:1100px;margin:0 auto;width:100%}
   .config-section{margin-bottom:30px}
@@ -277,6 +296,7 @@
     <!-- TABS -->
     <div class="tab-bar">
       <button class="tab active" onclick="switchTab('floorplan')">Floor Plan</button>
+      <button class="tab" onclick="switchTab('schedule')">Schedule</button>
       <button class="tab" onclick="switchTab('configure')">Configure</button>
     </div>
 
@@ -312,6 +332,24 @@
           <!-- WAITING AREA - clickable -->
           <g class="room" data-room="waiting-area"><rect x="140" y="355" width="500" height="120"/><text class="room-label" x="390" y="405">WAITING AREA</text><text class="room-count" x="390" y="425" id="count-waiting-area" fill="var(--navy)"></text></g>
         </svg>
+      </div>
+    </div>
+
+    <!-- SCHEDULE TAB -->
+    <div class="tab-content" id="tab-schedule" style="flex-direction:column">
+      <div style="padding:20px 24px;flex:1;overflow:auto">
+        <div style="display:flex;gap:24px;min-height:100%">
+          <!-- Providers Column -->
+          <div style="flex:1;min-width:280px">
+            <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:20px;font-weight:600;color:var(--navy);margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--sage)">Providers</div>
+            <div id="scheduleProviders"></div>
+          </div>
+          <!-- Resources Column -->
+          <div style="flex:1;min-width:280px">
+            <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:20px;font-weight:600;color:var(--navy);margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--gold)">Resources</div>
+            <div id="scheduleResources"></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -471,7 +509,7 @@
 
 <script>
 const API = '/plugin-io/api/floor_plan_viewer';
-let rooms = {}, resources = [], assignments = [], appointments = [], waitingPatients = [], selectedRoom = null;
+let rooms = {}, resources = [], assignments = [], appointments = [], waitingPatients = [], providers = [], selectedRoom = null;
 let sonosSpeakers = {}, sonosPresets = [], sonosConfigured = false, sonosTriggered = new Set();
 
 // === API ===
@@ -487,14 +525,16 @@ async function loadResources() { const d=await apiFetch('/resources'); resources
 async function loadAssignments() { const d=await apiFetch('/assignments'); assignments=d.assignments||[]; }
 async function loadAppointments() { const d=await apiFetch('/appointments/today'); appointments=d.appointments||[]; }
 async function loadWaiting() { const d=await apiFetch('/waiting'); waitingPatients=d.waiting||[]; }
+async function loadProviders() { const d=await apiFetch('/providers'); providers=d.providers||[]; }
 async function loadSonosSpeakers() { const d=await apiFetch('/sonos/speakers'); sonosSpeakers={}; (d.speakers||[]).forEach(s=>sonosSpeakers[s.room_key]=s); }
 async function loadSonosPresets() { const d=await apiFetch('/sonos/presets'); sonosPresets=d.presets||[]; }
 async function loadSonosStatus() { const d=await apiFetch('/sonos/status'); sonosConfigured=!!d.configured; sonosDemoMode=!!d.demo_mode; }
 
 async function refreshData() {
-  await Promise.all([loadRooms(),loadAssignments(),loadAppointments(),loadResources(),loadWaiting(),loadSonosSpeakers(),loadSonosPresets(),loadSonosStatus()]);
+  await Promise.all([loadRooms(),loadAssignments(),loadAppointments(),loadResources(),loadWaiting(),loadProviders(),loadSonosSpeakers(),loadSonosPresets(),loadSonosStatus()]);
   updateFloorPlan();
   renderResourceTable();
+  renderSchedule();
   renderSpeakerMapTable();
   renderPresetTable();
   updateSonosStatusBanner();
@@ -711,6 +751,114 @@ async function addToCalendar(key){
   const r=await apiFetch(`/resources/${key}/create-practitioner`,{method:'POST'});
   if(r.success){showToast('Resource is now schedulable on the calendar');await refreshData();}
   else{showToast(r.error||'Failed','error');}
+}
+
+// === Schedule Tab ===
+function renderSchedule() {
+  const bookableRooms = Object.values(rooms).filter(r => r.bookable);
+  const roomOpts = bookableRooms.map(r => `<option value="${r.key}">${r.name}</option>`).join('');
+
+  // Group appointments by provider
+  const providerAppts = {};
+  providers.forEach(p => { providerAppts[p.id] = []; });
+  appointments.forEach(a => {
+    if (a.provider_id && providerAppts[a.provider_id]) {
+      providerAppts[a.provider_id].push(a);
+    }
+  });
+
+  // Find room assignment for an appointment
+  function getAssignedRoom(apptId) {
+    const a = assignments.find(x => x.appointment_id === apptId && x.status !== 'cancelled');
+    return a ? a.room_key : '';
+  }
+  function getAssignmentId(apptId) {
+    const a = assignments.find(x => x.appointment_id === apptId && x.status !== 'cancelled');
+    return a ? a.id : null;
+  }
+
+  // Render providers
+  const provCol = document.getElementById('scheduleProviders');
+  const activeProviders = providers.filter(p => providerAppts[p.id] && providerAppts[p.id].length > 0);
+  if (!activeProviders.length) {
+    provCol.innerHTML = '<div style="color:var(--taupe);font-style:italic;padding:20px">No provider appointments today</div>';
+  } else {
+    provCol.innerHTML = activeProviders.map(p => {
+      const appts = providerAppts[p.id].sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+      return `<div class="sched-person">
+        <div class="sched-person-header">
+          <span class="sched-person-name">${p.name}</span>
+          <span class="sched-person-count">${appts.length} appt${appts.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div class="sched-appts">${appts.map(a => {
+          const assignedRoom = getAssignedRoom(a.id);
+          const assignId = getAssignmentId(a.id);
+          const roomName = assignedRoom ? (rooms[assignedRoom]?.name || assignedRoom) : '';
+          return `<div class="sched-appt">
+            <div class="sched-appt-info">
+              <div class="sched-appt-time">${formatTime(a.start_time)} - ${formatTime(a.end_time)}</div>
+              <div class="sched-appt-patient">${a.patient_name}</div>
+            </div>
+            <div class="sched-appt-room">
+              ${assignedRoom
+                ? '<span class="sched-room-badge assigned">' + roomName + '</span>'
+                : '<select class="sched-room-select" onchange="schedAssignRoom(this.value,\'' + a.id + '\',\'' + a.patient_name.replace(/'/g, "\\'") + '\',\'' + a.provider_name.replace(/'/g, "\\'") + '\',\'' + a.start_time + '\',\'' + a.end_time + '\')"><option value="">Assign room...</option>' + roomOpts + '</select>'
+              }
+            </div>
+          </div>`;
+        }).join('')}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Render resources with their assignments
+  const resCol = document.getElementById('scheduleResources');
+  if (!resources.length) {
+    resCol.innerHTML = '<div style="color:var(--taupe);font-style:italic;padding:20px">No resources configured</div>';
+  } else {
+    resCol.innerHTML = resources.map(r => {
+      const resAssignments = assignments.filter(a => (a.resource_keys || []).includes(r.key) && a.status !== 'cancelled');
+      const roomName = rooms[r.room_key]?.name || '';
+      return `<div class="sched-person">
+        <div class="sched-person-header">
+          <div>
+            <span class="sched-person-name">${r.name}</span>
+            ${roomName ? '<span class="sched-person-room">' + roomName + '</span>' : ''}
+          </div>
+          <span class="sched-person-count">${resAssignments.length} session${resAssignments.length !== 1 ? 's' : ''}</span>
+        </div>
+        ${resAssignments.length > 0 ? '<div class="sched-appts">' + resAssignments.sort((a, b) => new Date(a.start_time) - new Date(b.start_time)).map(a => {
+          const assignedRoom = a.room_key ? (rooms[a.room_key]?.name || a.room_key) : '';
+          return `<div class="sched-appt">
+            <div class="sched-appt-info">
+              <div class="sched-appt-time">${formatTime(a.start_time)} - ${formatTime(a.end_time)}</div>
+              <div class="sched-appt-patient">${a.patient_name || 'Unassigned'}</div>
+            </div>
+            ${assignedRoom ? '<span class="sched-room-badge assigned">' + assignedRoom + '</span>' : ''}
+          </div>`;
+        }).join('') + '</div>' : '<div style="padding:12px 16px;color:var(--taupe);font-size:12px;font-style:italic;border-top:1px solid var(--border)">No sessions scheduled</div>'}
+      </div>`;
+    }).join('');
+  }
+}
+
+async function schedAssignRoom(roomKey, apptId, patientName, providerName, startTime, endTime) {
+  if (!roomKey) return;
+  await apiFetch('/assignments', {
+    method: 'POST',
+    body: JSON.stringify({
+      room_key: roomKey,
+      appointment_id: apptId,
+      patient_name: patientName,
+      provider_name: providerName,
+      start_time: startTime,
+      end_time: endTime,
+      status: 'scheduled',
+      resource_keys: [],
+    }),
+  });
+  showToast(patientName + ' assigned to ' + (rooms[roomKey]?.name || roomKey));
+  await refreshData();
 }
 
 // === Resource Form ===

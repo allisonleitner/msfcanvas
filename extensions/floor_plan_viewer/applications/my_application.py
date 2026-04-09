@@ -938,10 +938,15 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
             duration = appt.duration_minutes or 30
             end_time = appt.start_time + timedelta(minutes=duration)
 
+            provider_id = ""
+            if appt.provider:
+                provider_id = str(appt.provider.id)
+
             result.append({
                 "id": str(appt.id),
                 "patient_name": patient_name,
                 "patient_id": patient_id,
+                "provider_id": provider_id,
                 "provider_name": provider_name,
                 "start_time": appt.start_time.isoformat(),
                 "end_time": end_time.isoformat(),
@@ -950,6 +955,26 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
             })
 
         return [JSONResponse({"appointments": result}, status_code=HTTPStatus.OK)]
+
+    @api.get("/providers")
+    def get_providers(self) -> list[Response | Effect]:
+        """Return active staff/providers for the schedule view."""
+        providers = Staff.objects.filter(active=True).order_by("last_name", "first_name")
+        result = []
+        for p in providers:
+            name = (
+                getattr(p, "credentialed_name", "")
+                or f"{p.first_name} {p.last_name}".strip()
+            )
+            if not name:
+                continue
+            result.append({
+                "id": str(p.id),
+                "name": name,
+                "first_name": p.first_name or "",
+                "last_name": p.last_name or "",
+            })
+        return [JSONResponse({"providers": result}, status_code=HTTPStatus.OK)]
 
     # ------------------------------------------------------------------
     # Sonos - Discovery & Configuration
