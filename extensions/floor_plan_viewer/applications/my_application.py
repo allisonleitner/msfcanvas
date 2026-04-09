@@ -267,34 +267,37 @@ class SonosClient:
 # ---------------------------------------------------------------------------
 
 ELLE_MEDICINE_ROOMS = [
-    {"key": "studio-two", "name": "Studio Two", "room_type": "treatment", "number": "113", "bookable": True, "equipment": ["IV Station"]},
+    # Clinical Exam Rooms
     {"key": "elle-one", "name": "Elle One", "room_type": "exam", "number": "105", "bookable": True, "equipment": []},
     {"key": "elle-two", "name": "Elle Two", "room_type": "exam", "number": "106", "bookable": True, "equipment": []},
-    {"key": "restore", "name": "Restore", "room_type": "wellness", "number": "109", "bookable": True, "equipment": ["Acupuncture Table"]},
-    {"key": "thrive", "name": "Thrive", "room_type": "exam", "number": "107", "bookable": True, "equipment": []},
-    {"key": "studio-one", "name": "Studio One", "room_type": "treatment", "number": "104", "bookable": True, "equipment": ["IV Station", "Infusion Chair"]},
+    {"key": "thrive", "name": "Thrive", "room_type": "exam", "number": "107", "bookable": True, "equipment": ["InBody"]},
+    # Wellness / Treatment Rooms
+    {"key": "restore", "name": "Restore", "room_type": "treatment", "number": "109", "bookable": True, "equipment": ["Hyperbaric Chamber"]},
+    {"key": "float", "name": "Float", "room_type": "treatment", "number": "108", "bookable": True, "equipment": ["Zero Gravity Dry Float"]},
+    # Member / Schedulable Spaces
+    {"key": "studio-one", "name": "Studio One", "room_type": "hoteling", "number": "104", "bookable": True, "equipment": []},
     {"key": "collective", "name": "The Collective", "room_type": "conference", "number": "105", "bookable": True, "equipment": []},
-    {"key": "float", "name": "Float", "room_type": "wellness", "number": "108", "bookable": True, "equipment": ["Hyperbaric Chamber"]},
-    {"key": "lab", "name": "Lab", "room_type": "lab", "number": "115", "bookable": True, "equipment": ["Centrifuge", "Phlebotomy Station"]},
+    # Staff / Non-Schedulable
+    {"key": "studio-two", "name": "Studio Two", "room_type": "staff", "number": "113", "bookable": False, "equipment": []},
+    {"key": "lab", "name": "Lab", "room_type": "lab", "number": "115", "bookable": False, "equipment": []},
     {"key": "hub", "name": "The Hub", "room_type": "utility", "number": "", "bookable": False, "equipment": []},
     {"key": "cafe", "name": "The Cafe", "room_type": "utility", "number": "114", "bookable": False, "equipment": []},
     {"key": "it", "name": "IT", "room_type": "utility", "number": "116", "bookable": False, "equipment": []},
     {"key": "hallway", "name": "Hallway", "room_type": "utility", "number": "", "bookable": False, "equipment": []},
     {"key": "entry", "name": "Entry", "room_type": "utility", "number": "100", "bookable": False, "equipment": []},
-    {"key": "lounge", "name": "Lounge", "room_type": "utility", "number": "102", "bookable": False, "equipment": []},
+    {"key": "lounge", "name": "Lounge", "room_type": "waiting", "number": "102", "bookable": False, "equipment": []},
     {"key": "physician", "name": "Physician's Suite", "room_type": "office", "number": "111", "bookable": False, "equipment": []},
     {"key": "workroom", "name": "Workroom", "room_type": "utility", "number": "112", "bookable": False, "equipment": []},
 ]
 
 ELLE_MEDICINE_RESOURCES = [
-    {"key": "iv-therapy", "name": "IV Therapy", "resource_type": "service", "room_key": "studio-one", "portable": False, "price_cents": 15000, "credit_amount": 1, "default_duration_minutes": 45, "description": "Vitamin & nutrient IV drip"},
-    {"key": "nad-infusion", "name": "NAD+ Infusion", "resource_type": "service", "room_key": "studio-one", "portable": False, "price_cents": 35000, "credit_amount": 2, "default_duration_minutes": 90, "description": "NAD+ anti-aging infusion therapy"},
-    {"key": "chelation", "name": "Chelation Therapy", "resource_type": "service", "room_key": "studio-two", "portable": False, "price_cents": 25000, "credit_amount": 2, "default_duration_minutes": 60, "description": "Heavy metal chelation treatment"},
-    {"key": "hyperbaric", "name": "Hyperbaric Chamber", "resource_type": "equipment", "room_key": "float", "portable": False, "price_cents": 20000, "credit_amount": 1, "default_duration_minutes": 60, "description": "Hyperbaric oxygen therapy session"},
-    {"key": "acupuncture", "name": "Acupuncture", "resource_type": "service", "room_key": "restore", "portable": False, "price_cents": 12000, "credit_amount": 1, "default_duration_minutes": 45, "description": "Traditional acupuncture treatment"},
-    {"key": "massage", "name": "Massage Therapy", "resource_type": "service", "room_key": "restore", "portable": False, "price_cents": 15000, "credit_amount": 1, "default_duration_minutes": 60, "description": "Therapeutic massage session"},
-    {"key": "float-therapy", "name": "Float Therapy", "resource_type": "service", "room_key": "float", "portable": False, "price_cents": 10000, "credit_amount": 1, "default_duration_minutes": 60, "description": "Sensory deprivation float session"},
-    {"key": "lab-panel", "name": "Lab Panel", "resource_type": "service", "room_key": "lab", "portable": False, "price_cents": 8000, "credit_amount": 0, "default_duration_minutes": 15, "description": "Comprehensive blood work / lab panel"},
+    # Treatment services - Restore
+    {"key": "hyperbaric", "name": "Hyperbaric Oxygen Therapy", "resource_type": "service", "room_key": "restore", "portable": False, "price_cents": 20000, "credit_amount": 1, "default_duration_minutes": 60, "description": "Hyperbaric oxygen therapy session"},
+    # Treatment services - Float
+    {"key": "dry-float", "name": "Zero Gravity Dry Float", "resource_type": "service", "room_key": "float", "portable": False, "price_cents": 10000, "credit_amount": 1, "default_duration_minutes": 60, "description": "Zero gravity dry float for nervous system recovery"},
+    # Clinical services - Thrive (Dietician)
+    {"key": "inbody", "name": "InBody Scan", "resource_type": "service", "room_key": "thrive", "portable": False, "price_cents": 5000, "credit_amount": 0, "default_duration_minutes": 15, "description": "InBody composition analysis"},
+    {"key": "nutrition-consult", "name": "Nutrition Consult", "resource_type": "service", "room_key": "thrive", "portable": False, "price_cents": 15000, "credit_amount": 1, "default_duration_minutes": 45, "description": "Lifestyle & performance nutrition consultation"},
 ]
 
 # Demo data for testing without Sonos OAuth credentials

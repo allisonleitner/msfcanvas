@@ -286,27 +286,27 @@
         <svg class="floor-plan" viewBox="0 0 820 500" xmlns="http://www.w3.org/2000/svg">
           <rect x="0" y="0" width="820" height="500" fill="var(--ivory)" rx="12"/>
           <rect class="wall-fill" x="20" y="20" width="780" height="460" rx="8"/>
-          <!-- TOP ROW -->
-          <g class="room" data-room="hub"><rect x="25" y="25" width="110" height="140"/><text class="room-label" x="80" y="90">THE HUB</text><text class="room-sublabel" x="80" y="104">Workroom</text></g>
-          <g class="room" data-room="studio-two"><rect x="140" y="25" width="120" height="140"/><text class="room-label" x="200" y="85">STUDIO</text><text class="room-label" x="200" y="99">TWO</text><text class="room-sublabel" x="200" y="114">113</text><text class="room-count pulse-dot" x="200" y="132" id="count-studio-two"></text></g>
-          <g class="room" data-room="cafe"><rect x="265" y="25" width="115" height="140"/><text class="room-label" x="322" y="88">THE CAFE</text><text class="room-sublabel" x="322" y="102">Break Room</text></g>
-          <g class="room" data-room="lab"><rect x="385" y="25" width="110" height="140"/><text class="room-label" x="440" y="90">LAB</text><text class="room-sublabel" x="440" y="104">115</text><text class="room-count pulse-dot" x="440" y="124" id="count-lab"></text></g>
+          <!-- TOP ROW - Staff / Non-Patient -->
+          <g class="room" data-room="hub"><rect x="25" y="25" width="110" height="140"/><text class="room-label" x="80" y="88">THE HUB</text><text class="room-sublabel" x="80" y="102">MA / Nurse Hub</text></g>
+          <g class="room" data-room="studio-two"><rect x="140" y="25" width="120" height="140"/><text class="room-label" x="200" y="85">STUDIO</text><text class="room-label" x="200" y="99">TWO</text><text class="room-sublabel" x="200" y="114">Staff Workspace</text></g>
+          <g class="room" data-room="cafe"><rect x="265" y="25" width="115" height="140"/><text class="room-label" x="322" y="88">THE CAFE</text><text class="room-sublabel" x="322" y="102">Staff Break Room</text></g>
+          <g class="room" data-room="lab"><rect x="385" y="25" width="110" height="140"/><text class="room-label" x="440" y="90">LAB</text><text class="room-sublabel" x="440" y="104">Specimens</text></g>
           <g class="room" data-room="it"><rect x="500" y="80" width="80" height="85"/><text class="room-label" x="540" y="120">IT</text><text class="room-sublabel" x="540" y="133">Server</text></g>
           <g class="room" data-room="hallway"><rect x="500" y="25" width="100" height="50"/><text class="room-label" x="550" y="50">HALLWAY</text></g>
           <g class="room" data-room="entry"><rect x="610" y="70" width="70" height="95"/><text class="room-label" x="645" y="115">ENTRY</text></g>
-          <g class="room" data-room="lounge"><rect x="690" y="25" width="105" height="145"/><text class="room-label" x="742" y="92">LOUNGE</text></g>
+          <g class="room" data-room="lounge"><rect x="690" y="25" width="105" height="145"/><text class="room-label" x="742" y="88">LOUNGE</text><text class="room-sublabel" x="742" y="102">Patient Waiting</text></g>
           <!-- CORRIDOR -->
           <rect x="140" y="170" width="540" height="45" rx="4" fill="var(--ivory-dark)" stroke="var(--border)" stroke-width=".5" stroke-dasharray="6 3"/>
           <text style="font-size:7px;fill:var(--taupe-light);text-anchor:middle;font-family:Inter,sans-serif;letter-spacing:2px" x="410" y="197">CORRIDOR</text>
-          <!-- BOTTOM ROW -->
-          <g class="room" data-room="physician"><rect x="25" y="170" width="110" height="160"/><text class="room-label" x="80" y="240">PHYSICIAN'S</text><text class="room-label" x="80" y="254">SUITE</text><text class="room-sublabel" x="80" y="268">111</text></g>
-          <g class="room" data-room="elle-one"><rect x="140" y="220" width="120" height="130"/><text class="room-label" x="200" y="275">ELLE ONE</text><text class="room-sublabel" x="200" y="290">Exam A</text><text class="room-count pulse-dot" x="200" y="318" id="count-elle-one"></text></g>
-          <g class="room" data-room="elle-two"><rect x="265" y="220" width="120" height="130"/><text class="room-label" x="325" y="275">ELLE TWO</text><text class="room-sublabel" x="325" y="290">Exam B</text><text class="room-count pulse-dot" x="325" y="318" id="count-elle-two"></text></g>
-          <g class="room" data-room="restore"><rect x="390" y="220" width="130" height="130"/><text class="room-label" x="455" y="278">RESTORE</text><text class="room-sublabel" x="455" y="293">Wellness A</text><text class="room-count pulse-dot" x="455" y="318" id="count-restore"></text></g>
-          <g class="room" data-room="thrive"><rect x="525" y="220" width="115" height="130"/><text class="room-label" x="582" y="278">THRIVE</text><text class="room-sublabel" x="582" y="293">Exam C</text><text class="room-count pulse-dot" x="582" y="318" id="count-thrive"></text></g>
-          <g class="room" data-room="studio-one"><rect x="645" y="170" width="150" height="100"/><text class="room-label" x="720" y="215">STUDIO ONE</text><text class="room-sublabel" x="720" y="230">104</text><text class="room-count pulse-dot" x="720" y="252" id="count-studio-one"></text></g>
+          <!-- BOTTOM ROW - Clinical & Treatment -->
+          <g class="room" data-room="physician"><rect x="25" y="170" width="110" height="160"/><text class="room-label" x="80" y="240">PHYSICIAN'S</text><text class="room-label" x="80" y="254">SUITE</text><text class="room-sublabel" x="80" y="268">Private Office</text></g>
+          <g class="room" data-room="elle-one"><rect x="140" y="220" width="120" height="130"/><text class="room-label" x="200" y="275">ELLE ONE</text><text class="room-sublabel" x="200" y="290">Clinical Exam</text><text class="room-count pulse-dot" x="200" y="318" id="count-elle-one"></text></g>
+          <g class="room" data-room="elle-two"><rect x="265" y="220" width="120" height="130"/><text class="room-label" x="325" y="275">ELLE TWO</text><text class="room-sublabel" x="325" y="290">Clinical Exam</text><text class="room-count pulse-dot" x="325" y="318" id="count-elle-two"></text></g>
+          <g class="room" data-room="restore"><rect x="390" y="220" width="130" height="130"/><text class="room-label" x="455" y="278">RESTORE</text><text class="room-sublabel" x="455" y="293">Hyperbaric / HBOT</text><text class="room-count pulse-dot" x="455" y="318" id="count-restore"></text></g>
+          <g class="room" data-room="thrive"><rect x="525" y="220" width="115" height="130"/><text class="room-label" x="582" y="278">THRIVE</text><text class="room-sublabel" x="582" y="293">Dietician</text><text class="room-count pulse-dot" x="582" y="318" id="count-thrive"></text></g>
+          <g class="room" data-room="studio-one"><rect x="645" y="170" width="150" height="100"/><text class="room-label" x="720" y="215">STUDIO ONE</text><text class="room-sublabel" x="720" y="230">Member Hoteling</text><text class="room-count pulse-dot" x="720" y="252" id="count-studio-one"></text></g>
           <g class="room" data-room="collective"><rect x="645" y="275" width="150" height="75"/><text class="room-label" x="720" y="308">THE COLLECTIVE</text><text class="room-sublabel" x="720" y="322">Conference</text><text class="room-count pulse-dot" x="720" y="340" id="count-collective"></text></g>
-          <g class="room" data-room="float"><rect x="645" y="355" width="150" height="120"/><text class="room-label" x="720" y="408">FLOAT</text><text class="room-sublabel" x="720" y="423">Wellness B</text><text class="room-count pulse-dot" x="720" y="448" id="count-float"></text></g>
+          <g class="room" data-room="float"><rect x="645" y="355" width="150" height="120"/><text class="room-label" x="720" y="408">FLOAT</text><text class="room-sublabel" x="720" y="423">Dry Float</text><text class="room-count pulse-dot" x="720" y="448" id="count-float"></text></g>
           <!-- BOTTOM LEFT -->
           <g class="room" data-room="workroom"><rect x="25" y="335" width="110" height="140"/><text class="room-label" x="80" y="400">WORKROOM</text><text class="room-sublabel" x="80" y="415">112</text></g>
           <!-- WAITING AREA - clickable -->
