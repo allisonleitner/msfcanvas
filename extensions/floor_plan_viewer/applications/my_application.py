@@ -1093,10 +1093,16 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
 
             # Determine practitioner ID (provider or resource's practitioner)
             practitioner_id = provider_id
-            if resource_key and not provider_id:
-                resource = Resource.objects.filter(key=resource_key).first()
-                if resource and resource.practitioner_id:
-                    practitioner_id = resource.practitioner_id
+            resource_obj = None
+            if resource_key:
+                resource_obj = Resource.objects.filter(key=resource_key).first()
+                if resource_obj and resource_obj.practitioner_id and not provider_id:
+                    practitioner_id = resource_obj.practitioner_id
+
+            # Auto-resolve room from resource's home room if not specified
+            if not room_key and resource_obj and resource_obj.room_key:
+                room_key = resource_obj.room_key
+                log.info("[floor_plan] auto-resolved room '%s' from resource '%s'", room_key, resource_key)
 
             # Determine location ID
             location_id = ""
