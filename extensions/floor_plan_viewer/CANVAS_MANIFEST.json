@@ -1,6 +1,6 @@
 {
     "sdk_version": "0.112.0",
-    "plugin_version": "0.3.0",
+    "plugin_version": "0.3.1",
     "name": "floor_plan_viewer",
     "description": "Interactive floor plan viewer with room & resource scheduling, Canvas calendar integration, and equipment management.",
     "url_permissions": [
