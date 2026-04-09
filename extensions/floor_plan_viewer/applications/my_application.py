@@ -761,7 +761,8 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
 
     @api.post("/sync-to-canvas")
     def sync_to_canvas(self) -> list[Response | Effect]:
-        """Create PracticeLocations in Canvas for all bookable rooms and resources."""
+        """Link rooms to Canvas PracticeLocations and create Practitioners for resources."""
+        from canvas_sdk.v1.data.practicelocation import PracticeLocation
         from floor_plan_viewer.models.custom_data import Resource, Room
 
         fhir = self._fhir_client()
@@ -774,32 +775,27 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
         rooms_synced = 0
         resources_synced = 0
 
-        # Sync bookable rooms
-        for room in Room.objects.filter(active=True, bookable=True):
-            if room.practice_location_id:
-                continue
-            try:
-                resp = fhir.create_location(room.name, physical_type="ro")
-                loc_id = resp.get("id", "")
-                if loc_id:
-                    room.practice_location_id = loc_id
-                    room.save()
-                    rooms_synced = rooms_synced + 1
-                else:
-                    errors.append(f"Room {room.key}: {resp}")
-            except Exception as e:
-                errors.append(f"Room {room.key}: {e}")
+        # Link bookable rooms to the first active PracticeLocation
+        fallback_loc = PracticeLocation.objects.filter(active=True).first()
+        if fallback_loc:
+            loc_id = str(fallback_loc.id)
+            for room in Room.objects.filter(active=True, bookable=True):
+                if room.practice_location_id:
+                    continue
+                Room.objects.filter(pk=room.pk).update(practice_location_id=loc_id)
+                rooms_synced = rooms_synced + 1
+        else:
+            errors.append("No PracticeLocations found in Canvas. Create one via Canvas admin first.")
 
-        # Sync resources
+        # Create Practitioners for resources
         for resource in Resource.objects.filter(active=True):
-            if resource.practice_location_id:
+            if resource.practitioner_id:
                 continue
             try:
-                resp = fhir.create_location(resource.name, physical_type="ro")
-                loc_id = resp.get("id", "")
-                if loc_id:
-                    resource.practice_location_id = loc_id
-                    resource.save()
+                resp = fhir.create_practitioner(resource.name, resource_key=resource.key)
+                pract_id = resp.get("id", "")
+                if pract_id:
+                    Resource.objects.filter(pk=resource.pk).update(practitioner_id=pract_id)
                     resources_synced = resources_synced + 1
                 else:
                     errors.append(f"Resource {resource.key}: {resp}")
@@ -1208,23 +1204,18 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                 if room and room.practice_location_id:
                     location_id = room.practice_location_id
 
-            log.info("[floor_plan] segment '%s': room_key='%s' location_id='%s' before auto-sync", seg_name, room_key, location_id)
-            # If no location, try to auto-sync the room to Canvas
+            # If no location, try to find one from existing Canvas PracticeLocations
             if not location_id and room_key:
-                if fhir:
-                    room_obj = Room.objects.filter(key=room_key).first()
-                    needs_sync = room_obj and (not room_obj.practice_location_id or room_obj.practice_location_id == "")
-                    log.info("[floor_plan] room '%s' needs_sync=%s current_loc='%s'", room_key, needs_sync, room_obj.practice_location_id if room_obj else 'N/A')
-                    if needs_sync:
-                        try:
-                            loc_resp = fhir.create_location(room_obj.name, physical_type="ro")
-                            loc_id_new = loc_resp.get("id", "")
-                            if loc_id_new:
-                                Room.objects.filter(key=room_key).update(practice_location_id=loc_id_new)
-                                location_id = loc_id_new
-                                log.info("[floor_plan] auto-synced room '%s' -> location %s", room_key, loc_id_new)
-                        except Exception as e:
-                            log.warning("[floor_plan] auto-sync room failed: %s", e)
+                from canvas_sdk.v1.data.practicelocation import PracticeLocation
+                # Use the first active PracticeLocation as fallback
+                fallback_loc = PracticeLocation.objects.filter(active=True).first()
+                if fallback_loc:
+                    location_id = str(fallback_loc.id)
+                    # Save it on the room for next time
+                    Room.objects.filter(key=room_key, practice_location_id="").update(
+                        practice_location_id=location_id
+                    )
+                    log.info("[floor_plan] linked room '%s' -> practice location %s (%s)", room_key, location_id, fallback_loc.name)
 
             log.info("[floor_plan] segment '%s': practitioner=%s location=%s start=%s end=%s",
                      seg_name, practitioner_id, location_id, current_start, end_iso)
