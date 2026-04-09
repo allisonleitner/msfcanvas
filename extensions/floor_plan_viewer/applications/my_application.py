@@ -1058,6 +1058,9 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
         fhir = self._fhir_client()
         staff_dbid = self._get_staff_dbid()
 
+        log.info("[floor_plan] book: patient=%s start=%s segments=%d fhir=%s",
+                 patient_id, start_time, len(segments), "yes" if fhir else "no")
+
         results = []
         errors = []
         current_start = start_time  # ISO string
@@ -1088,6 +1091,9 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                 if room and room.practice_location_id:
                     location_id = room.practice_location_id
 
+            log.info("[floor_plan] segment '%s': practitioner=%s location=%s start=%s end=%s",
+                     seg_name, practitioner_id, location_id, current_start, end_iso)
+
             # Create appointment via FHIR if we have credentials and a practitioner
             appt_id = ""
             if fhir and practitioner_id:
@@ -1101,9 +1107,14 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                     )
                     appt_id = resp.get("id", "")
                     if not appt_id:
+                        log.warning("[floor_plan] FHIR create failed: %s", resp)
                         errors.append(f"Segment '{seg_name}': {resp}")
                 except Exception as e:
+                    log.warning("[floor_plan] FHIR exception: %s", e)
                     errors.append(f"Segment '{seg_name}': {e}")
+            elif not practitioner_id:
+                log.info("[floor_plan] segment '%s': no practitioner, skipping FHIR", seg_name)
+                errors.append(f"Segment '{seg_name}': No provider or resource practitioner selected")
 
             # Create room assignment
             if room_key:

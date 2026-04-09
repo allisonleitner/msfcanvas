@@ -1097,7 +1097,7 @@ async function submitBooking() {
     const count = (r.booked || []).length;
     closeBookingModal();
     showToast(patientName + ': ' + count + ' segment(s) booked');
-    if (r.errors && r.errors.length) showToast('Some errors: ' + r.errors[0], 'error');
+    if (r.errors && r.errors.length) { r.errors.forEach(e => showToast(e, 'error')); }
     await refreshData();
   } else {
     showToast(r.error || 'Booking failed', 'error');
