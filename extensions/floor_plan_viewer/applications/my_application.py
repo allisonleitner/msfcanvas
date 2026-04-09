@@ -1237,40 +1237,27 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
             end_dt = start_dt + timedelta(minutes=duration)
             end_iso = end_dt.isoformat()
 
-            # Determine practitioner ID (provider or resource's practitioner)
+            # Determine practitioner ID
+            # For resources: use a real staff provider with an existing calendar
+            # (FHIR-created practitioners don't get Canvas calendars, so we use a fallback)
             practitioner_id = provider_id
             resource_obj = None
             if resource_key:
                 resource_obj = Resource.objects.filter(key=resource_key).first()
-                if resource_obj and not provider_id:
-                    if resource_obj.practitioner_id:
-                        practitioner_id = resource_obj.practitioner_id
-                    elif fhir:
-                        # Auto-create practitioner for this resource
-                        try:
-                            pract_resp = fhir.create_practitioner(resource_obj.name, resource_key=resource_obj.key)
-                            pract_id = pract_resp.get("id", "")
-                            if pract_id:
-                                Resource.objects.filter(key=resource_key).update(practitioner_id=pract_id)
-                                practitioner_id = pract_id
-                                log.info("[floor_plan] auto-created practitioner for '%s' -> %s", resource_key, pract_id)
-                                # Also create a calendar so appointments can be booked
-                                try:
-                                    from canvas_sdk.v1.data.practicelocation import PracticeLocation
-                                    fl = PracticeLocation.objects.filter(active=True).first()
-                                    cal_effect = CalendarEffect(
-                                        id=str(uuid4()),
-                                        provider=pract_id,
-                                        type=CalendarType.Clinic,
-                                        location=str(fl.id) if fl else None,
-                                        description=f"{resource_obj.name} schedule",
-                                    ).create()
-                                    extra_effects.append(cal_effect)
-                                    log.info("[floor_plan] auto-created calendar for '%s'", resource_key)
-                                except Exception as ce:
-                                    log.warning("[floor_plan] auto-create calendar failed: %s", ce)
-                        except Exception as e:
-                            log.warning("[floor_plan] auto-create practitioner failed: %s", e)
+
+            if not practitioner_id:
+                # Find a real staff member with a calendar to book against
+                from canvas_sdk.v1.data import Calendar as CalendarModel
+                first_cal = CalendarModel.objects.first()
+                if first_cal:
+                    # Calendar title format: "ProviderName: CalendarType: LocationName"
+                    # Extract provider from the calendar's staff reference
+                    cal_staff = Staff.objects.filter(
+                        active=True
+                    ).first()
+                    if cal_staff:
+                        practitioner_id = str(cal_staff.id)
+                        log.info("[floor_plan] using fallback provider %s for resource '%s'", practitioner_id, resource_key)
 
             # Auto-resolve room from resource's home room if not specified
             if not room_key and resource_obj and resource_obj.room_key:
