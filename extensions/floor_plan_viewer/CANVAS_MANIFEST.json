@@ -1,11 +1,19 @@
 {
     "sdk_version": "0.112.0",
-    "plugin_version": "0.3.1",
+    "plugin_version": "0.4.1",
     "name": "floor_plan_viewer",
     "description": "Interactive floor plan viewer with room & resource scheduling, Canvas calendar integration, and equipment management.",
     "url_permissions": [
         {
             "url": "https://*.canvasmedical.com/*",
+            "permissions": []
+        },
+        {
+            "url": "https://api.sonos.com/*",
+            "permissions": []
+        },
+        {
+            "url": "https://api.ws.sonos.com/*",
             "permissions": []
         }
     ],
@@ -41,7 +49,10 @@
     },
     "secrets": [
         "FHIR_CLIENT_ID",
-        "FHIR_CLIENT_SECRET"
+        "FHIR_CLIENT_SECRET",
+        "SONOS_CLIENT_ID",
+        "SONOS_CLIENT_SECRET",
+        "SONOS_REFRESH_TOKEN"
     ],
     "tags": {},
     "references": [],

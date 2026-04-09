@@ -94,3 +94,61 @@ class RoomAssignment(CustomModel):
 
     def __str__(self) -> str:
         return f"{self.room_key}: {self.patient_name} ({self.status})"
+
+
+class SonosSpeaker(CustomModel):
+    """Maps a physical Sonos speaker to a room on the floor plan."""
+
+    room_key: Any = CharField(max_length=50, db_index=True)
+    player_id: Any = CharField(max_length=256)  # Sonos player ID
+    group_id: Any = CharField(max_length=256, blank=True, default="")  # Sonos group ID
+    player_name: Any = CharField(max_length=256)  # human-readable name from Sonos
+    household_id: Any = CharField(max_length=256)
+    active: Any = BooleanField(default=True)
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(fields=["room_key"], name="uq_fp_sonos_room_key"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.player_name} → {self.room_key}"
+
+
+class AudioPreset(CustomModel):
+    """Maps an appointment type or resource to a Sonos audio preset."""
+
+    key: Any = CharField(max_length=100)
+    name: Any = CharField(max_length=256)
+    match_type: Any = CharField(max_length=50)  # appointment_type, resource_key, room_type, default
+    match_value: Any = CharField(max_length=256, blank=True, default="")
+    sonos_favorite_id: Any = CharField(max_length=256, blank=True, default="")
+    sonos_favorite_name: Any = CharField(max_length=256, blank=True, default="")
+    volume: Any = IntegerField(default=25)  # 0-100
+    priority: Any = IntegerField(default=0)  # higher wins on multiple matches
+    active: Any = BooleanField(default=True)
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(fields=["key"], name="uq_fp_audio_preset_key"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.match_type}={self.match_value})"
+
+
+class SonosPlaybackLog(CustomModel):
+    """Append-only audit trail of Sonos playback actions."""
+
+    assignment_id: Any = IntegerField(default=0, db_index=True)
+    room_key: Any = CharField(max_length=50)
+    player_id: Any = CharField(max_length=256)
+    preset_key: Any = CharField(max_length=100, blank=True, default="")
+    action: Any = CharField(max_length=50)  # play, pause, stop, volume_change, error
+    volume: Any = IntegerField(default=0)
+    triggered_by: Any = CharField(max_length=50)  # auto_assign, auto_start, auto_complete, manual, timer
+    error_message: Any = TextField(blank=True, default="")
+    created_at: Any = DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return f"{self.room_key}: {self.action} ({self.triggered_by})"

@@ -196,6 +196,42 @@
   .toast.error{background:var(--blush-dark);color:#fff}
 
   ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--ivory)}::-webkit-scrollbar-thumb{background:var(--sand);border-radius:10px}
+
+  /* SONOS */
+  .sonos-section{margin-top:24px;padding-top:20px;border-top:1px solid var(--border)}
+  .sonos-status-banner{padding:10px 14px;border-radius:10px;font-size:12px;display:flex;align-items:center;gap:8px;margin-bottom:14px}
+  .sonos-status-banner.connected{background:var(--sage-light);color:var(--sage-dark)}
+  .sonos-status-banner.disconnected{background:var(--blush-light);color:var(--blush-dark)}
+  .speaker-map-table{width:100%;border-collapse:collapse;font-size:13px}
+  .speaker-map-table th{text-align:left;font-size:10px;color:var(--taupe);text-transform:uppercase;letter-spacing:.8px;padding:8px 10px;border-bottom:1px solid var(--border);font-weight:600}
+  .speaker-map-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+  .speaker-map-table .speaker-name{font-weight:500;color:var(--navy)}
+  .speaker-map-table .unlink-btn{font-size:11px;color:var(--blush-dark);cursor:pointer;background:none;border:none;font-weight:500}
+  .speaker-map-table .unlink-btn:hover{text-decoration:underline}
+  .preset-table{width:100%;border-collapse:collapse;font-size:13px}
+  .preset-table th{text-align:left;font-size:10px;color:var(--taupe);text-transform:uppercase;letter-spacing:.8px;padding:8px 10px;border-bottom:1px solid var(--border);font-weight:600}
+  .preset-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+  .volume-badge{display:inline-flex;align-items:center;gap:4px;background:var(--cream);padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500}
+  .priority-badge{display:inline-flex;align-items:center;background:var(--gold-light);padding:2px 8px;border-radius:12px;font-size:11px;color:var(--gold-dark);font-weight:500}
+  .match-badge{display:inline-flex;background:var(--sage-light);padding:2px 8px;border-radius:12px;font-size:11px;color:var(--sage-dark);font-weight:500}
+  .favorite-badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--navy)}
+  .favorite-badge.unmapped{color:var(--taupe);font-style:italic}
+
+  .sonos-controls{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--cream);border-radius:10px;margin:10px 0}
+  .sonos-controls .sonos-label{font-size:11px;font-weight:600;color:var(--taupe);text-transform:uppercase;letter-spacing:.5px;flex:1;display:flex;align-items:center;gap:6px}
+  .sonos-controls .sonos-label svg{width:14px;height:14px}
+  .sonos-btn{width:28px;height:28px;border-radius:8px;border:1px solid var(--border);background:var(--warm-white);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+  .sonos-btn:hover{background:var(--sage-light);border-color:var(--sage)}
+  .sonos-btn svg{width:14px;height:14px;stroke:var(--navy);fill:none;stroke-width:2}
+  .sonos-btn.playing{background:var(--sage-light);border-color:var(--sage)}
+  .sonos-volume{width:60px;height:4px;-webkit-appearance:none;appearance:none;background:var(--border);border-radius:2px;outline:none;cursor:pointer}
+  .sonos-volume::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--sage);cursor:pointer}
+  .sonos-volume-label{font-size:10px;color:var(--taupe);width:24px;text-align:right}
+  .sonos-now-playing{font-size:11px;color:var(--sage-dark);margin-top:4px;padding-left:14px;font-style:italic}
+
+  .speaker-indicator{font-size:9px;fill:var(--taupe);opacity:.7}
+  .speaker-indicator.playing{fill:var(--sage-dark);opacity:1;animation:sonos-pulse 2s ease-in-out infinite}
+  @keyframes sonos-pulse{0%,100%{opacity:.7}50%{opacity:1}}
 </style>
 </head>
 <body>
@@ -294,6 +330,34 @@
             <tbody id="resourceTableBody"></tbody>
           </table>
         </div>
+
+        <!-- Sonos Speaker Mapping -->
+        <div class="config-section sonos-section">
+          <div class="config-section-header">
+            <div class="config-section-title">Sonos Speakers</div>
+            <button class="btn" onclick="discoverSonosSpeakers()">Discover Speakers</button>
+          </div>
+          <div id="sonosStatusBanner" class="sonos-status-banner disconnected">Checking Sonos status...</div>
+          <table class="speaker-map-table" id="speakerMapTable">
+            <thead><tr><th>Room</th><th>Speaker</th><th>Actions</th></tr></thead>
+            <tbody id="speakerMapBody"></tbody>
+          </table>
+        </div>
+
+        <!-- Audio Presets -->
+        <div class="config-section sonos-section">
+          <div class="config-section-header">
+            <div class="config-section-title">Audio Presets</div>
+            <div style="display:flex;gap:6px">
+              <button class="btn" onclick="seedSonosPresets()">Seed Defaults</button>
+              <button class="btn" onclick="openPresetForm()">+ Add Preset</button>
+            </div>
+          </div>
+          <table class="preset-table" id="presetTable">
+            <thead><tr><th>Name</th><th>Matches</th><th>Favorite</th><th>Volume</th><th>Priority</th><th>Actions</th></tr></thead>
+            <tbody id="presetTableBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -344,11 +408,71 @@
   </div>
 </div>
 
+<!-- Preset Form Modal -->
+<div class="form-overlay" id="presetFormOverlay">
+  <div class="form-modal">
+    <div class="form-modal-header"><h2 id="presetFormTitle">Add Audio Preset</h2><button class="modal-close" onclick="closePresetForm()">&times;</button></div>
+    <div class="form-modal-body">
+      <input type="hidden" id="pf-editing-key">
+      <div class="form-group"><label class="form-label">Name</label><input class="form-input" id="pf-name" placeholder="e.g. Acupuncture Ambient"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Match Type</label>
+          <select class="form-input" id="pf-match-type" onchange="updatePresetMatchUI()">
+            <option value="resource_key">Resource / Service</option>
+            <option value="appointment_type">Appointment Type</option>
+            <option value="room_type">Room Type</option>
+            <option value="default">Default (Fallback)</option>
+          </select>
+        </div>
+        <div class="form-group" id="pf-match-value-group"><label class="form-label">Match Value</label>
+          <select class="form-input" id="pf-match-value-select"></select>
+          <input class="form-input" id="pf-match-value-text" style="display:none" placeholder="e.g. Follow-Up Visit">
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Sonos Favorite</label>
+        <select class="form-input" id="pf-favorite">
+          <option value="">-- Select a Sonos favorite --</option>
+        </select>
+        <div style="font-size:11px;color:var(--taupe);margin-top:4px">Favorites are configured in the Sonos app</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Volume (0-100)</label>
+          <div style="display:flex;align-items:center;gap:10px">
+            <input type="range" min="0" max="100" value="25" id="pf-volume" oninput="document.getElementById('pf-volume-label').textContent=this.value" style="flex:1">
+            <span id="pf-volume-label" style="font-size:14px;font-weight:600;color:var(--navy);width:28px;text-align:right">25</span>
+          </div>
+        </div>
+        <div class="form-group"><label class="form-label">Priority</label><input class="form-input" id="pf-priority" type="number" min="0" value="0" placeholder="0"></div>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="closePresetForm()">Cancel</button>
+      <button class="btn active" onclick="savePreset()">Save Preset</button>
+    </div>
+  </div>
+</div>
+
+<!-- Speaker Discovery Modal -->
+<div class="modal-overlay" id="speakerDiscoveryModal">
+  <div class="modal" style="width:540px;max-height:80vh">
+    <div class="modal-header"><h2>Discover Sonos Speakers</h2><button class="modal-close" onclick="closeSpeakerDiscovery()">&times;</button></div>
+    <div class="modal-body">
+      <div id="sonosDiscoveryStatus" style="margin-bottom:12px;font-size:12px;color:var(--taupe)">Loading households...</div>
+      <div id="sonosHouseholdSelect" style="margin-bottom:14px;display:none">
+        <label class="form-label">Household</label>
+        <select class="form-input" id="sd-household" onchange="loadHouseholdPlayers()"></select>
+      </div>
+      <div id="sonosPlayerList"></div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
 const API = '/plugin-io/api/floor_plan_viewer';
 let rooms = {}, resources = [], assignments = [], appointments = [], waitingPatients = [], selectedRoom = null;
+let sonosSpeakers = {}, sonosPresets = [], sonosConfigured = false, sonosTriggered = new Set();
 
 // === API ===
 async function apiFetch(path, opts = {}) {
@@ -363,14 +487,21 @@ async function loadResources() { const d=await apiFetch('/resources'); resources
 async function loadAssignments() { const d=await apiFetch('/assignments'); assignments=d.assignments||[]; }
 async function loadAppointments() { const d=await apiFetch('/appointments/today'); appointments=d.appointments||[]; }
 async function loadWaiting() { const d=await apiFetch('/waiting'); waitingPatients=d.waiting||[]; }
+async function loadSonosSpeakers() { const d=await apiFetch('/sonos/speakers'); sonosSpeakers={}; (d.speakers||[]).forEach(s=>sonosSpeakers[s.room_key]=s); }
+async function loadSonosPresets() { const d=await apiFetch('/sonos/presets'); sonosPresets=d.presets||[]; }
+async function loadSonosStatus() { const d=await apiFetch('/sonos/status'); sonosConfigured=!!d.configured; sonosDemoMode=!!d.demo_mode; }
 
 async function refreshData() {
-  await Promise.all([loadRooms(),loadAssignments(),loadAppointments(),loadResources(),loadWaiting()]);
+  await Promise.all([loadRooms(),loadAssignments(),loadAppointments(),loadResources(),loadWaiting(),loadSonosSpeakers(),loadSonosPresets(),loadSonosStatus()]);
   updateFloorPlan();
   renderResourceTable();
+  renderSpeakerMapTable();
+  renderPresetTable();
+  updateSonosStatusBanner();
+  checkSonosTimers();
   if (selectedRoom) showRoomDetail(selectedRoom);
 }
-async function seedRooms() { await apiFetch('/rooms/seed',{method:'POST'}); showToast('Rooms & resources configured'); await refreshData(); }
+async function seedRooms() { await apiFetch('/rooms/seed',{method:'POST'}); showToast('Rooms, resources & audio presets configured'); await refreshData(); }
 async function syncToCanvas() {
   showToast('Syncing to Canvas calendar...');
   const r=await apiFetch('/sync-to-canvas',{method:'POST'});
@@ -412,6 +543,20 @@ function updateFloorPlan() {
       else{c.textContent='';}
     }
     if(rooms[k]?.bookable){if(s==='available')avail++;else if(s==='occupied')occ++;else if(s==='partial')upcoming++;}
+
+    // Sonos speaker indicator
+    let si=el.querySelector('.speaker-indicator');
+    if(sonosSpeakers[k]){
+      if(!si){
+        si=document.createElementNS('http://www.w3.org/2000/svg','text');
+        si.classList.add('speaker-indicator');
+        const rect=el.querySelector('rect');
+        if(rect){si.setAttribute('x',parseFloat(rect.getAttribute('x'))+parseFloat(rect.getAttribute('width'))-10);si.setAttribute('y',parseFloat(rect.getAttribute('y'))+14);}
+        el.appendChild(si);
+      }
+      si.textContent='\u266B';
+      si.classList.toggle('playing',s==='occupied');
+    } else if(si){si.remove();}
   });
   document.getElementById('statAvail').textContent=avail;
   document.getElementById('statOccupied').textContent=occ;
@@ -447,6 +592,10 @@ function showRoomDetail(roomKey) {
   let actH='';
   if(room.bookable){actH=`<div class="action-row"><button class="action-btn primary" onclick="openAssignModal('${roomKey}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Assign Patient</button></div>`;}
 
+  // Sonos controls
+  const activeAssignment=ra.find(a=>a.status==='in-progress');
+  const sonosH=room.bookable?getSonosControlsHTML(roomKey,activeAssignment?activeAssignment.id:0):'';
+
   let aH='';
   if(room.bookable&&ra.length>0){
     aH=`<div class="section-title">Today's Assignments</div>`;
@@ -462,7 +611,7 @@ function showRoomDetail(roomKey) {
   } else if(room.bookable){aH='<div class="no-appts">No patients assigned</div>';}
   else{aH='<div class="no-appts">Non-clinical space</div>';}
 
-  detail.innerHTML=`<div class="detail-header"><div class="detail-room-name">${room.name}</div><div class="detail-room-type">${room.room_type}${room.number?' &middot; Room '+room.number:''}${room.practice_location_id?' &middot; <span class="sync-dot synced"></span>On Calendar':''}</div><div class="detail-status ${status}">${labels[status]||status}</div>${equipH}</div>${actH}${aH}`;
+  detail.innerHTML=`<div class="detail-header"><div class="detail-room-name">${room.name}</div><div class="detail-room-type">${room.room_type}${room.number?' &middot; Room '+room.number:''}${room.practice_location_id?' &middot; <span class="sync-dot synced"></span>On Calendar':''}</div><div class="detail-status ${status}">${labels[status]||status}</div>${equipH}</div>${actH}${sonosH}${aH}`;
 }
 
 function showWaitingDetail(){
@@ -480,7 +629,16 @@ function showWaitingDetail(){
 function showEmptyState(){const d=document.getElementById('roomDetail');d.classList.add('empty-state');d.innerHTML=`<div class="empty-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg><p>Select a room on the floor plan<br>to view its schedule</p></div>`;}
 
 // === Assignment Actions ===
-async function updateStatus(id,s){await apiFetch(`/assignments/${id}`,{method:'PUT',body:JSON.stringify({status:s})});showToast(s==='completed'?'Session completed':'Session started');await refreshData();}
+async function updateStatus(id,s){
+  const r=await apiFetch(`/assignments/${id}`,{method:'PUT',body:JSON.stringify({status:s})});
+  let msg=s==='completed'?'Session completed':'Session started';
+  if(r.sonos){
+    if(r.sonos.playing)msg+=' \u2014 ambient audio playing';
+    else if(r.sonos.paused)msg+=' \u2014 audio paused';
+    else if(r.sonos.error)msg+=' (Sonos error)';
+  }
+  showToast(msg);await refreshData();
+}
 async function removeAssignment(id){await apiFetch(`/assignments/${id}`,{method:'DELETE'});showToast('Removed');await refreshData();}
 
 // === Assign Modal ===
@@ -595,6 +753,269 @@ async function saveResource(){
   closeResourceForm();await refreshData();
 }
 
+// === Sonos Config UI ===
+let sonosDemoMode=false;
+function updateSonosStatusBanner(){
+  const el=document.getElementById('sonosStatusBanner');
+  if(!el)return;
+  const count=Object.keys(sonosSpeakers).length;
+  if(sonosConfigured){
+    el.className='sonos-status-banner connected';
+    const modeLabel=sonosDemoMode?' (Demo Mode)':'';
+    el.innerHTML=`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> Sonos${modeLabel} &middot; ${count} speaker${count!==1?'s':''} mapped`;
+  } else {
+    el.className='sonos-status-banner disconnected';
+    el.textContent='Sonos not configured. Add SONOS_CLIENT_ID, SONOS_CLIENT_SECRET, and SONOS_REFRESH_TOKEN in plugin secrets.';
+  }
+}
+
+function renderSpeakerMapTable(){
+  const tb=document.getElementById('speakerMapBody');
+  if(!tb)return;
+  const bookableRooms=Object.values(rooms).filter(r=>r.bookable).sort((a,b)=>a.name.localeCompare(b.name));
+  if(!bookableRooms.length){tb.innerHTML='<tr><td colspan="3" style="text-align:center;color:var(--taupe);padding:20px">No rooms configured yet.</td></tr>';return;}
+  tb.innerHTML=bookableRooms.map(r=>{
+    const s=sonosSpeakers[r.key];
+    return `<tr>
+      <td><strong>${r.name}</strong><div style="font-size:11px;color:var(--taupe)">${r.room_type} &middot; ${r.number||'--'}</div></td>
+      <td>${s?`<span class="speaker-name">${s.player_name}</span>`:'<span style="color:var(--taupe);font-style:italic">Not mapped</span>'}</td>
+      <td>${s?`<button class="unlink-btn" onclick="unlinkSpeaker('${r.key}')">Unlink</button>`:''}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderPresetTable(){
+  const tb=document.getElementById('presetTableBody');
+  if(!tb)return;
+  if(!sonosPresets.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--taupe);padding:20px">No presets configured. Click Seed Defaults to create standard presets.</td></tr>';return;}
+  tb.innerHTML=sonosPresets.map(p=>{
+    const fav=p.sonos_favorite_name?`<span class="favorite-badge">${p.sonos_favorite_name}</span>`:`<span class="favorite-badge unmapped">Not mapped</span>`;
+    return `<tr>
+      <td><strong>${p.name}</strong></td>
+      <td><span class="match-badge">${p.match_type}${p.match_value?': '+p.match_value:''}</span></td>
+      <td>${fav}</td>
+      <td><span class="volume-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>${p.volume}</span></td>
+      <td><span class="priority-badge">${p.priority}</span></td>
+      <td><button class="table-btn" onclick="editPreset('${p.key}')">Edit</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// Speaker Discovery
+async function discoverSonosSpeakers(){
+  if(!sonosConfigured){showToast('Configure Sonos secrets first','error');return;}
+  document.getElementById('speakerDiscoveryModal').classList.add('visible');
+  document.getElementById('sonosDiscoveryStatus').textContent='Loading households...';
+  document.getElementById('sonosHouseholdSelect').style.display='none';
+  document.getElementById('sonosPlayerList').innerHTML='';
+  try{
+    const d=await apiFetch('/sonos/households');
+    const hh=d.households||[];
+    if(!hh.length){document.getElementById('sonosDiscoveryStatus').textContent='No Sonos households found.';return;}
+    const sel=document.getElementById('sd-household');
+    sel.innerHTML=hh.map(h=>`<option value="${h.id}">${h.id}</option>`).join('');
+    document.getElementById('sonosHouseholdSelect').style.display='block';
+    document.getElementById('sonosDiscoveryStatus').textContent=`Found ${hh.length} household${hh.length>1?'s':''}. Select one and map speakers to rooms.`;
+    await loadHouseholdPlayers();
+  }catch(e){document.getElementById('sonosDiscoveryStatus').textContent='Error: '+e.message;}
+}
+
+async function loadHouseholdPlayers(){
+  const hhId=document.getElementById('sd-household').value;
+  if(!hhId)return;
+  const list=document.getElementById('sonosPlayerList');
+  list.innerHTML='<div style="color:var(--taupe);font-size:12px">Loading players...</div>';
+  try{
+    const d=await apiFetch(`/sonos/players?household_id=${hhId}`);
+    const players=d.players||[];
+    const groups=d.groups||[];
+    if(!players.length){list.innerHTML='<div style="color:var(--taupe)">No players found in this household.</div>';return;}
+    // Build group lookup
+    const playerGroup={};
+    groups.forEach(g=>{(g.playerIds||[]).forEach(pid=>{playerGroup[pid]=g.id;});});
+    const bookableRooms=Object.values(rooms).filter(r=>r.bookable).sort((a,b)=>a.name.localeCompare(b.name));
+    list.innerHTML=bookableRooms.map(r=>{
+      const current=sonosSpeakers[r.key];
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="flex:1"><strong>${r.name}</strong><div style="font-size:11px;color:var(--taupe)">${r.room_type}</div></div>
+        <select class="form-input" style="width:200px;font-size:12px" id="sd-player-${r.key}">
+          <option value="">-- None --</option>
+          ${players.map(p=>`<option value="${p.id}" data-name="${p.name}" data-group="${playerGroup[p.id]||''}" data-hh="${hhId}" ${current&&current.player_id===p.id?'selected':''}>${p.name}</option>`).join('')}
+        </select>
+        <button class="btn" style="padding:6px 12px;font-size:11px" onclick="mapSpeaker('${r.key}')">Map</button>
+      </div>`;
+    }).join('');
+  }catch(e){list.innerHTML='<div style="color:var(--blush-dark)">Error: '+e.message+'</div>';}
+}
+
+async function mapSpeaker(roomKey){
+  const sel=document.getElementById(`sd-player-${roomKey}`);
+  const playerId=sel.value;
+  if(!playerId){showToast('Select a speaker first','error');return;}
+  const opt=sel.selectedOptions[0];
+  await apiFetch('/sonos/speakers',{method:'POST',body:JSON.stringify({
+    room_key:roomKey,player_id:playerId,player_name:opt.dataset.name,
+    group_id:opt.dataset.group||'',household_id:opt.dataset.hh||''
+  })});
+  showToast(`${opt.dataset.name} mapped to ${rooms[roomKey]?.name||roomKey}`);
+  await loadSonosSpeakers();renderSpeakerMapTable();updateSonosStatusBanner();
+}
+
+async function unlinkSpeaker(roomKey){
+  await apiFetch(`/sonos/speakers/${roomKey}`,{method:'DELETE'});
+  showToast('Speaker unlinked');
+  await loadSonosSpeakers();renderSpeakerMapTable();updateSonosStatusBanner();
+}
+
+function closeSpeakerDiscovery(){document.getElementById('speakerDiscoveryModal').classList.remove('visible');}
+
+// Preset Form
+let sonosFavorites=[];
+async function openPresetForm(editKey){
+  document.getElementById('presetFormOverlay').classList.add('visible');
+  // Load favorites if needed
+  if(sonosConfigured&&!sonosFavorites.length){
+    const firstSpeaker=Object.values(sonosSpeakers)[0];
+    if(firstSpeaker){
+      try{
+        const d=await apiFetch(`/sonos/favorites?household_id=${firstSpeaker.household_id}`);
+        sonosFavorites=d.items||d.favorites||[];
+      }catch(e){sonosFavorites=[];}
+    }
+  }
+  const favSel=document.getElementById('pf-favorite');
+  favSel.innerHTML='<option value="">-- Select a Sonos favorite --</option>'+sonosFavorites.map(f=>`<option value="${f.id}" data-name="${f.name}">${f.name}${f.description?' - '+f.description:''}</option>`).join('');
+
+  if(editKey){
+    const p=sonosPresets.find(x=>x.key===editKey);if(!p)return;
+    document.getElementById('presetFormTitle').textContent='Edit Audio Preset';
+    document.getElementById('pf-editing-key').value=p.key;
+    document.getElementById('pf-name').value=p.name;
+    document.getElementById('pf-match-type').value=p.match_type;
+    updatePresetMatchUI();
+    if(p.match_type==='appointment_type')document.getElementById('pf-match-value-text').value=p.match_value;
+    else document.getElementById('pf-match-value-select').value=p.match_value;
+    favSel.value=p.sonos_favorite_id||'';
+    document.getElementById('pf-volume').value=p.volume;document.getElementById('pf-volume-label').textContent=p.volume;
+    document.getElementById('pf-priority').value=p.priority;
+  } else {
+    document.getElementById('presetFormTitle').textContent='Add Audio Preset';
+    document.getElementById('pf-editing-key').value='';
+    document.getElementById('pf-name').value='';document.getElementById('pf-match-type').value='resource_key';
+    updatePresetMatchUI();
+    document.getElementById('pf-volume').value=25;document.getElementById('pf-volume-label').textContent='25';
+    document.getElementById('pf-priority').value=0;
+    favSel.value='';
+  }
+}
+function editPreset(key){openPresetForm(key);}
+function closePresetForm(){document.getElementById('presetFormOverlay').classList.remove('visible');}
+
+function updatePresetMatchUI(){
+  const mt=document.getElementById('pf-match-type').value;
+  const sel=document.getElementById('pf-match-value-select');
+  const txt=document.getElementById('pf-match-value-text');
+  const grp=document.getElementById('pf-match-value-group');
+  if(mt==='default'){grp.style.display='none';return;}
+  grp.style.display='block';
+  if(mt==='resource_key'){
+    sel.style.display='block';txt.style.display='none';
+    sel.innerHTML='<option value="">-- Select --</option>'+resources.map(r=>`<option value="${r.key}">${r.name}</option>`).join('');
+  } else if(mt==='room_type'){
+    sel.style.display='block';txt.style.display='none';
+    const types=[...new Set(Object.values(rooms).map(r=>r.room_type))].sort();
+    sel.innerHTML='<option value="">-- Select --</option>'+types.map(t=>`<option value="${t}">${t}</option>`).join('');
+  } else {
+    sel.style.display='none';txt.style.display='block';
+  }
+}
+
+async function savePreset(){
+  const editKey=document.getElementById('pf-editing-key').value;
+  const name=document.getElementById('pf-name').value.trim();
+  if(!name){showToast('Name is required','error');return;}
+  const mt=document.getElementById('pf-match-type').value;
+  let mv='';
+  if(mt==='appointment_type')mv=document.getElementById('pf-match-value-text').value.trim();
+  else if(mt!=='default')mv=document.getElementById('pf-match-value-select').value;
+  const favSel=document.getElementById('pf-favorite');
+  const favOpt=favSel.selectedOptions[0];
+  const body={
+    name,match_type:mt,match_value:mv,
+    sonos_favorite_id:favSel.value||'',
+    sonos_favorite_name:favOpt&&favSel.value?favOpt.dataset.name||favOpt.textContent:'',
+    volume:parseInt(document.getElementById('pf-volume').value||'25',10),
+    priority:parseInt(document.getElementById('pf-priority').value||'0',10),
+  };
+  if(editKey){
+    await apiFetch(`/sonos/presets/${editKey}`,{method:'PUT',body:JSON.stringify(body)});
+    showToast('Preset updated');
+  } else {
+    body.key=name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/-+$/,'');
+    await apiFetch('/sonos/presets',{method:'POST',body:JSON.stringify(body)});
+    showToast('Preset created');
+  }
+  closePresetForm();await loadSonosPresets();renderPresetTable();
+}
+
+async function seedSonosPresets(){
+  const r=await apiFetch('/sonos/presets/seed',{method:'POST'});
+  showToast(r.presets_created>0?`${r.presets_created} presets created`:'All presets already exist');
+  await loadSonosPresets();renderPresetTable();
+}
+
+// === Sonos Playback Controls ===
+function getSonosControlsHTML(roomKey,assignmentId){
+  const speaker=sonosSpeakers[roomKey];
+  if(!speaker)return '';
+  return `<div class="sonos-controls">
+    <div class="sonos-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>${speaker.player_name}</div>
+    <button class="sonos-btn" title="Play" onclick="sonosPlay('${roomKey}',${assignmentId||0})"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor" stroke="none"/></svg></button>
+    <button class="sonos-btn" title="Pause" onclick="sonosPause('${roomKey}',${assignmentId||0})"><svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" fill="currentColor" stroke="none"/><rect x="14" y="4" width="4" height="16" fill="currentColor" stroke="none"/></svg></button>
+    <input type="range" class="sonos-volume" min="0" max="100" value="25" onchange="sonosSetVolume('${roomKey}',this.value)" title="Volume">
+    <span class="sonos-volume-label">25</span>
+  </div>`;
+}
+
+async function sonosPlay(roomKey,assignmentId){
+  const r=await apiFetch('/sonos/play',{method:'POST',body:JSON.stringify({room_key:roomKey,assignment_id:assignmentId||null,triggered_by:'manual'})});
+  if(r.success){showToast(`Playing: ${r.preset} at volume ${r.volume}`);}
+  else{showToast(r.error||'Could not start playback','error');}
+}
+
+async function sonosPause(roomKey,assignmentId){
+  const r=await apiFetch('/sonos/pause',{method:'POST',body:JSON.stringify({room_key:roomKey,assignment_id:assignmentId||null,triggered_by:'manual'})});
+  if(r.success){showToast('Paused');}
+  else{showToast(r.error||'Could not pause','error');}
+}
+
+async function sonosSetVolume(roomKey,volume){
+  await apiFetch('/sonos/volume',{method:'POST',body:JSON.stringify({room_key:roomKey,volume:parseInt(volume,10)})});
+}
+
+// === Sonos Timer-Based Auto-Trigger ===
+function checkSonosTimers(){
+  if(!sonosConfigured)return;
+  const now=new Date();
+  assignments.forEach(a=>{
+    if(a.status!=='scheduled')return;
+    if(!sonosSpeakers[a.room_key])return;
+    const start=new Date(a.start_time);
+    const triggerKey=`play-${a.id}`;
+    if(start<=now&&!sonosTriggered.has(triggerKey)){
+      sonosTriggered.add(triggerKey);
+      apiFetch('/sonos/play',{method:'POST',body:JSON.stringify({room_key:a.room_key,assignment_id:a.id,triggered_by:'timer'})})
+        .then(r=>{if(r.success)showToast(`Auto-started ambient audio in ${rooms[a.room_key]?.name||a.room_key}`);});
+    }
+    const end=new Date(a.end_time);
+    const stopKey=`stop-${a.id}`;
+    if(end<=now&&!sonosTriggered.has(stopKey)){
+      sonosTriggered.add(stopKey);
+      apiFetch('/sonos/pause',{method:'POST',body:JSON.stringify({room_key:a.room_key,assignment_id:a.id,triggered_by:'timer'})});
+    }
+  });
+}
+
 // === Clock ===
 function updateClock(){const n=new Date();document.getElementById('currentTime').textContent=n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',second:'2-digit',hour12:true});document.getElementById('dateDisplay').textContent=n.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});}
 
@@ -604,6 +1025,8 @@ async function init(){
   document.querySelectorAll('.room').forEach(el=>{el.addEventListener('click',()=>showRoomDetail(el.dataset.room));});
   document.getElementById('assignModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeAssignModal();});
   document.getElementById('resourceFormOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeResourceForm();});
+  document.getElementById('presetFormOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closePresetForm();});
+  document.getElementById('speakerDiscoveryModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeSpeakerDiscovery();});
   await refreshData();
   setInterval(refreshData,30000);
 }
