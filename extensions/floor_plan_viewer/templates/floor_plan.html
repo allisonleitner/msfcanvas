@@ -202,7 +202,7 @@
   .config-section-title{font-family:'Cormorant Garamond',Georgia,serif;font-size:22px;font-weight:600;color:var(--navy)}
   .resource-table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--warm-white)}
   .resource-table th{background:var(--cream);padding:10px 14px;font-size:11px;font-weight:600;color:var(--taupe);text-transform:uppercase;letter-spacing:.8px;text-align:left;border-bottom:1px solid var(--border)}
-  .resource-table td{padding:10px 14px;font-size:13px;border-bottom:1px solid var(--border)}
+  .resource-table td{padding:10px 14px;font-size:13px;border-bottom:1px solid var(--border);white-space:nowrap}
   .resource-table tr:last-child td{border-bottom:none}
   .resource-table tr:hover td{background:var(--ivory)}
   .price-cell{font-weight:600;color:var(--sage-dark)}
@@ -440,6 +440,17 @@
           </table>
         </div>
 
+        <!-- Staff Configuration -->
+        <div class="config-section">
+          <div class="config-section-header">
+            <div class="config-section-title">Staff / Providers</div>
+          </div>
+          <table class="resource-table" id="staffTable">
+            <thead><tr><th>Name</th><th>Schedulable</th><th>Default Room</th></tr></thead>
+            <tbody id="staffTableBody"></tbody>
+          </table>
+        </div>
+
         <!-- Sonos Speaker Mapping -->
         <div class="config-section sonos-section">
           <div class="config-section-header">
@@ -623,7 +634,7 @@
 
 <script>
 const API = '/plugin-io/api/floor_plan_viewer';
-let rooms = {}, resources = [], assignments = [], appointments = [], waitingPatients = [], providers = [], selectedRoom = null;
+let rooms = {}, resources = [], assignments = [], appointments = [], waitingPatients = [], providers = [], allStaff = [], selectedRoom = null;
 let scheduleDate = new Date(); // currently viewed date on schedule tab
 let sonosSpeakers = {}, sonosPresets = [], sonosConfigured = false, sonosTriggered = new Set();
 
@@ -641,7 +652,8 @@ function getSchedDateStr() { return scheduleDate.toISOString().split('T')[0]; }
 async function loadAssignments() { const d=await apiFetch('/assignments?date=' + getSchedDateStr()); assignments=d.assignments||[]; }
 async function loadAppointments() { const d=await apiFetch('/appointments/today?date=' + getSchedDateStr()); appointments=d.appointments||[]; }
 async function loadWaiting() { const d=await apiFetch('/waiting'); waitingPatients=d.waiting||[]; }
-async function loadProviders() { const d=await apiFetch('/providers'); providers=d.providers||[]; }
+async function loadProviders() { const d=await apiFetch('/providers?schedulable=true'); providers=d.providers||[]; }
+async function loadAllStaff() { const d=await apiFetch('/providers'); allStaff=d.providers||[]; }
 async function loadSonosSpeakers() { const d=await apiFetch('/sonos/speakers'); sonosSpeakers={}; (d.speakers||[]).forEach(s=>sonosSpeakers[s.room_key]=s); }
 async function loadSonosPresets() { const d=await apiFetch('/sonos/presets'); sonosPresets=d.presets||[]; }
 async function loadSonosStatus() { const d=await apiFetch('/sonos/status'); sonosConfigured=!!d.configured; sonosDemoMode=!!d.demo_mode; }
@@ -649,9 +661,10 @@ async function loadSonosStatus() { const d=await apiFetch('/sonos/status'); sono
 async function refreshData() {
   // Each load wrapped to prevent one failure from breaking everything
   const safe = fn => fn().catch(e => console.warn('load error:', e));
-  await Promise.all([safe(loadRooms),safe(loadAssignments),safe(loadAppointments),safe(loadResources),safe(loadWaiting),safe(loadProviders),safe(loadSonosSpeakers),safe(loadSonosPresets),safe(loadSonosStatus)]);
+  await Promise.all([safe(loadRooms),safe(loadAssignments),safe(loadAppointments),safe(loadResources),safe(loadWaiting),safe(loadProviders),safe(loadAllStaff),safe(loadSonosSpeakers),safe(loadSonosPresets),safe(loadSonosStatus)]);
   try { updateFloorPlan(); } catch(e) { console.warn('updateFloorPlan error:', e); }
   try { renderResourceTable(); } catch(e) { console.warn('renderResourceTable error:', e); }
+  try { renderStaffTable(); } catch(e) { console.warn('renderStaffTable error:', e); }
   try { renderSchedule(); } catch(e) { console.warn('renderSchedule error:', e); }
   try { renderSpeakerMapTable(); } catch(e) { console.warn('renderSpeakerMapTable:', e); }
   try { renderPresetTable(); } catch(e) { console.warn('renderPresetTable:', e); }
@@ -866,6 +879,32 @@ async function assignAppointment(id){
 }
 
 // === Resource Table (Configure tab) ===
+function renderStaffTable() {
+  const tb = document.getElementById('staffTableBody');
+  if (!allStaff.length) { tb.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--taupe);padding:20px">No staff found</td></tr>'; return; }
+  const bookableRooms = Object.values(rooms).filter(r => r.bookable);
+  tb.innerHTML = allStaff.map(s => {
+    const roomOpts = bookableRooms.map(r => '<option value="' + r.key + '"' + (r.key === s.default_room_key ? ' selected' : '') + '>' + r.name + '</option>').join('');
+    return '<tr>' +
+      '<td><strong>' + s.name + '</strong></td>' +
+      '<td><input type="checkbox"' + (s.schedulable ? ' checked' : '') + ' onchange="toggleStaffSchedulable(\'' + s.id + '\',\'' + s.name.replace(/'/g, '') + '\',this.checked,\'' + (s.default_room_key || '') + '\')" style="width:18px;height:18px;accent-color:var(--sage-dark);cursor:pointer"></td>' +
+      '<td><select style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:100%" onchange="updateStaffRoom(\'' + s.id + '\',\'' + s.name.replace(/'/g, '') + '\',' + s.schedulable + ',this.value)"><option value="">-- None --</option>' + roomOpts + '</select></td>' +
+    '</tr>';
+  }).join('');
+}
+
+async function toggleStaffSchedulable(staffId, staffName, schedulable, roomKey) {
+  await apiFetch('/staff-config', { method: 'POST', body: JSON.stringify({ staff_id: staffId, staff_name: staffName, schedulable: schedulable, default_room_key: roomKey }) });
+  showToast(staffName + (schedulable ? ' is now schedulable' : ' hidden from schedule'));
+  await refreshData();
+}
+
+async function updateStaffRoom(staffId, staffName, schedulable, roomKey) {
+  await apiFetch('/staff-config', { method: 'POST', body: JSON.stringify({ staff_id: staffId, staff_name: staffName, schedulable: schedulable, default_room_key: roomKey }) });
+  showToast('Default room updated');
+  await refreshData();
+}
+
 function renderResourceTable(){
   const tb=document.getElementById('resourceTableBody');
   if(!resources.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--taupe);padding:30px">No resources configured. Click Setup or + Add Resource.</td></tr>';return;}
@@ -1327,7 +1366,8 @@ function renderSchedule() {
     });
     blocks += pendingBlocks(p.id);
     const escapedName = p.name.replace(/'/g, "\\'");
-    gridHtml += `<div class="cal-col"><div class="cal-col-header provider">${p.name}<div class="cal-col-sub">${appts.length} appt${appts.length !== 1 ? 's' : ''}</div></div><div class="cal-col-body${bmClass}" onmousedown="onCalColMouseDown(event,'provider','${p.id}','${escapedName}','','',30)">${hourLines()}${blocks}</div></div>`;
+    const provRoom = p.default_room_key || '';
+    gridHtml += `<div class="cal-col"><div class="cal-col-header provider">${p.name}<div class="cal-col-sub">${appts.length} appt${appts.length !== 1 ? 's' : ''}${provRoom ? ' · ' + (rooms[provRoom]?.name || provRoom) : ''}</div></div><div class="cal-col-body${bmClass}" onmousedown="onCalColMouseDown(event,'provider','${p.id}','${escapedName}','','${provRoom}',30)">${hourLines()}${blocks}</div></div>`;
   });
 
   // Resource columns

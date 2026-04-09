@@ -1022,23 +1022,88 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
 
     @api.get("/providers")
     def get_providers(self) -> list[Response | Effect]:
-        """Return active staff/providers for the schedule view."""
-        providers = Staff.objects.filter(active=True).order_by("last_name", "first_name")
+        """Return active staff/providers with their scheduling config."""
+        from floor_plan_viewer.models.custom_data import StaffConfig
+
+        all_staff = Staff.objects.filter(active=True).order_by("last_name", "first_name")
+        # Load staff configs
+        configs = {}
+        for sc in StaffConfig.objects.filter(active=True):
+            configs[sc.staff_id] = sc
+
+        schedulable_only = self.request.query_params.get("schedulable", "") == "true"
+
         result = []
-        for p in providers:
+        for p in all_staff:
             name = (
                 getattr(p, "credentialed_name", "")
                 or f"{p.first_name} {p.last_name}".strip()
             )
             if not name:
                 continue
+            sid = str(p.id)
+            cfg = configs.get(sid)
+            is_schedulable = cfg.schedulable if cfg else False
+            default_room = cfg.default_room_key if cfg else ""
+
+            if schedulable_only and not is_schedulable:
+                continue
+
             result.append({
-                "id": str(p.id),
+                "id": sid,
                 "name": name,
                 "first_name": p.first_name or "",
                 "last_name": p.last_name or "",
+                "schedulable": is_schedulable,
+                "default_room_key": default_room,
             })
         return [JSONResponse({"providers": result}, status_code=HTTPStatus.OK)]
+
+    # ------------------------------------------------------------------
+    # Staff config
+    # ------------------------------------------------------------------
+
+    @api.get("/staff-config")
+    def get_staff_configs(self) -> list[Response | Effect]:
+        from floor_plan_viewer.models.custom_data import StaffConfig
+
+        configs = StaffConfig.objects.filter(active=True)
+        return [JSONResponse({
+            "configs": [
+                {
+                    "id": sc.pk,
+                    "staff_id": sc.staff_id,
+                    "staff_name": sc.staff_name,
+                    "schedulable": sc.schedulable,
+                    "default_room_key": sc.default_room_key,
+                }
+                for sc in configs
+            ]
+        }, status_code=HTTPStatus.OK)]
+
+    @api.post("/staff-config")
+    def set_staff_config(self) -> list[Response | Effect]:
+        from floor_plan_viewer.models.custom_data import StaffConfig
+
+        try:
+            body = json.loads(self.request.body)
+        except (json.JSONDecodeError, TypeError):
+            return [JSONResponse({"error": "Invalid JSON"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+        staff_id = body.get("staff_id", "")
+        if not staff_id:
+            return [JSONResponse({"error": "staff_id is required"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+        StaffConfig.objects.update_or_create(
+            staff_id=staff_id,
+            defaults={
+                "staff_name": body.get("staff_name", ""),
+                "schedulable": body.get("schedulable", True),
+                "default_room_key": body.get("default_room_key", ""),
+                "active": True,
+            },
+        )
+        return [JSONResponse({"success": True}, status_code=HTTPStatus.OK)]
 
     # ------------------------------------------------------------------
     # Patient search

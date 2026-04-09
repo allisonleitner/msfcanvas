@@ -97,6 +97,24 @@ class RoomAssignment(CustomModel):
         return f"{self.room_key}: {self.patient_name} ({self.status})"
 
 
+class StaffConfig(CustomModel):
+    """Per-staff scheduling configuration (schedulable flag, default room)."""
+
+    staff_id: Any = CharField(max_length=256)  # Canvas Staff UUID
+    staff_name: Any = CharField(max_length=256)
+    schedulable: Any = BooleanField(default=True)
+    default_room_key: Any = CharField(max_length=50, blank=True, default="")
+    active: Any = BooleanField(default=True)
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(fields=["staff_id"], name="uq_fp_staff_config"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.staff_name} ({'schedulable' if self.schedulable else 'hidden'})"
+
+
 class SonosSpeaker(CustomModel):
     """Maps a physical Sonos speaker to a room on the floor plan."""
 
