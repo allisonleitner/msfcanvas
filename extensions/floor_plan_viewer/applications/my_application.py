@@ -366,7 +366,9 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                 "error": "FHIR credentials not configured. Set FHIR_CLIENT_ID and FHIR_CLIENT_SECRET secrets.",
             }, status_code=HTTPStatus.BAD_REQUEST)]
 
-        results: dict[str, Any] = {"rooms_synced": 0, "resources_synced": 0, "errors": []}
+        errors: list[str] = []
+        rooms_synced = 0
+        resources_synced = 0
 
         # Sync bookable rooms
         for room in Room.objects.filter(active=True, bookable=True):
@@ -378,11 +380,11 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                 if loc_id:
                     room.practice_location_id = loc_id
                     room.save()
-                    results["rooms_synced"] += 1
+                    rooms_synced = rooms_synced + 1
                 else:
-                    results["errors"].append(f"Room {room.key}: {resp}")
+                    errors.append(f"Room {room.key}: {resp}")
             except Exception as e:
-                results["errors"].append(f"Room {room.key}: {e}")
+                errors.append(f"Room {room.key}: {e}")
 
         # Sync resources
         for resource in Resource.objects.filter(active=True):
@@ -394,13 +396,17 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                 if loc_id:
                     resource.practice_location_id = loc_id
                     resource.save()
-                    results["resources_synced"] += 1
+                    resources_synced = resources_synced + 1
                 else:
-                    results["errors"].append(f"Resource {resource.key}: {resp}")
+                    errors.append(f"Resource {resource.key}: {resp}")
             except Exception as e:
-                results["errors"].append(f"Resource {resource.key}: {e}")
+                errors.append(f"Resource {resource.key}: {e}")
 
-        return [JSONResponse(results, status_code=HTTPStatus.OK)]
+        return [JSONResponse({
+            "rooms_synced": rooms_synced,
+            "resources_synced": resources_synced,
+            "errors": errors,
+        }, status_code=HTTPStatus.OK)]
 
     # ------------------------------------------------------------------
     # Assignments
