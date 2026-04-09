@@ -503,14 +503,16 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
         except (json.JSONDecodeError, TypeError):
             return [JSONResponse({"error": "Invalid JSON"}, status_code=HTTPStatus.BAD_REQUEST)]
 
-        room = Room.objects.filter(key=key).first()
-        if not room:
+        qs = Room.objects.filter(key=key)
+        if not qs.exists():
             return [JSONResponse({"error": "Room not found"}, status_code=HTTPStatus.NOT_FOUND)]
 
+        update_fields = {}
         for field in ("name", "room_type", "number", "bookable", "equipment", "practice_location_id"):
             if field in body:
-                setattr(room, field, body[field])
-        room.save()
+                update_fields[field] = body[field]
+        if update_fields:
+            qs.update(**update_fields)
         return [JSONResponse({"success": True}, status_code=HTTPStatus.OK)]
 
     @api.post("/rooms/seed")
@@ -639,15 +641,17 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
         except (json.JSONDecodeError, TypeError):
             return [JSONResponse({"error": "Invalid JSON"}, status_code=HTTPStatus.BAD_REQUEST)]
 
-        resource = Resource.objects.filter(key=key).first()
-        if not resource:
+        qs = Resource.objects.filter(key=key)
+        if not qs.exists():
             return [JSONResponse({"error": "Resource not found"}, status_code=HTTPStatus.NOT_FOUND)]
 
+        update_fields = {}
         for field in ("name", "resource_type", "room_key", "description", "portable",
                        "price_cents", "credit_amount", "default_duration_minutes", "max_concurrent", "active"):
             if field in body:
-                setattr(resource, field, body[field])
-        resource.save()
+                update_fields[field] = body[field]
+        if update_fields:
+            qs.update(**update_fields)
         return [JSONResponse({"success": True}, status_code=HTTPStatus.OK)]
 
     @api.delete("/resources/<key>")
@@ -923,15 +927,19 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
         except (json.JSONDecodeError, TypeError):
             return [JSONResponse({"error": "Invalid JSON"}, status_code=HTTPStatus.BAD_REQUEST)]
 
-        assignment = RoomAssignment.objects.filter(pk=pk).first()
-        if not assignment:
+        qs = RoomAssignment.objects.filter(pk=pk)
+        if not qs.exists():
             return [JSONResponse({"error": "Assignment not found"}, status_code=HTTPStatus.NOT_FOUND)]
 
-        for field in ("room_key", "status", "notes", "start_time", "end_time",
-                       "patient_name", "appointment_type", "provider_name", "resource_keys"):
+        update_fields = {}
+        allowed = ("room_key", "status", "notes", "start_time", "end_time",
+                    "patient_name", "appointment_type", "provider_name", "resource_keys")
+        for field in allowed:
             if field in body:
-                setattr(assignment, field, body[field])
-        assignment.save()
+                update_fields[field] = body[field]
+        if update_fields:
+            qs.update(**update_fields)
+        assignment = qs.first()
 
         # Sonos triggers on status change
         sonos_result = None
@@ -1384,14 +1392,16 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
         except (json.JSONDecodeError, TypeError):
             return [JSONResponse({"error": "Invalid JSON"}, status_code=HTTPStatus.BAD_REQUEST)]
 
-        speaker = SonosSpeaker.objects.filter(room_key=room_key, active=True).first()
-        if not speaker:
+        qs = SonosSpeaker.objects.filter(room_key=room_key, active=True)
+        if not qs.exists():
             return [JSONResponse({"error": "Speaker mapping not found"}, status_code=HTTPStatus.NOT_FOUND)]
 
+        update_fields = {}
         for field in ("player_id", "group_id", "player_name", "household_id"):
             if field in body:
-                setattr(speaker, field, body[field])
-        speaker.save()
+                update_fields[field] = body[field]
+        if update_fields:
+            qs.update(**update_fields)
         return [JSONResponse({"success": True}, status_code=HTTPStatus.OK)]
 
     @api.delete("/sonos/speakers/<room_key>")
@@ -1470,15 +1480,17 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
         except (json.JSONDecodeError, TypeError):
             return [JSONResponse({"error": "Invalid JSON"}, status_code=HTTPStatus.BAD_REQUEST)]
 
-        preset = AudioPreset.objects.filter(key=key, active=True).first()
-        if not preset:
+        qs = AudioPreset.objects.filter(key=key, active=True)
+        if not qs.exists():
             return [JSONResponse({"error": "Preset not found"}, status_code=HTTPStatus.NOT_FOUND)]
 
+        update_fields = {}
         for field in ("name", "match_type", "match_value", "sonos_favorite_id",
                        "sonos_favorite_name", "volume", "priority"):
             if field in body:
-                setattr(preset, field, body[field])
-        preset.save()
+                update_fields[field] = body[field]
+        if update_fields:
+            qs.update(**update_fields)
         return [JSONResponse({"success": True}, status_code=HTTPStatus.OK)]
 
     @api.delete("/sonos/presets/<key>")
