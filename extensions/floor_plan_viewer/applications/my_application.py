@@ -67,6 +67,24 @@ class FHIRClient:
             "Content-Type": "application/json",
         }
 
+    def create_practitioner(self, name: str) -> dict:
+        """Create a FHIR Practitioner resource (for schedulable resources)."""
+        parts = name.split(" ", 1)
+        given = parts[0]
+        family = parts[1] if len(parts) > 1 else "Resource"
+        payload = {
+            "resourceType": "Practitioner",
+            "name": [{"family": family, "given": [given], "text": name}],
+            "active": True,
+        }
+        resp = http_requests.post(
+            f"{self.base_url}/Practitioner",
+            json=payload,
+            headers=self._headers(),
+            timeout=15,
+        )
+        return dict(resp.json())
+
     def create_location(self, name: str, physical_type: str = "ro") -> dict:
         """Create a FHIR Location resource. physical_type: 'ro' (room) or 'area'."""
         display = "Room" if physical_type == "ro" else "Area"
@@ -148,13 +166,14 @@ ELLE_MEDICINE_ROOMS = [
 ]
 
 ELLE_MEDICINE_RESOURCES = [
-    {"key": "iv-station-1", "name": "IV Station 1", "resource_type": "equipment", "room_key": "studio-one", "portable": False},
-    {"key": "iv-station-2", "name": "IV Station 2", "resource_type": "equipment", "room_key": "studio-two", "portable": False},
-    {"key": "infusion-chair-1", "name": "Infusion Chair", "resource_type": "equipment", "room_key": "studio-one", "portable": False},
-    {"key": "hyperbaric-1", "name": "Hyperbaric Chamber", "resource_type": "equipment", "room_key": "float", "portable": False},
-    {"key": "acupuncture-table-1", "name": "Acupuncture Table", "resource_type": "equipment", "room_key": "restore", "portable": False},
-    {"key": "centrifuge-1", "name": "Centrifuge", "resource_type": "equipment", "room_key": "lab", "portable": False},
-    {"key": "phlebotomy-1", "name": "Phlebotomy Station", "resource_type": "equipment", "room_key": "lab", "portable": False},
+    {"key": "iv-therapy", "name": "IV Therapy", "resource_type": "service", "room_key": "studio-one", "portable": False, "price_cents": 15000, "credit_amount": 1, "default_duration_minutes": 45, "description": "Vitamin & nutrient IV drip"},
+    {"key": "nad-infusion", "name": "NAD+ Infusion", "resource_type": "service", "room_key": "studio-one", "portable": False, "price_cents": 35000, "credit_amount": 2, "default_duration_minutes": 90, "description": "NAD+ anti-aging infusion therapy"},
+    {"key": "chelation", "name": "Chelation Therapy", "resource_type": "service", "room_key": "studio-two", "portable": False, "price_cents": 25000, "credit_amount": 2, "default_duration_minutes": 60, "description": "Heavy metal chelation treatment"},
+    {"key": "hyperbaric", "name": "Hyperbaric Chamber", "resource_type": "equipment", "room_key": "float", "portable": False, "price_cents": 20000, "credit_amount": 1, "default_duration_minutes": 60, "description": "Hyperbaric oxygen therapy session"},
+    {"key": "acupuncture", "name": "Acupuncture", "resource_type": "service", "room_key": "restore", "portable": False, "price_cents": 12000, "credit_amount": 1, "default_duration_minutes": 45, "description": "Traditional acupuncture treatment"},
+    {"key": "massage", "name": "Massage Therapy", "resource_type": "service", "room_key": "restore", "portable": False, "price_cents": 15000, "credit_amount": 1, "default_duration_minutes": 60, "description": "Therapeutic massage session"},
+    {"key": "float-therapy", "name": "Float Therapy", "resource_type": "service", "room_key": "float", "portable": False, "price_cents": 10000, "credit_amount": 1, "default_duration_minutes": 60, "description": "Sensory deprivation float session"},
+    {"key": "lab-panel", "name": "Lab Panel", "resource_type": "service", "room_key": "lab", "portable": False, "price_cents": 8000, "credit_amount": 0, "default_duration_minutes": 15, "description": "Comprehensive blood work / lab panel"},
 ]
 
 
@@ -292,6 +311,10 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                     "resource_type": res["resource_type"],
                     "room_key": res["room_key"],
                     "portable": res["portable"],
+                    "price_cents": res.get("price_cents", 0),
+                    "credit_amount": res.get("credit_amount", 0),
+                    "default_duration_minutes": res.get("default_duration_minutes", 30),
+                    "description": res.get("description", ""),
                 },
             )
             if was_created:
@@ -320,8 +343,13 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                     "name": r.name,
                     "resource_type": r.resource_type,
                     "room_key": r.room_key,
+                    "description": r.description or "",
                     "portable": r.portable,
+                    "price_cents": r.price_cents or 0,
+                    "credit_amount": r.credit_amount or 0,
+                    "default_duration_minutes": r.default_duration_minutes or 30,
                     "practice_location_id": r.practice_location_id or "",
+                    "practitioner_id": r.practitioner_id or "",
                 }
                 for r in resources
             ]
@@ -345,9 +373,135 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
             name=body["name"],
             resource_type=body["resource_type"],
             room_key=body.get("room_key", ""),
+            description=body.get("description", ""),
             portable=body.get("portable", False),
+            price_cents=body.get("price_cents", 0),
+            credit_amount=body.get("credit_amount", 0),
+            default_duration_minutes=body.get("default_duration_minutes", 30),
         )
         return [JSONResponse({"success": True, "id": resource.pk}, status_code=HTTPStatus.CREATED)]
+
+    @api.put("/resources/<key>")
+    def update_resource(self) -> list[Response | Effect]:
+        from floor_plan_viewer.models.custom_data import Resource
+
+        key = self.request.path_params["key"]
+        try:
+            body = json.loads(self.request.body)
+        except (json.JSONDecodeError, TypeError):
+            return [JSONResponse({"error": "Invalid JSON"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+        resource = Resource.objects.filter(key=key).first()
+        if not resource:
+            return [JSONResponse({"error": "Resource not found"}, status_code=HTTPStatus.NOT_FOUND)]
+
+        for field in ("name", "resource_type", "room_key", "description", "portable",
+                       "price_cents", "credit_amount", "default_duration_minutes", "active"):
+            if field in body:
+                setattr(resource, field, body[field])
+        resource.save()
+        return [JSONResponse({"success": True}, status_code=HTTPStatus.OK)]
+
+    @api.delete("/resources/<key>")
+    def delete_resource(self) -> list[Response | Effect]:
+        from floor_plan_viewer.models.custom_data import Resource
+
+        key = self.request.path_params["key"]
+        resource = Resource.objects.filter(key=key).first()
+        if not resource:
+            return [JSONResponse({"error": "Resource not found"}, status_code=HTTPStatus.NOT_FOUND)]
+        resource.active = False
+        resource.save()
+        return [JSONResponse({"success": True}, status_code=HTTPStatus.OK)]
+
+    @api.post("/resources/<key>/create-practitioner")
+    def create_resource_practitioner(self) -> list[Response | Effect]:
+        """Create a Canvas Practitioner for this resource so it appears on the scheduling screen."""
+        from floor_plan_viewer.models.custom_data import Resource
+
+        key = self.request.path_params["key"]
+        resource = Resource.objects.filter(key=key).first()
+        if not resource:
+            return [JSONResponse({"error": "Resource not found"}, status_code=HTTPStatus.NOT_FOUND)]
+
+        if resource.practitioner_id:
+            return [JSONResponse({"error": "Already has a practitioner", "practitioner_id": resource.practitioner_id}, status_code=HTTPStatus.CONFLICT)]
+
+        fhir = self._fhir_client()
+        if not fhir:
+            return [JSONResponse({"error": "FHIR credentials not configured"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+        try:
+            resp = fhir.create_practitioner(resource.name)
+            pract_id = resp.get("id", "")
+            if pract_id:
+                resource.practitioner_id = pract_id
+                resource.save()
+                return [JSONResponse({"success": True, "practitioner_id": pract_id}, status_code=HTTPStatus.OK)]
+            return [JSONResponse({"error": f"FHIR response: {resp}"}, status_code=HTTPStatus.BAD_GATEWAY)]
+        except Exception as e:
+            return [JSONResponse({"error": str(e)}, status_code=HTTPStatus.BAD_GATEWAY)]
+
+    # ------------------------------------------------------------------
+    # Waiting room - checked-in patients not yet in a room
+    # ------------------------------------------------------------------
+
+    @api.get("/waiting")
+    def get_waiting_patients(self) -> list[Response | Effect]:
+        """Return checked-in appointments that don't have an active room assignment."""
+        from floor_plan_viewer.models.custom_data import RoomAssignment
+
+        start, end = self._today_range()
+
+        appointments = Appointment.objects.filter(
+            start_time__gte=start,
+            start_time__lt=end,
+        ).select_related("patient", "provider").order_by("start_time")
+
+        # IDs that already have a non-cancelled room assignment
+        assigned_ids = set(
+            RoomAssignment.objects.filter(
+                start_time__lt=end,
+                end_time__gt=start,
+            ).exclude(status="cancelled").values_list("appointment_id", flat=True)
+        )
+
+        waiting = []
+        for appt in appointments:
+            appt_status = str(getattr(appt, "status", ""))
+            # Canvas uses various status representations; look for checked-in
+            if "check" not in appt_status.lower():
+                continue
+            if str(appt.id) in assigned_ids:
+                continue
+
+            patient_name = ""
+            patient_id = ""
+            if appt.patient:
+                patient_name = f"{appt.patient.first_name} {appt.patient.last_name}".strip()
+                patient_id = str(appt.patient.id)
+
+            provider_name = ""
+            if appt.provider:
+                provider_name = (
+                    getattr(appt.provider, "credentialed_name", "")
+                    or f"{appt.provider.first_name} {appt.provider.last_name}".strip()
+                )
+
+            duration = appt.duration_minutes or 30
+            end_time = appt.start_time + timedelta(minutes=duration)
+
+            waiting.append({
+                "id": str(appt.id),
+                "patient_name": patient_name,
+                "patient_id": patient_id,
+                "provider_name": provider_name,
+                "start_time": appt.start_time.isoformat(),
+                "end_time": end_time.isoformat(),
+                "status": appt_status,
+            })
+
+        return [JSONResponse({"waiting": waiting}, status_code=HTTPStatus.OK)]
 
     # ------------------------------------------------------------------
     # Canvas sync - create PracticeLocations for rooms & resources

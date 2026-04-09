@@ -6,6 +6,7 @@ from django.db.models import (
     CharField,
     DateTimeField,
     ForeignKey,
+    IntegerField,
     JSONField,
     TextField,
     UniqueConstraint,
@@ -40,11 +41,16 @@ class Resource(CustomModel):
 
     key: Any = CharField(max_length=50)
     name: Any = CharField(max_length=100)
-    resource_type: Any = CharField(max_length=50)  # equipment, device, room_feature
+    resource_type: Any = CharField(max_length=50)  # equipment, service, device
     room_key: Any = CharField(max_length=50, blank=True, default="")  # home room
+    description: Any = CharField(max_length=500, blank=True, default="")
     portable: Any = BooleanField(default=False)
     active: Any = BooleanField(default=True)
-    practice_location_id: Any = CharField(max_length=256, blank=True, default="")  # Canvas Location UUID for calendar
+    price_cents: Any = IntegerField(default=0)  # session price in cents ($45.00 = 4500)
+    credit_amount: Any = IntegerField(default=0)  # credits per session
+    default_duration_minutes: Any = IntegerField(default=30)
+    practice_location_id: Any = CharField(max_length=256, blank=True, default="")
+    practitioner_id: Any = CharField(max_length=256, blank=True, default="")  # Canvas Practitioner UUID
 
     class Meta:
         constraints = [

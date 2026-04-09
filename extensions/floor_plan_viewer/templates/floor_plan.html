@@ -9,297 +9,193 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --ivory: #FAF7F2;
-    --ivory-dark: #F0EBE3;
-    --cream: #F5F0E8;
-    --warm-white: #FFFDF9;
-    --sage: #7A9E7E;
-    --sage-light: #E8F0E9;
-    --sage-dark: #5C7E60;
-    --blush: #C4908A;
-    --blush-light: #F5E6E4;
-    --blush-dark: #A67069;
-    --gold: #BFA065;
-    --gold-light: #F5EDD8;
-    --gold-dark: #9A7E4A;
-    --navy: #2C3345;
-    --navy-light: #3D4660;
-    --charcoal: #4A4A4A;
-    --taupe: #9B9285;
-    --taupe-light: #C4BBB0;
-    --sand: #E8E0D4;
-    --border: #E2DCD3;
+    --ivory:#FAF7F2; --ivory-dark:#F0EBE3; --cream:#F5F0E8; --warm-white:#FFFDF9;
+    --sage:#7A9E7E; --sage-light:#E8F0E9; --sage-dark:#5C7E60;
+    --blush:#C4908A; --blush-light:#F5E6E4; --blush-dark:#A67069;
+    --gold:#BFA065; --gold-light:#F5EDD8; --gold-dark:#9A7E4A;
+    --navy:#2C3345; --navy-light:#3D4660; --charcoal:#4A4A4A;
+    --taupe:#9B9285; --taupe-light:#C4BBB0; --sand:#E8E0D4; --border:#E2DCD3;
   }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: var(--ivory);
-    color: var(--navy);
-    height: 100vh;
-    overflow: hidden;
-  }
-  .app { display: flex; height: 100vh; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Inter',-apple-system,sans-serif;background:var(--ivory);color:var(--navy);height:100vh;overflow:hidden}
+  .app{display:flex;height:100vh}
 
-  /* ===== SIDEBAR ===== */
-  .sidebar {
-    width: 370px;
-    background: var(--warm-white);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-    box-shadow: 2px 0 20px rgba(44,51,69,0.04);
-  }
-  .sidebar-header {
-    padding: 24px 24px 20px;
-    border-bottom: 1px solid var(--border);
-    background: linear-gradient(135deg, var(--warm-white) 0%, var(--cream) 100%);
-  }
-  .brand-mark { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
-  .brand-icon {
-    width: 36px; height: 36px;
-    background: linear-gradient(135deg, var(--sage) 0%, var(--sage-dark) 100%);
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .brand-icon svg { width: 20px; height: 20px; }
-  .sidebar-header h1 {
-    font-family: 'Cormorant Garamond', Georgia, serif;
-    font-size: 24px; font-weight: 600; color: var(--navy); letter-spacing: 0.5px;
-  }
-  .sidebar-header .subtitle {
-    font-size: 11px; color: var(--taupe); margin-top: 2px;
-    text-transform: uppercase; letter-spacing: 2px; font-weight: 500;
-  }
-  .date-display {
-    font-size: 13px; color: var(--charcoal); margin-top: 12px; font-weight: 400;
-    padding-top: 12px; border-top: 1px solid var(--border);
-  }
+  /* SIDEBAR */
+  .sidebar{width:370px;background:var(--warm-white);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;box-shadow:2px 0 20px rgba(44,51,69,.04)}
+  .sidebar-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,var(--warm-white),var(--cream))}
+  .brand-mark{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+  .brand-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--sage),var(--sage-dark));border-radius:10px;display:flex;align-items:center;justify-content:center}
+  .brand-icon svg{width:20px;height:20px}
+  .sidebar-header h1{font-family:'Cormorant Garamond',Georgia,serif;font-size:24px;font-weight:600;color:var(--navy)}
+  .sidebar-header .subtitle{font-size:11px;color:var(--taupe);text-transform:uppercase;letter-spacing:2px;font-weight:500}
+  .date-display{font-size:13px;color:var(--charcoal);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
 
-  /* Legend */
-  .legend {
-    padding: 14px 24px; border-bottom: 1px solid var(--border);
-    display: flex; gap: 16px; flex-wrap: wrap; background: var(--warm-white);
-  }
-  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--charcoal); font-weight: 500; }
-  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
-  .legend-dot.available { background: var(--sage); box-shadow: 0 0 0 2px var(--sage-light); }
-  .legend-dot.occupied { background: var(--blush); box-shadow: 0 0 0 2px var(--blush-light); }
-  .legend-dot.partial { background: var(--gold); box-shadow: 0 0 0 2px var(--gold-light); }
-  .legend-dot.non-bookable { background: var(--taupe-light); box-shadow: 0 0 0 2px var(--sand); }
+  .legend{padding:12px 24px;border-bottom:1px solid var(--border);display:flex;gap:14px;flex-wrap:wrap}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--charcoal);font-weight:500}
+  .legend-dot{width:10px;height:10px;border-radius:50%}
+  .legend-dot.available{background:var(--sage);box-shadow:0 0 0 2px var(--sage-light)}
+  .legend-dot.occupied{background:var(--blush);box-shadow:0 0 0 2px var(--blush-light)}
+  .legend-dot.partial{background:var(--gold);box-shadow:0 0 0 2px var(--gold-light)}
+  .legend-dot.non-bookable{background:var(--taupe-light);box-shadow:0 0 0 2px var(--sand)}
+  .legend-dot.waiting{background:var(--navy);box-shadow:0 0 0 2px #d0d3db}
 
-  /* Stats */
-  .stats-bar {
-    padding: 16px 24px; border-bottom: 1px solid var(--border);
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; background: var(--cream);
-  }
-  .stat {
-    text-align: center; padding: 10px 6px;
-    background: var(--warm-white); border-radius: 12px; border: 1px solid var(--border);
-  }
-  .stat-value { font-size: 24px; font-weight: 700; font-family: 'Cormorant Garamond', Georgia, serif; }
-  .stat-value.green { color: var(--sage-dark); }
-  .stat-value.red { color: var(--blush-dark); }
-  .stat-value.yellow { color: var(--gold-dark); }
-  .stat-label { font-size: 9px; color: var(--taupe); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; font-weight: 600; }
+  .stats-bar{padding:14px 24px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:repeat(4,1fr);gap:8px;background:var(--cream)}
+  .stat{text-align:center;padding:8px 4px;background:var(--warm-white);border-radius:10px;border:1px solid var(--border)}
+  .stat-value{font-size:22px;font-weight:700;font-family:'Cormorant Garamond',Georgia,serif}
+  .stat-value.green{color:var(--sage-dark)} .stat-value.red{color:var(--blush-dark)} .stat-value.yellow{color:var(--gold-dark)} .stat-value.blue{color:var(--navy)}
+  .stat-label{font-size:8px;color:var(--taupe);text-transform:uppercase;letter-spacing:.8px;margin-top:1px;font-weight:600}
 
-  /* Detail panel */
-  .room-detail { flex: 1; overflow-y: auto; padding: 20px 24px; }
-  .room-detail.empty-state { display: flex; align-items: center; justify-content: center; }
-  .empty-hint { text-align: center; color: var(--taupe); }
-  .empty-hint svg { width: 48px; height: 48px; margin-bottom: 16px; opacity: 0.35; color: var(--taupe-light); }
-  .empty-hint p { font-size: 13px; line-height: 1.6; }
+  .room-detail{flex:1;overflow-y:auto;padding:20px 24px}
+  .room-detail.empty-state{display:flex;align-items:center;justify-content:center}
+  .empty-hint{text-align:center;color:var(--taupe)}
+  .empty-hint svg{width:48px;height:48px;margin-bottom:16px;opacity:.35}
+  .empty-hint p{font-size:13px;line-height:1.6}
 
-  .detail-header { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
-  .detail-room-name { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 24px; font-weight: 600; color: var(--navy); }
-  .detail-room-type { font-size: 12px; color: var(--taupe); margin-top: 4px; }
-  .detail-status {
-    display: inline-block; padding: 4px 14px; border-radius: 20px;
-    font-size: 11px; font-weight: 600; margin-top: 10px; letter-spacing: 0.3px;
-  }
-  .detail-status.available { background: var(--sage-light); color: var(--sage-dark); }
-  .detail-status.occupied { background: var(--blush-light); color: var(--blush-dark); }
-  .detail-status.partial { background: var(--gold-light); color: var(--gold-dark); }
-  .detail-status.non-bookable { background: var(--sand); color: var(--taupe); }
+  .detail-header{margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+  .detail-room-name{font-family:'Cormorant Garamond',Georgia,serif;font-size:22px;font-weight:600}
+  .detail-room-type{font-size:12px;color:var(--taupe);margin-top:3px}
+  .detail-status{display:inline-block;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:600;margin-top:8px}
+  .detail-status.available{background:var(--sage-light);color:var(--sage-dark)}
+  .detail-status.occupied{background:var(--blush-light);color:var(--blush-dark)}
+  .detail-status.partial{background:var(--gold-light);color:var(--gold-dark)}
+  .detail-status.non-bookable{background:var(--sand);color:var(--taupe)}
+  .detail-status.waiting-room{background:#d0d3db;color:var(--navy)}
 
-  .equipment-list { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
-  .equipment-tag {
-    display: inline-flex; align-items: center; gap: 4px;
-    padding: 3px 8px; background: var(--gold-light); border: 1px solid var(--gold);
-    border-radius: 6px; font-size: 10px; color: var(--gold-dark); font-weight: 600;
-  }
+  .equipment-list{margin-top:8px;display:flex;flex-wrap:wrap;gap:5px}
+  .equipment-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:var(--gold-light);border:1px solid var(--gold);border-radius:6px;font-size:10px;color:var(--gold-dark);font-weight:600}
+  .sync-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:3px}
+  .sync-dot.synced{background:var(--sage)} .sync-dot.unsynced{background:var(--blush)}
 
-  .section-title {
-    font-size: 11px; font-weight: 600; color: var(--taupe);
-    text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px;
-  }
+  .section-title{font-size:11px;font-weight:600;color:var(--taupe);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px}
+  .action-row{display:flex;gap:8px;margin-bottom:14px}
+  .action-btn{flex:1;padding:9px 14px;border-radius:10px;border:1px solid var(--border);background:var(--warm-white);color:var(--charcoal);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px}
+  .action-btn:hover{background:var(--cream);border-color:var(--taupe-light)}
+  .action-btn.primary{background:var(--sage);border-color:var(--sage-dark);color:#fff}
+  .action-btn.primary:hover{background:var(--sage-dark)}
+  .action-btn.danger{color:var(--blush-dark)}
+  .action-btn.danger:hover{background:var(--blush-light);border-color:var(--blush)}
+  .action-btn svg{width:14px;height:14px}
 
-  /* Action buttons */
-  .action-row { display: flex; gap: 8px; margin-bottom: 16px; }
-  .action-btn {
-    flex: 1; padding: 10px 16px; border-radius: 10px; border: 1px solid var(--border);
-    background: var(--warm-white); color: var(--charcoal);
-    font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;
-    display: flex; align-items: center; justify-content: center; gap: 6px;
-  }
-  .action-btn:hover { background: var(--cream); border-color: var(--taupe-light); }
-  .action-btn.primary {
-    background: var(--sage); border-color: var(--sage-dark); color: white;
-  }
-  .action-btn.primary:hover { background: var(--sage-dark); }
-  .action-btn.danger { color: var(--blush-dark); }
-  .action-btn.danger:hover { background: var(--blush-light); border-color: var(--blush); }
-  .action-btn svg { width: 14px; height: 14px; }
+  .appt-card{background:var(--warm-white);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;transition:all .2s}
+  .appt-card:hover{border-color:var(--taupe-light);box-shadow:0 2px 8px rgba(44,51,69,.06)}
+  .appt-card.current{border-left:3px solid var(--blush);background:var(--blush-light)}
+  .appt-card.upcoming{border-left:3px solid var(--gold)}
+  .appt-card.past{border-left:3px solid var(--sand);opacity:.55}
+  .appt-card.waiting-card{border-left:3px solid var(--navy);background:#f0f1f4}
+  .appt-time{font-size:12px;font-weight:600;color:var(--charcoal)}
+  .appt-patient{font-family:'Cormorant Garamond',Georgia,serif;font-size:16px;font-weight:600;color:var(--navy);margin-top:2px}
+  .appt-type{font-size:12px;color:var(--taupe);margin-top:1px}
+  .appt-provider{font-size:11px;color:var(--taupe-light);margin-top:5px}
+  .appt-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;margin-left:8px}
+  .appt-badge.in-progress{background:var(--blush-light);color:var(--blush-dark)}
+  .appt-badge.completed{background:var(--sage-light);color:var(--sage-dark)}
+  .appt-badge.scheduled{background:var(--gold-light);color:var(--gold-dark)}
+  .appt-badge.waiting-badge{background:#d0d3db;color:var(--navy)}
+  .assigned-resources{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+  .res-tag{padding:2px 6px;background:var(--gold-light);border-radius:4px;font-size:10px;color:var(--gold-dark);font-weight:500}
+  .no-appts{text-align:center;padding:30px 20px;color:var(--taupe);font-size:13px;font-style:italic}
 
-  /* Appointment cards */
-  .appt-card {
-    background: var(--warm-white); border: 1px solid var(--border);
-    border-radius: 12px; padding: 14px; margin-bottom: 8px; transition: all 0.2s;
-  }
-  .appt-card:hover { border-color: var(--taupe-light); box-shadow: 0 2px 8px rgba(44,51,69,0.06); }
-  .appt-card.current { border-left: 3px solid var(--blush); background: var(--blush-light); }
-  .appt-card.upcoming { border-left: 3px solid var(--gold); }
-  .appt-card.past { border-left: 3px solid var(--sand); opacity: 0.55; }
-  .appt-time { font-size: 12px; font-weight: 600; color: var(--charcoal); }
-  .appt-patient { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 17px; font-weight: 600; color: var(--navy); margin-top: 3px; }
-  .appt-type { font-size: 12px; color: var(--taupe); margin-top: 2px; }
-  .appt-provider { font-size: 11px; color: var(--taupe-light); margin-top: 6px; }
-  .appt-badge {
-    display: inline-block; padding: 2px 8px; border-radius: 10px;
-    font-size: 10px; font-weight: 600; margin-left: 8px;
-  }
-  .appt-badge.in-progress { background: var(--blush-light); color: var(--blush-dark); }
-  .appt-badge.completed { background: var(--sage-light); color: var(--sage-dark); }
-  .appt-badge.scheduled { background: var(--gold-light); color: var(--gold-dark); }
+  /* MAIN */
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--ivory)}
+  .toolbar{padding:10px 24px;background:var(--warm-white);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .time-display{font-family:'Cormorant Garamond',Georgia,serif;font-size:24px;font-weight:600;color:var(--navy);font-variant-numeric:tabular-nums}
+  .time-label{font-size:10px;color:var(--taupe);text-transform:uppercase;letter-spacing:1px;font-weight:500}
+  .toolbar-right{display:flex;gap:8px}
+  .btn{padding:7px 14px;border-radius:20px;border:1px solid var(--border);background:var(--warm-white);color:var(--charcoal);font-size:12px;font-weight:500;cursor:pointer;transition:all .2s}
+  .btn:hover{background:var(--cream);border-color:var(--taupe-light)}
+  .btn.active{background:var(--navy);border-color:var(--navy);color:var(--warm-white)}
 
-  .no-appts { text-align: center; padding: 30px 20px; color: var(--taupe); font-size: 13px; font-style: italic; }
+  /* TABS */
+  .tab-bar{display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--warm-white);padding:0 24px}
+  .tab{padding:10px 20px;font-size:13px;font-weight:500;color:var(--taupe);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:all .2s}
+  .tab:hover{color:var(--navy)}
+  .tab.active{color:var(--navy);border-bottom-color:var(--sage);font-weight:600}
+  .tab-content{display:none;flex:1;overflow:auto}
+  .tab-content.active{display:flex}
 
-  /* ===== MAIN ===== */
-  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--ivory); }
-  .toolbar {
-    padding: 12px 24px; background: var(--warm-white); border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .time-display {
-    font-family: 'Cormorant Garamond', Georgia, serif;
-    font-size: 26px; font-weight: 600; color: var(--navy); font-variant-numeric: tabular-nums;
-  }
-  .time-label { font-size: 10px; color: var(--taupe); text-transform: uppercase; letter-spacing: 1px; font-weight: 500; }
-  .toolbar-right { display: flex; gap: 8px; }
-  .btn {
-    padding: 8px 16px; border-radius: 20px; border: 1px solid var(--border);
-    background: var(--warm-white); color: var(--charcoal);
-    font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s;
-  }
-  .btn:hover { background: var(--cream); border-color: var(--taupe-light); }
-  .btn.active { background: var(--navy); border-color: var(--navy); color: var(--warm-white); }
+  /* FLOOR PLAN TAB */
+  .floor-container{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;padding:30px;background:linear-gradient(180deg,var(--ivory),var(--cream))}
+  svg.floor-plan{width:100%;max-width:1000px;height:auto;filter:drop-shadow(0 4px 24px rgba(44,51,69,.08))}
+  .room{cursor:pointer;transition:all .25s}
+  .room rect{stroke-width:1;transition:all .25s;rx:6;ry:6}
+  .room:hover rect{stroke-width:2;filter:brightness(.97)}
+  .room.selected rect{stroke-width:2.5}
+  .room-label{font-family:'Cormorant Garamond',Georgia,serif;font-size:10px;fill:var(--navy);font-weight:600;pointer-events:none;text-anchor:middle;letter-spacing:.5px}
+  .room-sublabel{font-size:6.5px;fill:var(--taupe);pointer-events:none;text-anchor:middle;font-family:'Inter',sans-serif}
+  .room-count{font-size:7px;pointer-events:none;text-anchor:middle;font-family:'Inter',sans-serif;font-weight:600}
+  .room-available rect{fill:var(--sage-light);stroke:var(--sage)}
+  .room-occupied rect{fill:var(--blush-light);stroke:var(--blush)}
+  .room-partial rect{fill:var(--gold-light);stroke:var(--gold)}
+  .room-non-bookable rect{fill:var(--ivory-dark);stroke:var(--taupe-light)}
+  .room-waiting rect{fill:#e0e2ea;stroke:var(--navy)}
+  .wall-fill{fill:var(--warm-white);stroke:var(--border);stroke-width:1}
+  @keyframes softPulse{0%,100%{opacity:1}50%{opacity:.5}}
+  .room-occupied .pulse-dot{animation:softPulse 3s ease-in-out infinite}
 
-  .floor-container {
-    flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center;
-    padding: 30px; background: linear-gradient(180deg, var(--ivory) 0%, var(--cream) 100%);
-  }
+  /* CONFIGURE TAB */
+  .config-panel{flex:1;padding:30px;overflow-y:auto;max-width:1100px;margin:0 auto;width:100%}
+  .config-section{margin-bottom:30px}
+  .config-section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .config-section-title{font-family:'Cormorant Garamond',Georgia,serif;font-size:22px;font-weight:600;color:var(--navy)}
+  .resource-table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--warm-white)}
+  .resource-table th{background:var(--cream);padding:10px 14px;font-size:11px;font-weight:600;color:var(--taupe);text-transform:uppercase;letter-spacing:.8px;text-align:left;border-bottom:1px solid var(--border)}
+  .resource-table td{padding:10px 14px;font-size:13px;border-bottom:1px solid var(--border)}
+  .resource-table tr:last-child td{border-bottom:none}
+  .resource-table tr:hover td{background:var(--ivory)}
+  .price-cell{font-weight:600;color:var(--sage-dark)}
+  .credit-cell{font-weight:600;color:var(--gold-dark)}
+  .calendar-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;font-size:10px;font-weight:600}
+  .calendar-badge.on{background:var(--sage-light);color:var(--sage-dark)}
+  .calendar-badge.off{background:var(--sand);color:var(--taupe)}
+  .table-btn{padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--warm-white);font-size:11px;font-weight:500;cursor:pointer;transition:all .2s;color:var(--charcoal)}
+  .table-btn:hover{background:var(--cream)}
+  .table-btn.add-cal{color:var(--sage-dark);border-color:var(--sage)}
+  .table-btn.add-cal:hover{background:var(--sage-light)}
 
-  /* SVG */
-  svg.floor-plan { width: 100%; max-width: 1000px; height: auto; filter: drop-shadow(0 4px 24px rgba(44,51,69,0.08)); }
-  .room { cursor: pointer; transition: all 0.25s ease; }
-  .room rect { stroke-width: 1; transition: all 0.25s ease; rx: 6; ry: 6; }
-  .room:hover rect { stroke-width: 2; filter: brightness(0.97); }
-  .room.selected rect { stroke-width: 2.5; }
-  .room-label {
-    font-family: 'Cormorant Garamond', Georgia, serif; font-size: 10px;
-    fill: var(--navy); font-weight: 600; pointer-events: none; text-anchor: middle; letter-spacing: 0.5px;
-  }
-  .room-sublabel { font-size: 6.5px; fill: var(--taupe); pointer-events: none; text-anchor: middle; font-family: 'Inter', sans-serif; }
-  .room-count { font-size: 7px; pointer-events: none; text-anchor: middle; font-family: 'Inter', sans-serif; font-weight: 600; }
+  /* Add/Edit form */
+  .form-overlay{display:none;position:fixed;inset:0;background:rgba(44,51,69,.3);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+  .form-overlay.visible{display:flex}
+  .form-modal{background:var(--warm-white);border-radius:16px;width:520px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(44,51,69,.15);border:1px solid var(--border)}
+  .form-modal-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .form-modal-header h2{font-family:'Cormorant Garamond',Georgia,serif;font-size:20px;font-weight:600}
+  .form-modal-body{padding:20px 24px;overflow-y:auto;flex:1}
+  .form-group{margin-bottom:14px}
+  .form-label{display:block;font-size:11px;font-weight:600;color:var(--taupe);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px}
+  .form-input{width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--ivory);font-size:13px;color:var(--navy);outline:none;font-family:'Inter',sans-serif}
+  .form-input:focus{border-color:var(--sage);box-shadow:0 0 0 3px var(--sage-light)}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .form-actions{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
 
-  .room-available rect { fill: var(--sage-light); stroke: var(--sage); }
-  .room-occupied rect { fill: var(--blush-light); stroke: var(--blush); }
-  .room-partial rect { fill: var(--gold-light); stroke: var(--gold); }
-  .room-non-bookable rect { fill: var(--ivory-dark); stroke: var(--taupe-light); }
+  /* MODAL (assign) */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(44,51,69,.3);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+  .modal-overlay.visible{display:flex}
+  .modal{background:var(--warm-white);border-radius:16px;width:480px;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(44,51,69,.15);border:1px solid var(--border)}
+  .modal-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .modal-header h2{font-family:'Cormorant Garamond',Georgia,serif;font-size:20px;font-weight:600}
+  .modal-close{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--warm-white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--taupe);transition:all .2s}
+  .modal-close:hover{background:var(--cream);color:var(--navy)}
+  .modal-body{padding:20px 24px;overflow-y:auto;flex:1}
+  .search-box{width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--ivory);font-size:13px;color:var(--navy);outline:none;font-family:'Inter',sans-serif;margin-bottom:12px}
+  .search-box:focus{border-color:var(--sage);box-shadow:0 0 0 3px var(--sage-light)}
+  .resource-section{margin-bottom:14px}
+  .resource-section-title{font-size:11px;font-weight:600;color:var(--taupe);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+  .resource-check{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;transition:all .2s}
+  .resource-check:hover,.resource-check.checked{background:var(--gold-light);border-color:var(--gold)}
+  .resource-check input[type="checkbox"]{accent-color:var(--gold-dark);width:16px;height:16px;cursor:pointer}
+  .resource-check label{font-size:13px;color:var(--navy);cursor:pointer;flex:1}
+  .resource-check .res-room{font-size:10px;color:var(--taupe)}
+  .appt-option{padding:10px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;transition:all .2s}
+  .appt-option:hover{background:var(--sage-light);border-color:var(--sage)}
+  .appt-option .opt-patient{font-family:'Cormorant Garamond',Georgia,serif;font-size:16px;font-weight:600;color:var(--navy)}
+  .appt-option .opt-detail{font-size:12px;color:var(--taupe);margin-top:2px}
+  .appt-option.assigned{opacity:.4;pointer-events:none}
 
-  .wall-fill { fill: var(--warm-white); stroke: var(--border); stroke-width: 1; }
+  .toast{position:fixed;bottom:24px;right:24px;z-index:2000;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 8px 24px rgba(44,51,69,.15);transform:translateY(100px);opacity:0;transition:all .3s}
+  .toast.visible{transform:translateY(0);opacity:1}
+  .toast.success{background:var(--sage);color:#fff}
+  .toast.error{background:var(--blush-dark);color:#fff}
 
-  @keyframes softPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
-  .room-occupied .pulse-dot { animation: softPulse 3s ease-in-out infinite; }
-
-  ::-webkit-scrollbar { width: 5px; }
-  ::-webkit-scrollbar-track { background: var(--ivory); }
-  ::-webkit-scrollbar-thumb { background: var(--sand); border-radius: 10px; }
-
-  /* ===== ASSIGN MODAL ===== */
-  .modal-overlay {
-    display: none; position: fixed; inset: 0; background: rgba(44,51,69,0.3);
-    z-index: 1000; align-items: center; justify-content: center;
-    backdrop-filter: blur(2px);
-  }
-  .modal-overlay.visible { display: flex; }
-  .modal {
-    background: var(--warm-white); border-radius: 16px; width: 480px; max-height: 70vh;
-    display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(44,51,69,0.15);
-    border: 1px solid var(--border);
-  }
-  .modal-header {
-    padding: 20px 24px; border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .modal-header h2 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 20px; font-weight: 600; }
-  .modal-close {
-    width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--warm-white); cursor: pointer; display: flex; align-items: center;
-    justify-content: center; font-size: 16px; color: var(--taupe); transition: all 0.2s;
-  }
-  .modal-close:hover { background: var(--cream); color: var(--navy); }
-  .modal-body { padding: 20px 24px; overflow-y: auto; flex: 1; }
-  .search-box {
-    width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border);
-    background: var(--ivory); font-size: 13px; color: var(--navy); outline: none;
-    font-family: 'Inter', sans-serif; margin-bottom: 16px;
-  }
-  .search-box:focus { border-color: var(--sage); box-shadow: 0 0 0 3px var(--sage-light); }
-  .search-box::placeholder { color: var(--taupe-light); }
-
-  .appt-option {
-    padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px;
-    margin-bottom: 8px; cursor: pointer; transition: all 0.2s;
-  }
-  .appt-option:hover { background: var(--sage-light); border-color: var(--sage); }
-  .appt-option .opt-patient { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 16px; font-weight: 600; color: var(--navy); }
-  .appt-option .opt-detail { font-size: 12px; color: var(--taupe); margin-top: 2px; }
-  .appt-option.assigned { opacity: 0.4; pointer-events: none; }
-  .appt-option.assigned::after { content: " (assigned)"; font-size: 10px; color: var(--taupe-light); }
-
-  /* Resource checkboxes in modal */
-  .resource-section { margin-bottom: 16px; }
-  .resource-section-title { font-size: 11px; font-weight: 600; color: var(--taupe); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-  .resource-check { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; cursor: pointer; transition: all 0.2s; }
-  .resource-check:hover { background: var(--gold-light); border-color: var(--gold); }
-  .resource-check.checked { background: var(--gold-light); border-color: var(--gold); }
-  .resource-check input[type="checkbox"] { accent-color: var(--gold-dark); width: 16px; height: 16px; cursor: pointer; }
-  .resource-check label { font-size: 13px; color: var(--navy); cursor: pointer; flex: 1; }
-  .resource-check .res-room { font-size: 10px; color: var(--taupe); }
-
-  /* Resource tags in assignment cards */
-  .assigned-resources { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
-  .res-tag { padding: 2px 6px; background: var(--gold-light); border-radius: 4px; font-size: 10px; color: var(--gold-dark); font-weight: 500; }
-
-  /* Sync status indicator */
-  .sync-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 4px; }
-  .sync-dot.synced { background: var(--sage); }
-  .sync-dot.unsynced { background: var(--blush); }
-
-  /* Loading */
-  .loading { text-align: center; padding: 40px; color: var(--taupe); font-style: italic; font-size: 13px; }
-
-  /* Toast */
-  .toast {
-    position: fixed; bottom: 24px; right: 24px; z-index: 2000;
-    padding: 12px 20px; border-radius: 10px; font-size: 13px; font-weight: 500;
-    box-shadow: 0 8px 24px rgba(44,51,69,0.15); transform: translateY(100px);
-    opacity: 0; transition: all 0.3s ease;
-  }
-  .toast.visible { transform: translateY(0); opacity: 1; }
-  .toast.success { background: var(--sage); color: white; }
-  .toast.error { background: var(--blush-dark); color: white; }
+  ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--ivory)}::-webkit-scrollbar-thumb{background:var(--sand);border-radius:10px}
 </style>
 </head>
 <body>
@@ -307,16 +203,8 @@
   <div class="sidebar">
     <div class="sidebar-header">
       <div class="brand-mark">
-        <div class="brand-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-            <polyline points="9 22 9 12 15 12 15 22"/>
-          </svg>
-        </div>
-        <div>
-          <h1>Elle Medicine</h1>
-          <div class="subtitle">Floor Plan</div>
-        </div>
+        <div class="brand-icon"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+        <div><h1>Elle Medicine</h1><div class="subtitle">Floor Plan</div></div>
       </div>
       <div class="date-display" id="dateDisplay"></div>
     </div>
@@ -324,12 +212,13 @@
       <div class="legend-item"><div class="legend-dot available"></div>Available</div>
       <div class="legend-item"><div class="legend-dot occupied"></div>Occupied</div>
       <div class="legend-item"><div class="legend-dot partial"></div>Upcoming</div>
-      <div class="legend-item"><div class="legend-dot non-bookable"></div>Non-clinical</div>
+      <div class="legend-item"><div class="legend-dot waiting"></div>Waiting</div>
     </div>
     <div class="stats-bar">
-      <div class="stat"><div class="stat-value green" id="statAvail">-</div><div class="stat-label">Available</div></div>
-      <div class="stat"><div class="stat-value red" id="statOccupied">-</div><div class="stat-label">Occupied</div></div>
-      <div class="stat"><div class="stat-value yellow" id="statUpcoming">-</div><div class="stat-label">Upcoming</div></div>
+      <div class="stat"><div class="stat-value green" id="statAvail">-</div><div class="stat-label">Open</div></div>
+      <div class="stat"><div class="stat-value red" id="statOccupied">-</div><div class="stat-label">In Use</div></div>
+      <div class="stat"><div class="stat-value yellow" id="statUpcoming">-</div><div class="stat-label">Next</div></div>
+      <div class="stat"><div class="stat-value blue" id="statWaiting">-</div><div class="stat-label">Waiting</div></div>
     </div>
     <div class="room-detail empty-state" id="roomDetail">
       <div class="empty-hint">
@@ -341,52 +230,71 @@
 
   <div class="main">
     <div class="toolbar">
-      <div>
-        <div class="time-display" id="currentTime"></div>
-        <div class="time-label">Current Time</div>
-      </div>
+      <div><div class="time-display" id="currentTime"></div><div class="time-label">Current Time</div></div>
       <div class="toolbar-right">
         <button class="btn" onclick="refreshData()">Refresh</button>
         <button class="btn" onclick="syncToCanvas()">Sync to Calendar</button>
-        <button class="btn" id="seedBtn" onclick="seedRooms()">Setup Rooms</button>
+        <button class="btn" onclick="seedRooms()">Setup</button>
       </div>
     </div>
-    <div class="floor-container">
-      <svg class="floor-plan" viewBox="0 0 820 500" xmlns="http://www.w3.org/2000/svg">
-        <rect x="0" y="0" width="820" height="500" fill="var(--ivory)" rx="12"/>
-        <rect class="wall-fill" x="20" y="20" width="780" height="460" rx="8"/>
 
-        <!-- TOP ROW -->
-        <g class="room" data-room="hub"><rect x="25" y="25" width="110" height="140"/><text class="room-label" x="80" y="90">THE HUB</text><text class="room-sublabel" x="80" y="104">Workroom</text></g>
-        <g class="room" data-room="studio-two"><rect x="140" y="25" width="120" height="140"/><text class="room-label" x="200" y="85">STUDIO</text><text class="room-label" x="200" y="99">TWO</text><text class="room-sublabel" x="200" y="114">Room 113</text><text class="room-count pulse-dot" x="200" y="132" id="count-studio-two"></text></g>
-        <g class="room" data-room="cafe"><rect x="265" y="25" width="115" height="140"/><text class="room-label" x="322" y="88">THE CAFE</text><text class="room-sublabel" x="322" y="102">Break Room</text></g>
-        <g class="room" data-room="lab"><rect x="385" y="25" width="110" height="140"/><text class="room-label" x="440" y="90">LAB</text><text class="room-sublabel" x="440" y="104">Room 115</text><text class="room-count pulse-dot" x="440" y="124" id="count-lab"></text></g>
-        <g class="room" data-room="it"><rect x="500" y="80" width="80" height="85"/><text class="room-label" x="540" y="120">IT</text><text class="room-sublabel" x="540" y="133">Server</text></g>
-        <g class="room" data-room="hallway"><rect x="500" y="25" width="100" height="50"/><text class="room-label" x="550" y="50">HALLWAY</text><text class="room-sublabel" x="550" y="62">RR</text></g>
-        <g class="room" data-room="entry"><rect x="610" y="70" width="70" height="95"/><text class="room-label" x="645" y="115">ENTRY</text><text class="room-sublabel" x="645" y="128">100</text></g>
-        <g class="room" data-room="lounge"><rect x="690" y="25" width="105" height="145"/><text class="room-label" x="742" y="92">LOUNGE</text><text class="room-sublabel" x="742" y="106">102</text></g>
+    <!-- TABS -->
+    <div class="tab-bar">
+      <button class="tab active" onclick="switchTab('floorplan')">Floor Plan</button>
+      <button class="tab" onclick="switchTab('configure')">Configure</button>
+    </div>
 
-        <!-- CORRIDOR -->
-        <rect x="140" y="170" width="540" height="45" rx="4" fill="var(--ivory-dark)" stroke="var(--border)" stroke-width="0.5" stroke-dasharray="6 3"/>
-        <text style="font-size:7px;fill:var(--taupe-light);text-anchor:middle;font-family:Inter,sans-serif;letter-spacing:2px" x="410" y="197">CORRIDOR</text>
+    <!-- FLOOR PLAN TAB -->
+    <div class="tab-content active" id="tab-floorplan">
+      <div class="floor-container">
+        <svg class="floor-plan" viewBox="0 0 820 500" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="820" height="500" fill="var(--ivory)" rx="12"/>
+          <rect class="wall-fill" x="20" y="20" width="780" height="460" rx="8"/>
+          <!-- TOP ROW -->
+          <g class="room" data-room="hub"><rect x="25" y="25" width="110" height="140"/><text class="room-label" x="80" y="90">THE HUB</text><text class="room-sublabel" x="80" y="104">Workroom</text></g>
+          <g class="room" data-room="studio-two"><rect x="140" y="25" width="120" height="140"/><text class="room-label" x="200" y="85">STUDIO</text><text class="room-label" x="200" y="99">TWO</text><text class="room-sublabel" x="200" y="114">113</text><text class="room-count pulse-dot" x="200" y="132" id="count-studio-two"></text></g>
+          <g class="room" data-room="cafe"><rect x="265" y="25" width="115" height="140"/><text class="room-label" x="322" y="88">THE CAFE</text><text class="room-sublabel" x="322" y="102">Break Room</text></g>
+          <g class="room" data-room="lab"><rect x="385" y="25" width="110" height="140"/><text class="room-label" x="440" y="90">LAB</text><text class="room-sublabel" x="440" y="104">115</text><text class="room-count pulse-dot" x="440" y="124" id="count-lab"></text></g>
+          <g class="room" data-room="it"><rect x="500" y="80" width="80" height="85"/><text class="room-label" x="540" y="120">IT</text><text class="room-sublabel" x="540" y="133">Server</text></g>
+          <g class="room" data-room="hallway"><rect x="500" y="25" width="100" height="50"/><text class="room-label" x="550" y="50">HALLWAY</text></g>
+          <g class="room" data-room="entry"><rect x="610" y="70" width="70" height="95"/><text class="room-label" x="645" y="115">ENTRY</text></g>
+          <g class="room" data-room="lounge"><rect x="690" y="25" width="105" height="145"/><text class="room-label" x="742" y="92">LOUNGE</text></g>
+          <!-- CORRIDOR -->
+          <rect x="140" y="170" width="540" height="45" rx="4" fill="var(--ivory-dark)" stroke="var(--border)" stroke-width=".5" stroke-dasharray="6 3"/>
+          <text style="font-size:7px;fill:var(--taupe-light);text-anchor:middle;font-family:Inter,sans-serif;letter-spacing:2px" x="410" y="197">CORRIDOR</text>
+          <!-- BOTTOM ROW -->
+          <g class="room" data-room="physician"><rect x="25" y="170" width="110" height="160"/><text class="room-label" x="80" y="240">PHYSICIAN'S</text><text class="room-label" x="80" y="254">SUITE</text><text class="room-sublabel" x="80" y="268">111</text></g>
+          <g class="room" data-room="elle-one"><rect x="140" y="220" width="120" height="130"/><text class="room-label" x="200" y="275">ELLE ONE</text><text class="room-sublabel" x="200" y="290">Exam A</text><text class="room-count pulse-dot" x="200" y="318" id="count-elle-one"></text></g>
+          <g class="room" data-room="elle-two"><rect x="265" y="220" width="120" height="130"/><text class="room-label" x="325" y="275">ELLE TWO</text><text class="room-sublabel" x="325" y="290">Exam B</text><text class="room-count pulse-dot" x="325" y="318" id="count-elle-two"></text></g>
+          <g class="room" data-room="restore"><rect x="390" y="220" width="130" height="130"/><text class="room-label" x="455" y="278">RESTORE</text><text class="room-sublabel" x="455" y="293">Wellness A</text><text class="room-count pulse-dot" x="455" y="318" id="count-restore"></text></g>
+          <g class="room" data-room="thrive"><rect x="525" y="220" width="115" height="130"/><text class="room-label" x="582" y="278">THRIVE</text><text class="room-sublabel" x="582" y="293">Exam C</text><text class="room-count pulse-dot" x="582" y="318" id="count-thrive"></text></g>
+          <g class="room" data-room="studio-one"><rect x="645" y="170" width="150" height="100"/><text class="room-label" x="720" y="215">STUDIO ONE</text><text class="room-sublabel" x="720" y="230">104</text><text class="room-count pulse-dot" x="720" y="252" id="count-studio-one"></text></g>
+          <g class="room" data-room="collective"><rect x="645" y="275" width="150" height="75"/><text class="room-label" x="720" y="308">THE COLLECTIVE</text><text class="room-sublabel" x="720" y="322">Conference</text><text class="room-count pulse-dot" x="720" y="340" id="count-collective"></text></g>
+          <g class="room" data-room="float"><rect x="645" y="355" width="150" height="120"/><text class="room-label" x="720" y="408">FLOAT</text><text class="room-sublabel" x="720" y="423">Wellness B</text><text class="room-count pulse-dot" x="720" y="448" id="count-float"></text></g>
+          <!-- BOTTOM LEFT -->
+          <g class="room" data-room="workroom"><rect x="25" y="335" width="110" height="140"/><text class="room-label" x="80" y="400">WORKROOM</text><text class="room-sublabel" x="80" y="415">112</text></g>
+          <!-- WAITING AREA - clickable -->
+          <g class="room" data-room="waiting-area"><rect x="140" y="355" width="500" height="120"/><text class="room-label" x="390" y="405">WAITING AREA</text><text class="room-count" x="390" y="425" id="count-waiting-area" fill="var(--navy)"></text></g>
+        </svg>
+      </div>
+    </div>
 
-        <!-- BOTTOM ROW -->
-        <g class="room" data-room="physician"><rect x="25" y="170" width="110" height="160"/><text class="room-label" x="80" y="240">PHYSICIAN'S</text><text class="room-label" x="80" y="254">SUITE</text><text class="room-sublabel" x="80" y="268">Office 111</text></g>
-        <g class="room" data-room="elle-one"><rect x="140" y="220" width="120" height="130"/><text class="room-label" x="200" y="275">ELLE ONE</text><text class="room-sublabel" x="200" y="290">Exam Room A</text><text class="room-count pulse-dot" x="200" y="318" id="count-elle-one"></text></g>
-        <g class="room" data-room="elle-two"><rect x="265" y="220" width="120" height="130"/><text class="room-label" x="325" y="275">ELLE TWO</text><text class="room-sublabel" x="325" y="290">Exam Room B</text><text class="room-count pulse-dot" x="325" y="318" id="count-elle-two"></text></g>
-        <g class="room" data-room="restore"><rect x="390" y="220" width="130" height="130"/><text class="room-label" x="455" y="278">RESTORE</text><text class="room-sublabel" x="455" y="293">Wellness A</text><text class="room-count pulse-dot" x="455" y="318" id="count-restore"></text></g>
-        <g class="room" data-room="thrive"><rect x="525" y="220" width="115" height="130"/><text class="room-label" x="582" y="278">THRIVE</text><text class="room-sublabel" x="582" y="293">Exam Room C</text><text class="room-count pulse-dot" x="582" y="318" id="count-thrive"></text></g>
-        <g class="room" data-room="studio-one"><rect x="645" y="170" width="150" height="100"/><text class="room-label" x="720" y="215">STUDIO ONE</text><text class="room-sublabel" x="720" y="230">Room 104</text><text class="room-count pulse-dot" x="720" y="252" id="count-studio-one"></text></g>
-        <g class="room" data-room="collective"><rect x="645" y="275" width="150" height="75"/><text class="room-label" x="720" y="308">THE COLLECTIVE</text><text class="room-sublabel" x="720" y="322">Conference</text><text class="room-count pulse-dot" x="720" y="340" id="count-collective"></text></g>
-        <g class="room" data-room="float"><rect x="645" y="355" width="150" height="120"/><text class="room-label" x="720" y="408">FLOAT</text><text class="room-sublabel" x="720" y="423">Wellness B</text><text class="room-count pulse-dot" x="720" y="448" id="count-float"></text></g>
-
-        <!-- BOTTOM LEFT -->
-        <g class="room" data-room="workroom"><rect x="25" y="335" width="110" height="140"/><text class="room-label" x="80" y="400">WORKROOM</text><text class="room-sublabel" x="80" y="415">112</text></g>
-
-        <!-- OPEN AREA -->
-        <rect x="140" y="355" width="500" height="120" rx="6" fill="var(--ivory-dark)" stroke="var(--border)" stroke-width="0.5"/>
-        <text style="font-size:7px;fill:var(--taupe-light);text-anchor:middle;font-family:Inter,sans-serif;letter-spacing:2px" x="390" y="420">OPEN AREA</text>
-      </svg>
+    <!-- CONFIGURE TAB -->
+    <div class="tab-content" id="tab-configure">
+      <div class="config-panel">
+        <div class="config-section">
+          <div class="config-section-header">
+            <div class="config-section-title">Resources & Services</div>
+            <button class="btn" onclick="openResourceForm()">+ Add Resource</button>
+          </div>
+          <table class="resource-table" id="resourceTable">
+            <thead><tr>
+              <th>Name</th><th>Type</th><th>Room</th><th>Duration</th><th>Price</th><th>Credits</th><th>Calendar</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="resourceTableBody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -394,10 +302,7 @@
 <!-- Assign Modal -->
 <div class="modal-overlay" id="assignModal">
   <div class="modal">
-    <div class="modal-header">
-      <h2 id="assignModalTitle">Assign Patient</h2>
-      <button class="modal-close" onclick="closeAssignModal()">&times;</button>
-    </div>
+    <div class="modal-header"><h2 id="assignModalTitle">Assign Patient</h2><button class="modal-close" onclick="closeAssignModal()">&times;</button></div>
     <div class="modal-body">
       <div class="resource-section" id="resourceSection" style="display:none">
         <div class="resource-section-title">Resources / Equipment</div>
@@ -405,413 +310,303 @@
       </div>
       <div class="resource-section-title" style="margin-bottom:8px">Select Appointment</div>
       <input type="text" class="search-box" id="apptSearch" placeholder="Search by patient name..." oninput="filterAppointments()">
-      <div id="apptList"><div class="loading">Loading appointments...</div></div>
+      <div id="apptList"></div>
     </div>
   </div>
 </div>
 
-<!-- Toast -->
+<!-- Resource Form Modal -->
+<div class="form-overlay" id="resourceFormOverlay">
+  <div class="form-modal">
+    <div class="form-modal-header"><h2 id="resourceFormTitle">Add Resource</h2><button class="modal-close" onclick="closeResourceForm()">&times;</button></div>
+    <div class="form-modal-body">
+      <input type="hidden" id="rf-editing-key">
+      <div class="form-group"><label class="form-label">Name</label><input class="form-input" id="rf-name" placeholder="e.g. IV Therapy"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Type</label>
+          <select class="form-input" id="rf-type"><option value="service">Service</option><option value="equipment">Equipment</option><option value="device">Device</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Home Room</label>
+          <select class="form-input" id="rf-room"></select>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Description</label><input class="form-input" id="rf-desc" placeholder="Short description"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Session Price ($)</label><input class="form-input" id="rf-price" type="number" step="0.01" min="0" placeholder="0.00"></div>
+        <div class="form-group"><label class="form-label">Credits per Session</label><input class="form-input" id="rf-credits" type="number" min="0" placeholder="0"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Default Duration (min)</label><input class="form-input" id="rf-duration" type="number" min="5" step="5" placeholder="30"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeResourceForm()">Cancel</button>
+      <button class="btn active" onclick="saveResource()">Save Resource</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
 const API = '/plugin-io/api/floor_plan_viewer';
+let rooms = {}, resources = [], assignments = [], appointments = [], waitingPatients = [], selectedRoom = null;
 
-// ----- State -----
-let rooms = {};          // key -> room data
-let resources = [];      // all resources
-let assignments = [];    // today's assignments
-let appointments = [];   // today's Canvas appointments
-let selectedRoom = null;
-
-// ----- API helpers -----
+// === API ===
 async function apiFetch(path, opts = {}) {
-  const res = await fetch(`${API}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...opts.headers },
-    ...opts,
-  });
+  const res = await fetch(`${API}${path}`, { headers: {'Content-Type':'application/json', ...opts.headers}, ...opts });
   return res.json();
 }
+function showToast(msg, type='success') { const t=document.getElementById('toast'); t.textContent=msg; t.className=`toast ${type} visible`; setTimeout(()=>t.classList.remove('visible'),3000); }
 
-function showToast(msg, type = 'success') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = `toast ${type} visible`;
-  setTimeout(() => t.classList.remove('visible'), 3000);
-}
-
-// ----- Data loading -----
-async function loadRooms() {
-  const data = await apiFetch('/rooms');
-  rooms = {};
-  (data.rooms || []).forEach(r => rooms[r.key] = r);
-}
-
-async function loadAssignments() {
-  const data = await apiFetch('/assignments');
-  assignments = data.assignments || [];
-}
-
-async function loadAppointments() {
-  const data = await apiFetch('/appointments/today');
-  appointments = data.appointments || [];
-}
-
-async function loadResources() {
-  const data = await apiFetch('/resources');
-  resources = data.resources || [];
-}
+// === Data ===
+async function loadRooms() { const d=await apiFetch('/rooms'); rooms={}; (d.rooms||[]).forEach(r=>rooms[r.key]=r); }
+async function loadResources() { const d=await apiFetch('/resources'); resources=d.resources||[]; }
+async function loadAssignments() { const d=await apiFetch('/assignments'); assignments=d.assignments||[]; }
+async function loadAppointments() { const d=await apiFetch('/appointments/today'); appointments=d.appointments||[]; }
+async function loadWaiting() { const d=await apiFetch('/waiting'); waitingPatients=d.waiting||[]; }
 
 async function refreshData() {
-  await Promise.all([loadRooms(), loadAssignments(), loadAppointments(), loadResources()]);
+  await Promise.all([loadRooms(),loadAssignments(),loadAppointments(),loadResources(),loadWaiting()]);
   updateFloorPlan();
+  renderResourceTable();
   if (selectedRoom) showRoomDetail(selectedRoom);
 }
-
-async function seedRooms() {
-  await apiFetch('/rooms/seed', { method: 'POST' });
-  showToast('Rooms & resources configured');
-  await refreshData();
-}
-
+async function seedRooms() { await apiFetch('/rooms/seed',{method:'POST'}); showToast('Rooms & resources configured'); await refreshData(); }
 async function syncToCanvas() {
-  showToast('Syncing rooms & resources to Canvas calendar...', 'success');
-  const result = await apiFetch('/sync-to-canvas', { method: 'POST' });
-  if (result.error) {
-    showToast(result.error, 'error');
-  } else {
-    const total = (result.rooms_synced || 0) + (result.resources_synced || 0);
-    if (total > 0) {
-      showToast(`Synced ${total} items to Canvas calendar`);
-    } else if (result.errors?.length) {
-      showToast(`Sync errors: ${result.errors[0]}`, 'error');
-    } else {
-      showToast('Everything already synced');
-    }
-    await refreshData();
-  }
+  showToast('Syncing to Canvas calendar...');
+  const r=await apiFetch('/sync-to-canvas',{method:'POST'});
+  if(r.error){showToast(r.error,'error')}else{const t=(r.rooms_synced||0)+(r.resources_synced||0);showToast(t>0?`Synced ${t} items`:'All synced');await refreshData();}
 }
 
-function getRoomResources(roomKey) {
-  return resources.filter(r => r.room_key === roomKey);
+// === Tabs ===
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
 }
 
-// ----- Room status -----
-function getRoomAssignments(roomKey) {
-  const now = new Date();
-  return assignments.filter(a => a.room_key === roomKey);
-}
-
-function getRoomStatus(roomKey) {
-  const room = rooms[roomKey];
-  if (!room || !room.bookable) return 'non-bookable';
-
-  const now = new Date();
-  const roomAssignments = getRoomAssignments(roomKey);
-
-  const hasInProgress = roomAssignments.some(a => a.status === 'in-progress');
-  if (hasInProgress) return 'occupied';
-
-  const hasScheduled = roomAssignments.some(a => {
-    if (a.status !== 'scheduled') return false;
-    const start = new Date(a.start_time);
-    const oneHour = new Date(now.getTime() + 60 * 60 * 1000);
-    return start <= oneHour;
-  });
-  if (hasScheduled) return 'partial';
-
+// === Room status ===
+function getRoomAssignments(k) { return assignments.filter(a=>a.room_key===k); }
+function getRoomResources(k) { return resources.filter(r=>r.room_key===k); }
+function getRoomStatus(k) {
+  if(k==='waiting-area') return waitingPatients.length>0?'waiting':'non-bookable';
+  const room=rooms[k]; if(!room||!room.bookable) return 'non-bookable';
+  const ra=getRoomAssignments(k);
+  if(ra.some(a=>a.status==='in-progress')) return 'occupied';
+  const now=new Date(),hr=new Date(now.getTime()+3600000);
+  if(ra.some(a=>a.status==='scheduled'&&new Date(a.start_time)<=hr)) return 'partial';
   return 'available';
 }
 
-// ----- Rendering -----
+// === Floor Plan ===
 function updateFloorPlan() {
-  let avail = 0, occ = 0, upcoming = 0;
-
-  document.querySelectorAll('.room').forEach(el => {
-    const key = el.dataset.room;
-    const status = getRoomStatus(key);
-    el.classList.remove('room-available', 'room-occupied', 'room-partial', 'room-non-bookable');
-    el.classList.add('room-' + status);
-
-    // Count indicator
-    const countEl = document.getElementById(`count-${key}`);
-    if (countEl) {
-      const roomAssignments = getRoomAssignments(key);
-      const active = roomAssignments.filter(a => a.status !== 'completed' && a.status !== 'cancelled');
-      if (active.length > 0 && status !== 'non-bookable') {
-        countEl.textContent = active.length === 1 ? active[0].patient_name.split(' ')[0] : `${active.length} patients`;
-        countEl.setAttribute('fill', status === 'occupied' ? 'var(--blush-dark)' : 'var(--gold-dark)');
-      } else {
-        countEl.textContent = '';
-      }
+  let avail=0,occ=0,upcoming=0;
+  document.querySelectorAll('.room').forEach(el=>{
+    const k=el.dataset.room,s=getRoomStatus(k);
+    el.classList.remove('room-available','room-occupied','room-partial','room-non-bookable','room-waiting');
+    el.classList.add('room-'+s);
+    const c=document.getElementById(`count-${k}`);
+    if(c&&k!=='waiting-area'){
+      const ra=getRoomAssignments(k).filter(a=>a.status!=='completed'&&a.status!=='cancelled');
+      if(ra.length>0&&s!=='non-bookable'){c.textContent=ra.length===1?ra[0].patient_name.split(' ')[0]:`${ra.length} patients`;c.setAttribute('fill',s==='occupied'?'var(--blush-dark)':'var(--gold-dark)');}
+      else{c.textContent='';}
     }
-
-    if (rooms[key]?.bookable) {
-      if (status === 'available') avail++;
-      else if (status === 'occupied') occ++;
-      else if (status === 'partial') upcoming++;
-    }
+    if(rooms[k]?.bookable){if(s==='available')avail++;else if(s==='occupied')occ++;else if(s==='partial')upcoming++;}
   });
-
-  document.getElementById('statAvail').textContent = avail;
-  document.getElementById('statOccupied').textContent = occ;
-  document.getElementById('statUpcoming').textContent = upcoming;
+  document.getElementById('statAvail').textContent=avail;
+  document.getElementById('statOccupied').textContent=occ;
+  document.getElementById('statUpcoming').textContent=upcoming;
+  document.getElementById('statWaiting').textContent=waitingPatients.length;
+  // Waiting area count
+  const wc=document.getElementById('count-waiting-area');
+  if(wc) wc.textContent=waitingPatients.length>0?`${waitingPatients.length} patient${waitingPatients.length>1?'s':''} waiting`:'';
 }
 
-function formatTime(iso) {
-  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-}
+function formatTime(iso){return new Date(iso).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});}
+function formatPrice(cents){return cents>0?'$'+(cents/100).toFixed(2):'-';}
 
+// === Room Detail ===
 function showRoomDetail(roomKey) {
-  document.querySelectorAll('.room.selected').forEach(el => el.classList.remove('selected'));
+  document.querySelectorAll('.room.selected').forEach(el=>el.classList.remove('selected'));
+  if(selectedRoom===roomKey){selectedRoom=null;showEmptyState();return;}
+  selectedRoom=roomKey;
+  const el=document.querySelector(`[data-room="${roomKey}"]`);if(el)el.classList.add('selected');
 
-  if (selectedRoom === roomKey) {
-    selectedRoom = null;
-    showEmptyState();
-    return;
-  }
+  // Special: waiting area
+  if(roomKey==='waiting-area'){showWaitingDetail();return;}
 
-  selectedRoom = roomKey;
-  const el = document.querySelector(`[data-room="${roomKey}"]`);
-  if (el) el.classList.add('selected');
+  const room=rooms[roomKey]||{name:roomKey,room_type:'',number:'',bookable:false,equipment:[]};
+  const status=getRoomStatus(roomKey);
+  const ra=getRoomAssignments(roomKey).sort((a,b)=>new Date(a.start_time)-new Date(b.start_time));
+  const roomRes=getRoomResources(roomKey);
+  const labels={available:'Available',occupied:'In Session',partial:'Upcoming','non-bookable':'Non-clinical'};
+  const detail=document.getElementById('roomDetail');detail.classList.remove('empty-state');
 
-  const room = rooms[roomKey] || { name: roomKey, room_type: '', number: '', bookable: false, equipment: [] };
-  const status = getRoomStatus(roomKey);
-  const roomAssignments = getRoomAssignments(roomKey).sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
-  const statusLabels = { available: 'Available', occupied: 'In Session', partial: 'Upcoming', 'non-bookable': 'Non-clinical' };
+  let equipH='';
+  if(roomRes.length>0){equipH='<div class="equipment-list">'+roomRes.map(r=>`<span class="equipment-tag">${r.practitioner_id?'<span class="sync-dot synced"></span>':'<span class="sync-dot unsynced"></span>'}${r.name}</span>`).join('')+'</div>';}
+  let actH='';
+  if(room.bookable){actH=`<div class="action-row"><button class="action-btn primary" onclick="openAssignModal('${roomKey}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Assign Patient</button></div>`;}
 
-  const detail = document.getElementById('roomDetail');
-  detail.classList.remove('empty-state');
-
-  const roomResources = getRoomResources(roomKey);
-  let equipHtml = '';
-  if (roomResources.length > 0) {
-    equipHtml = '<div class="equipment-list">' +
-      roomResources.map(r => {
-        const syncDot = r.practice_location_id
-          ? '<span class="sync-dot synced" title="Synced to Calendar"></span>'
-          : '<span class="sync-dot unsynced" title="Not synced"></span>';
-        return `<span class="equipment-tag">${syncDot}${r.name}</span>`;
-      }).join('') +
-    '</div>';
-  } else if (room.equipment?.length) {
-    equipHtml = '<div class="equipment-list">' +
-      room.equipment.map(e => `<span class="equipment-tag">${e}</span>`).join('') +
-    '</div>';
-  }
-
-  let actionsHtml = '';
-  if (room.bookable) {
-    actionsHtml = '<div class="action-row">';
-    actionsHtml += `<button class="action-btn primary" onclick="openAssignModal('${roomKey}')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Assign Patient
-    </button>`;
-    actionsHtml += '</div>';
-  }
-
-  let assignmentsHtml = '';
-  if (room.bookable && roomAssignments.length > 0) {
-    assignmentsHtml = `<div class="section-title">Today's Assignments</div>`;
-    roomAssignments.forEach(a => {
-      const cardClass = a.status === 'in-progress' ? 'current' : (a.status === 'completed' ? 'past' : 'upcoming');
-      let badgeHtml = '';
-      if (a.status === 'in-progress') badgeHtml = '<span class="appt-badge in-progress">In Session</span>';
-      else if (a.status === 'completed') badgeHtml = '<span class="appt-badge completed">Complete</span>';
-      else if (a.status === 'scheduled') badgeHtml = '<span class="appt-badge scheduled">Scheduled</span>';
-
-      let actionBtns = '';
-      if (a.status === 'scheduled') {
-        actionBtns = `<div style="margin-top:8px;display:flex;gap:6px">
-          <button class="action-btn" style="flex:0;padding:4px 10px;font-size:11px;border-radius:8px" onclick="updateStatus(${a.id},'in-progress')">Start Session</button>
-          <button class="action-btn danger" style="flex:0;padding:4px 10px;font-size:11px;border-radius:8px" onclick="removeAssignment(${a.id})">Remove</button>
-        </div>`;
-      } else if (a.status === 'in-progress') {
-        actionBtns = `<div style="margin-top:8px;display:flex;gap:6px">
-          <button class="action-btn" style="flex:0;padding:4px 10px;font-size:11px;border-radius:8px" onclick="updateStatus(${a.id},'completed')">Complete</button>
-        </div>`;
-      }
-
-      assignmentsHtml += `
-        <div class="appt-card ${cardClass}">
-          <div class="appt-time">${formatTime(a.start_time)} - ${formatTime(a.end_time)}${badgeHtml}</div>
-          <div class="appt-patient">${a.patient_name || 'Walk-in'}</div>
-          <div class="appt-type">${a.appointment_type || ''}</div>
-          <div class="appt-provider">${a.provider_name || ''}</div>
-          ${(a.resource_keys?.length) ? '<div class="assigned-resources">' + a.resource_keys.map(rk => { const res = resources.find(r => r.key === rk); return `<span class="res-tag">${res ? res.name : rk}</span>`; }).join('') + '</div>' : ''}
-          ${actionBtns}
-        </div>`;
+  let aH='';
+  if(room.bookable&&ra.length>0){
+    aH=`<div class="section-title">Today's Assignments</div>`;
+    ra.forEach(a=>{
+      const cc=a.status==='in-progress'?'current':a.status==='completed'?'past':'upcoming';
+      let badge='';if(a.status==='in-progress')badge='<span class="appt-badge in-progress">In Session</span>';else if(a.status==='completed')badge='<span class="appt-badge completed">Done</span>';else if(a.status==='scheduled')badge='<span class="appt-badge scheduled">Scheduled</span>';
+      let btns='';
+      if(a.status==='scheduled')btns=`<div style="margin-top:6px;display:flex;gap:6px"><button class="action-btn" style="flex:0;padding:4px 10px;font-size:11px;border-radius:8px" onclick="updateStatus(${a.id},'in-progress')">Start</button><button class="action-btn danger" style="flex:0;padding:4px 10px;font-size:11px;border-radius:8px" onclick="removeAssignment(${a.id})">Remove</button></div>`;
+      else if(a.status==='in-progress')btns=`<div style="margin-top:6px"><button class="action-btn" style="flex:0;padding:4px 10px;font-size:11px;border-radius:8px" onclick="updateStatus(${a.id},'completed')">Complete</button></div>`;
+      const resH=(a.resource_keys?.length)?'<div class="assigned-resources">'+a.resource_keys.map(rk=>{const r=resources.find(x=>x.key===rk);return `<span class="res-tag">${r?r.name:rk}</span>`;}).join('')+'</div>':'';
+      aH+=`<div class="appt-card ${cc}"><div class="appt-time">${formatTime(a.start_time)} - ${formatTime(a.end_time)}${badge}</div><div class="appt-patient">${a.patient_name||'Walk-in'}</div><div class="appt-type">${a.appointment_type||''}</div><div class="appt-provider">${a.provider_name||''}</div>${resH}${btns}</div>`;
     });
-  } else if (room.bookable) {
-    assignmentsHtml = '<div class="no-appts">No patients assigned today</div>';
-  } else {
-    assignmentsHtml = '<div class="no-appts">Non-clinical space</div>';
-  }
+  } else if(room.bookable){aH='<div class="no-appts">No patients assigned</div>';}
+  else{aH='<div class="no-appts">Non-clinical space</div>';}
 
-  detail.innerHTML = `
-    <div class="detail-header">
-      <div class="detail-room-name">${room.name}</div>
-      <div class="detail-room-type">${room.room_type}${room.number ? ' &middot; Room ' + room.number : ''}${room.practice_location_id ? ' &middot; <span class="sync-dot synced"></span>On Calendar' : ''}</div>
-      <div class="detail-status ${status}">${statusLabels[status]}</div>
-      ${equipHtml}
-    </div>
-    ${actionsHtml}
-    ${assignmentsHtml}
-  `;
+  detail.innerHTML=`<div class="detail-header"><div class="detail-room-name">${room.name}</div><div class="detail-room-type">${room.room_type}${room.number?' &middot; Room '+room.number:''}${room.practice_location_id?' &middot; <span class="sync-dot synced"></span>On Calendar':''}</div><div class="detail-status ${status}">${labels[status]||status}</div>${equipH}</div>${actH}${aH}`;
 }
 
-function showEmptyState() {
-  const detail = document.getElementById('roomDetail');
-  detail.classList.add('empty-state');
-  detail.innerHTML = `
-    <div class="empty-hint">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
-      <p>Select a room on the floor plan<br>to view its schedule</p>
-    </div>`;
+function showWaitingDetail(){
+  const detail=document.getElementById('roomDetail');detail.classList.remove('empty-state');
+  let html=`<div class="detail-header"><div class="detail-room-name">Waiting Area</div><div class="detail-room-type">Checked-in patients awaiting room assignment</div><div class="detail-status waiting-room">${waitingPatients.length} Waiting</div></div>`;
+  if(waitingPatients.length>0){
+    html+=`<div class="section-title">Checked In</div>`;
+    waitingPatients.forEach(w=>{
+      html+=`<div class="appt-card waiting-card"><div class="appt-time">${formatTime(w.start_time)}<span class="appt-badge waiting-badge">Checked In</span></div><div class="appt-patient">${w.patient_name}</div><div class="appt-provider">${w.provider_name}</div></div>`;
+    });
+  } else { html+='<div class="no-appts">No patients waiting</div>'; }
+  detail.innerHTML=html;
 }
 
-// ----- Assignment actions -----
-async function updateStatus(assignmentId, newStatus) {
-  await apiFetch(`/assignments/${assignmentId}`, {
-    method: 'PUT',
-    body: JSON.stringify({ status: newStatus }),
-  });
-  showToast(newStatus === 'completed' ? 'Session completed' : 'Session started');
-  await refreshData();
-}
+function showEmptyState(){const d=document.getElementById('roomDetail');d.classList.add('empty-state');d.innerHTML=`<div class="empty-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg><p>Select a room on the floor plan<br>to view its schedule</p></div>`;}
 
-async function removeAssignment(assignmentId) {
-  await apiFetch(`/assignments/${assignmentId}`, { method: 'DELETE' });
-  showToast('Assignment removed');
-  await refreshData();
-}
+// === Assignment Actions ===
+async function updateStatus(id,s){await apiFetch(`/assignments/${id}`,{method:'PUT',body:JSON.stringify({status:s})});showToast(s==='completed'?'Session completed':'Session started');await refreshData();}
+async function removeAssignment(id){await apiFetch(`/assignments/${id}`,{method:'DELETE'});showToast('Removed');await refreshData();}
 
-// ----- Assign modal -----
-let assigningRoomKey = null;
-
-function openAssignModal(roomKey) {
-  assigningRoomKey = roomKey;
-  const room = rooms[roomKey] || {};
-  document.getElementById('assignModalTitle').textContent = `Assign to ${room.name || roomKey}`;
+// === Assign Modal ===
+let assigningRoomKey=null;
+function openAssignModal(k){
+  assigningRoomKey=k;const room=rooms[k]||{};
+  document.getElementById('assignModalTitle').textContent=`Assign to ${room.name||k}`;
   document.getElementById('assignModal').classList.add('visible');
-  document.getElementById('apptSearch').value = '';
-
-  // Show resource checkboxes for this room
-  const roomRes = getRoomResources(roomKey);
-  const resSection = document.getElementById('resourceSection');
-  const resChecks = document.getElementById('resourceChecks');
-  if (roomRes.length > 0) {
-    resSection.style.display = 'block';
-    resChecks.innerHTML = roomRes.map(r => `
-      <div class="resource-check" onclick="this.querySelector('input').click()">
-        <input type="checkbox" value="${r.key}" id="res-${r.key}" onclick="event.stopPropagation(); this.parentElement.classList.toggle('checked', this.checked)">
-        <label for="res-${r.key}" onclick="event.preventDefault()">${r.name}</label>
-        <span class="res-room">${r.resource_type}</span>
-      </div>
-    `).join('');
-  } else {
-    resSection.style.display = 'none';
-  }
-
+  document.getElementById('apptSearch').value='';
+  const rr=getRoomResources(k),rs=document.getElementById('resourceSection'),rc=document.getElementById('resourceChecks');
+  if(rr.length>0){rs.style.display='block';rc.innerHTML=rr.map(r=>`<div class="resource-check" onclick="this.querySelector('input').click()"><input type="checkbox" value="${r.key}" id="res-${r.key}" onclick="event.stopPropagation();this.parentElement.classList.toggle('checked',this.checked)"><label for="res-${r.key}" onclick="event.preventDefault()">${r.name}${r.price_cents?' &middot; '+formatPrice(r.price_cents):''}</label><span class="res-room">${r.default_duration_minutes}min</span></div>`).join('');}
+  else{rs.style.display='none';}
   renderAppointmentList();
 }
-
-function getSelectedResources() {
-  return Array.from(document.querySelectorAll('#resourceChecks input:checked')).map(cb => cb.value);
+function closeAssignModal(){document.getElementById('assignModal').classList.remove('visible');assigningRoomKey=null;}
+function filterAppointments(){renderAppointmentList();}
+function getSelectedResources(){return Array.from(document.querySelectorAll('#resourceChecks input:checked')).map(cb=>cb.value);}
+function renderAppointmentList(){
+  const q=document.getElementById('apptSearch').value.toLowerCase();
+  const assigned=new Set(assignments.filter(a=>a.status!=='cancelled').map(a=>a.appointment_id));
+  const filtered=appointments.filter(a=>!q||a.patient_name.toLowerCase().includes(q));
+  const c=document.getElementById('apptList');
+  if(!filtered.length){c.innerHTML='<div class="no-appts">No appointments found</div>';return;}
+  c.innerHTML=filtered.map(a=>{const ia=assigned.has(a.id);return `<div class="appt-option ${ia?'assigned':''}" onclick="${ia?'':`assignAppointment('${a.id}')`}"><div class="opt-patient">${a.patient_name}</div><div class="opt-detail">${formatTime(a.start_time)} - ${formatTime(a.end_time)} &middot; ${a.provider_name}${ia?' (assigned)':''}</div></div>`;}).join('');
+}
+async function assignAppointment(id){
+  const a=appointments.find(x=>x.id===id);if(!a||!assigningRoomKey)return;
+  const sr=getSelectedResources();
+  await apiFetch('/assignments',{method:'POST',body:JSON.stringify({room_key:assigningRoomKey,appointment_id:a.id,patient_id:a.patient_id,patient_name:a.patient_name,appointment_type:a.appointment_type||'',provider_name:a.provider_name,start_time:a.start_time,end_time:a.end_time,status:'scheduled',resource_keys:sr})});
+  closeAssignModal();
+  const rn=sr.map(k=>{const r=resources.find(x=>x.key===k);return r?r.name:k;});
+  let msg=`${a.patient_name} assigned to ${rooms[assigningRoomKey]?.name||assigningRoomKey}`;
+  if(rn.length)msg+=` with ${rn.join(', ')}`;
+  showToast(msg);await refreshData();
 }
 
-function closeAssignModal() {
-  document.getElementById('assignModal').classList.remove('visible');
-  assigningRoomKey = null;
-}
-
-function filterAppointments() {
-  renderAppointmentList();
-}
-
-function renderAppointmentList() {
-  const query = document.getElementById('apptSearch').value.toLowerCase();
-  const assignedApptIds = new Set(assignments.filter(a => a.status !== 'cancelled').map(a => a.appointment_id));
-
-  const filtered = appointments.filter(a => {
-    if (query && !a.patient_name.toLowerCase().includes(query)) return false;
-    return true;
-  });
-
-  const container = document.getElementById('apptList');
-  if (filtered.length === 0) {
-    container.innerHTML = '<div class="no-appts">No appointments found</div>';
-    return;
-  }
-
-  container.innerHTML = filtered.map(a => {
-    const isAssigned = assignedApptIds.has(a.id);
-    return `
-      <div class="appt-option ${isAssigned ? 'assigned' : ''}" onclick="${isAssigned ? '' : `assignAppointment('${a.id}')`}">
-        <div class="opt-patient">${a.patient_name}</div>
-        <div class="opt-detail">${formatTime(a.start_time)} - ${formatTime(a.end_time)} &middot; ${a.provider_name}</div>
-      </div>`;
+// === Resource Table (Configure tab) ===
+function renderResourceTable(){
+  const tb=document.getElementById('resourceTableBody');
+  if(!resources.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--taupe);padding:30px">No resources configured. Click Setup or + Add Resource.</td></tr>';return;}
+  tb.innerHTML=resources.map(r=>{
+    const roomName=rooms[r.room_key]?.name||r.room_key||'-';
+    const hasCal=!!r.practitioner_id;
+    return `<tr>
+      <td><strong>${r.name}</strong><div style="font-size:11px;color:var(--taupe)">${r.description||''}</div></td>
+      <td>${r.resource_type}</td>
+      <td>${roomName}</td>
+      <td>${r.default_duration_minutes} min</td>
+      <td class="price-cell">${formatPrice(r.price_cents)}</td>
+      <td class="credit-cell">${r.credit_amount||'-'}</td>
+      <td>${hasCal?'<span class="calendar-badge on"><span class="sync-dot synced"></span>Schedulable</span>':`<button class="table-btn add-cal" onclick="addToCalendar('${r.key}')">Add to Calendar</button>`}</td>
+      <td><button class="table-btn" onclick="editResource('${r.key}')">Edit</button></td>
+    </tr>`;
   }).join('');
 }
 
-async function assignAppointment(apptId) {
-  const appt = appointments.find(a => a.id === apptId);
-  if (!appt || !assigningRoomKey) return;
+async function addToCalendar(key){
+  showToast('Creating schedulable provider...');
+  const r=await apiFetch(`/resources/${key}/create-practitioner`,{method:'POST'});
+  if(r.success){showToast('Resource is now schedulable on the calendar');await refreshData();}
+  else{showToast(r.error||'Failed','error');}
+}
 
-  const selectedResources = getSelectedResources();
+// === Resource Form ===
+function openResourceForm(editKey){
+  const overlay=document.getElementById('resourceFormOverlay');overlay.classList.add('visible');
+  // Populate room dropdown
+  const sel=document.getElementById('rf-room');
+  sel.innerHTML='<option value="">-- None --</option>'+Object.values(rooms).filter(r=>r.bookable).map(r=>`<option value="${r.key}">${r.name}</option>`).join('');
+  if(editKey){
+    const r=resources.find(x=>x.key===editKey);if(!r)return;
+    document.getElementById('resourceFormTitle').textContent='Edit Resource';
+    document.getElementById('rf-editing-key').value=r.key;
+    document.getElementById('rf-name').value=r.name;
+    document.getElementById('rf-type').value=r.resource_type;
+    document.getElementById('rf-room').value=r.room_key;
+    document.getElementById('rf-desc').value=r.description||'';
+    document.getElementById('rf-price').value=r.price_cents>0?(r.price_cents/100).toFixed(2):'';
+    document.getElementById('rf-credits').value=r.credit_amount||'';
+    document.getElementById('rf-duration').value=r.default_duration_minutes||30;
+  } else {
+    document.getElementById('resourceFormTitle').textContent='Add Resource';
+    document.getElementById('rf-editing-key').value='';
+    document.querySelectorAll('.form-modal-body .form-input').forEach(i=>{if(i.tagName==='SELECT')i.selectedIndex=0;else i.value='';});
+    document.getElementById('rf-duration').value='30';
+  }
+}
+function editResource(key){openResourceForm(key);}
+function closeResourceForm(){document.getElementById('resourceFormOverlay').classList.remove('visible');}
 
-  await apiFetch('/assignments', {
-    method: 'POST',
-    body: JSON.stringify({
-      room_key: assigningRoomKey,
-      appointment_id: appt.id,
-      patient_id: appt.patient_id,
-      patient_name: appt.patient_name,
-      appointment_type: appt.appointment_type || '',
-      provider_name: appt.provider_name,
-      start_time: appt.start_time,
-      end_time: appt.end_time,
-      status: 'scheduled',
-      resource_keys: selectedResources,
-    }),
-  });
+async function saveResource(){
+  const editKey=document.getElementById('rf-editing-key').value;
+  const name=document.getElementById('rf-name').value.trim();
+  if(!name){showToast('Name is required','error');return;}
+  const body={
+    name:name,
+    resource_type:document.getElementById('rf-type').value,
+    room_key:document.getElementById('rf-room').value,
+    description:document.getElementById('rf-desc').value,
+    price_cents:Math.round(parseFloat(document.getElementById('rf-price').value||'0')*100),
+    credit_amount:parseInt(document.getElementById('rf-credits').value||'0',10),
+    default_duration_minutes:parseInt(document.getElementById('rf-duration').value||'30',10),
+  };
+  if(editKey){
+    await apiFetch(`/resources/${editKey}`,{method:'PUT',body:JSON.stringify(body)});
+    showToast('Resource updated');
+  } else {
+    body.key=name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/-+$/,'');
+    await apiFetch('/resources',{method:'POST',body:JSON.stringify(body)});
+    showToast('Resource created');
+  }
+  closeResourceForm();await refreshData();
+}
 
-  closeAssignModal();
-  const resNames = selectedResources.map(k => { const r = resources.find(x => x.key === k); return r ? r.name : k; });
-  let msg = `${appt.patient_name} assigned to ${rooms[assigningRoomKey]?.name || assigningRoomKey}`;
-  if (resNames.length) msg += ` with ${resNames.join(', ')}`;
-  showToast(msg);
+// === Clock ===
+function updateClock(){const n=new Date();document.getElementById('currentTime').textContent=n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',second:'2-digit',hour12:true});document.getElementById('dateDisplay').textContent=n.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});}
+
+// === Init ===
+async function init(){
+  updateClock();setInterval(updateClock,1000);
+  document.querySelectorAll('.room').forEach(el=>{el.addEventListener('click',()=>showRoomDetail(el.dataset.room));});
+  document.getElementById('assignModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeAssignModal();});
+  document.getElementById('resourceFormOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeResourceForm();});
   await refreshData();
+  setInterval(refreshData,30000);
 }
-
-// ----- Clock -----
-function updateClock() {
-  const now = new Date();
-  document.getElementById('currentTime').textContent = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
-  document.getElementById('dateDisplay').textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-}
-
-// ----- Init -----
-async function init() {
-  updateClock();
-  setInterval(updateClock, 1000);
-
-  // Room click handlers
-  document.querySelectorAll('.room').forEach(el => {
-    el.addEventListener('click', () => showRoomDetail(el.dataset.room));
-  });
-
-  // Close modal on overlay click
-  document.getElementById('assignModal').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeAssignModal();
-  });
-
-  // Load data
-  await refreshData();
-
-  // Auto-refresh every 30 seconds
-  setInterval(refreshData, 30000);
-}
-
 init();
 </script>
 </body>
