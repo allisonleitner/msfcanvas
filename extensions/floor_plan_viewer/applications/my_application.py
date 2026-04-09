@@ -71,14 +71,23 @@ class FHIRClient:
             "Content-Type": "application/json",
         }
 
-    def create_practitioner(self, name: str) -> dict:
-        """Create a FHIR Practitioner resource (for schedulable resources)."""
+    def create_practitioner(self, name: str, resource_key: str = "") -> dict:
+        """Create a FHIR Practitioner resource (for schedulable resources).
+
+        Canvas requires: name.use='usual', birthDate, phone (rank 2), email (rank 1).
+        """
         parts = name.split(" ", 1)
         given = parts[0]
         family = parts[1] if len(parts) > 1 else "Resource"
+        email_slug = (resource_key or name.lower().replace(" ", "-")).replace("'", "")
         payload = {
             "resourceType": "Practitioner",
-            "name": [{"family": family, "given": [given], "text": name}],
+            "name": [{"use": "usual", "family": family, "given": [given], "text": name}],
+            "birthDate": "1900-01-01",
+            "telecom": [
+                {"system": "phone", "value": "0000000000", "use": "work", "rank": 2},
+                {"system": "email", "value": f"{email_slug}@resource.internal", "use": "work", "rank": 1},
+            ],
             "active": True,
         }
         resp = http_requests.post(
@@ -87,6 +96,11 @@ class FHIRClient:
             headers=self._headers(),
             timeout=15,
         )
+        # Canvas returns 201 with empty body; get ID from Location header
+        if resp.status_code == 201:
+            loc = resp.headers.get("location", "")
+            pract_id = loc.rsplit("/", 1)[-1] if loc else ""
+            return {"id": pract_id, "status": 201}
         return dict(resp.json())
 
     def create_appointment(
@@ -663,7 +677,7 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
             return [JSONResponse({"error": "FHIR credentials not configured"}, status_code=HTTPStatus.BAD_REQUEST)]
 
         try:
-            resp = fhir.create_practitioner(resource.name)
+            resp = fhir.create_practitioner(resource.name, resource_key=resource.key)
             pract_id = resp.get("id", "")
             if pract_id:
                 resource.practitioner_id = pract_id
