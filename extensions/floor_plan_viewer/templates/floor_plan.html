@@ -1156,10 +1156,10 @@ function renderSchedule() {
     const isConflict = type === 'conflict';
     const cls = isConflict ? 'conflict' : (type === 'resource' ? 'resource-block' : 'provider-block');
     const showRoom = height > 30 && roomName;
-    const safeId = (appt.id || '').replace(/'/g, "\\'");
-    const safeName = (appt.patient_name || '').replace(/'/g, "\\'");
-    return `<div class="cal-block ${cls}" style="top:${top}px;height:${height}px" title="${appt.patient_name || ''} ${formatTime(appt.start_time)}-${formatTime(appt.end_time)}${roomName ? ' @ ' + roomName : ''}" onclick="event.stopPropagation();showApptDetail('${safeId}','${safeName}','${type}','${roomKey || ''}')">
-      <div class="cal-block-patient">${appt.patient_name || appt.appointment_type || ''}</div>
+    const apptId = String(appt.id || appt.appointment_id || '').replace(/'/g, '');
+    const pName = String(appt.patient_name || appt.appointment_type || '').replace(/'/g, '').replace(/"/g, '');
+    return `<div class="cal-block ${cls}" style="top:${top}px;height:${height}px" title="${pName} ${formatTime(appt.start_time)}-${formatTime(appt.end_time)}" onclick="event.stopPropagation();showApptDetail('${apptId}','${pName}','${type}','${roomKey || ''}')">
+      <div class="cal-block-patient">${pName}</div>
       ${height > 22 ? '<div class="cal-block-time">' + formatTime(appt.start_time) + ' - ' + formatTime(appt.end_time) + '</div>' : ''}
       ${showRoom ? '<div class="cal-block-room">' + roomName + '</div>' : ''}
     </div>`;
