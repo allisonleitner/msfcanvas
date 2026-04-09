@@ -432,12 +432,14 @@
             <div class="config-section-title">Resources & Services</div>
             <button class="btn" onclick="openResourceForm()">+ Add Resource</button>
           </div>
-          <table class="resource-table" id="resourceTable">
+          <div style="overflow-x:auto;border:1px solid var(--border);border-radius:12px">
+          <table class="resource-table" style="border:none;border-radius:0;min-width:800px">
             <thead><tr>
-              <th style="min-width:160px">Name</th><th>Type</th><th>Room</th><th>Duration</th><th>Price</th><th>Credits</th><th style="min-width:120px">Calendar</th><th style="min-width:120px">Actions</th>
+              <th style="min-width:160px">Name</th><th>Type</th><th>Room</th><th>Duration</th><th>Price</th><th>Credits</th><th style="min-width:130px">Calendar</th><th style="min-width:130px">Actions</th>
             </tr></thead>
             <tbody id="resourceTableBody"></tbody>
           </table>
+          </div>
         </div>
 
         <!-- Staff Configuration -->
