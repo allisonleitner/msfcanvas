@@ -51,7 +51,7 @@ class RoomAssignment(CustomModel):
         Staff,
         to_field="dbid",
         on_delete=DO_NOTHING,
-        related_name="fp_room_assignments",
+        related_name="%(app_label)s_fp_room_assignments",
         null=True,
         blank=True,
     )
