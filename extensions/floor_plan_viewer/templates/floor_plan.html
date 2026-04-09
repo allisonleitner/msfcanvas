@@ -382,9 +382,17 @@
     <div class="tab-content" id="tab-schedule" style="flex-direction:row">
       <div style="flex:1;display:flex;flex-direction:column;min-width:0">
         <div style="padding:10px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--warm-white);flex-shrink:0">
-          <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:20px;font-weight:600;color:var(--navy)">Today's Schedule</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button class="btn" onclick="changeScheduleDay(-1)" style="padding:6px 10px;font-size:14px">&larr;</button>
+            <div style="text-align:center;min-width:160px">
+              <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:17px;font-weight:600;color:var(--navy)" id="schedDateLabel"></div>
+              <input type="date" id="schedDatePicker" style="font-size:11px;border:1px solid var(--border);border-radius:6px;padding:2px 6px;color:var(--navy);background:var(--ivory);cursor:pointer" onchange="goToScheduleDate(this.value)">
+            </div>
+            <button class="btn" onclick="changeScheduleDay(1)" style="padding:6px 10px;font-size:14px">&rarr;</button>
+            <button class="btn" onclick="goToScheduleToday()" style="font-size:11px">Today</button>
+          </div>
           <div style="display:flex;gap:8px;align-items:center">
-            <span id="bookingModeHint" style="font-size:11px;color:var(--taupe);display:none">Click on the calendar to add segments</span>
+            <span id="bookingModeHint" style="font-size:11px;color:var(--taupe);display:none">Click to add segments</span>
             <button class="btn" id="toggleBookBtn" onclick="toggleBookingMode()">Start Booking</button>
           </div>
         </div>
@@ -539,7 +547,10 @@
         <div class="form-group"><label class="form-label">Session Price ($)</label><input class="form-input" id="rf-price" type="number" step="0.01" min="0" placeholder="0.00"></div>
         <div class="form-group"><label class="form-label">Credits per Session</label><input class="form-input" id="rf-credits" type="number" min="0" placeholder="0"></div>
       </div>
-      <div class="form-group"><label class="form-label">Default Duration (min)</label><input class="form-input" id="rf-duration" type="number" min="5" step="5" placeholder="30"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Default Duration (min)</label><input class="form-input" id="rf-duration" type="number" min="5" step="5" placeholder="30"></div>
+        <div class="form-group"><label class="form-label">Max Concurrent Bookings</label><input class="form-input" id="rf-maxconcurrent" type="number" min="0" step="1" placeholder="1"><div style="font-size:10px;color:var(--taupe);margin-top:2px">1 = no double-book, 0 = unlimited</div></div>
+      </div>
     </div>
     <div class="form-actions">
       <button class="btn" onclick="closeResourceForm()">Cancel</button>
@@ -612,6 +623,7 @@
 <script>
 const API = '/plugin-io/api/floor_plan_viewer';
 let rooms = {}, resources = [], assignments = [], appointments = [], waitingPatients = [], providers = [], selectedRoom = null;
+let scheduleDate = new Date(); // currently viewed date on schedule tab
 let sonosSpeakers = {}, sonosPresets = [], sonosConfigured = false, sonosTriggered = new Set();
 
 // === API ===
@@ -624,8 +636,9 @@ function showToast(msg, type='success') { const t=document.getElementById('toast
 // === Data ===
 async function loadRooms() { const d=await apiFetch('/rooms'); rooms={}; (d.rooms||[]).forEach(r=>rooms[r.key]=r); }
 async function loadResources() { const d=await apiFetch('/resources'); resources=d.resources||[]; }
-async function loadAssignments() { const d=await apiFetch('/assignments'); assignments=d.assignments||[]; }
-async function loadAppointments() { const d=await apiFetch('/appointments/today'); appointments=d.appointments||[]; }
+function getSchedDateStr() { return scheduleDate.toISOString().split('T')[0]; }
+async function loadAssignments() { const d=await apiFetch('/assignments?date=' + getSchedDateStr()); assignments=d.assignments||[]; }
+async function loadAppointments() { const d=await apiFetch('/appointments/today?date=' + getSchedDateStr()); appointments=d.appointments||[]; }
 async function loadWaiting() { const d=await apiFetch('/waiting'); waitingPatients=d.waiting||[]; }
 async function loadProviders() { const d=await apiFetch('/providers'); providers=d.providers||[]; }
 async function loadSonosSpeakers() { const d=await apiFetch('/sonos/speakers'); sonosSpeakers={}; (d.speakers||[]).forEach(s=>sonosSpeakers[s.room_key]=s); }
@@ -658,6 +671,38 @@ function switchTab(tab) {
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
   document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
   document.getElementById('tab-'+tab).classList.add('active');
+}
+
+// === Schedule date navigation ===
+function updateScheduleDateUI() {
+  const today = new Date();
+  const isToday = scheduleDate.toDateString() === today.toDateString();
+  const label = isToday ? "Today's Schedule" : scheduleDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  document.getElementById('schedDateLabel').textContent = label;
+  const y = scheduleDate.getFullYear();
+  const m = String(scheduleDate.getMonth() + 1).padStart(2, '0');
+  const d = String(scheduleDate.getDate()).padStart(2, '0');
+  document.getElementById('schedDatePicker').value = y + '-' + m + '-' + d;
+}
+
+function changeScheduleDay(delta) {
+  scheduleDate = new Date(scheduleDate.getTime() + delta * 86400000);
+  updateScheduleDateUI();
+  refreshData();
+}
+
+function goToScheduleDate(val) {
+  if (!val) return;
+  const parts = val.split('-');
+  scheduleDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  updateScheduleDateUI();
+  refreshData();
+}
+
+function goToScheduleToday() {
+  scheduleDate = new Date();
+  updateScheduleDateUI();
+  refreshData();
 }
 
 // === Room status ===
@@ -1604,11 +1649,13 @@ function openResourceForm(editKey){
     document.getElementById('rf-price').value=r.price_cents>0?(r.price_cents/100).toFixed(2):'';
     document.getElementById('rf-credits').value=r.credit_amount||'';
     document.getElementById('rf-duration').value=r.default_duration_minutes||30;
+    document.getElementById('rf-maxconcurrent').value=r.max_concurrent!=null?r.max_concurrent:1;
   } else {
     document.getElementById('resourceFormTitle').textContent='Add Resource';
     document.getElementById('rf-editing-key').value='';
     document.querySelectorAll('.form-modal-body .form-input').forEach(i=>{if(i.tagName==='SELECT')i.selectedIndex=0;else i.value='';});
     document.getElementById('rf-duration').value='30';
+    document.getElementById('rf-maxconcurrent').value='1';
   }
 }
 function editResource(key){openResourceForm(key);}
@@ -1626,6 +1673,7 @@ async function saveResource(){
     price_cents:Math.round(parseFloat(document.getElementById('rf-price').value||'0')*100),
     credit_amount:parseInt(document.getElementById('rf-credits').value||'0',10),
     default_duration_minutes:parseInt(document.getElementById('rf-duration').value||'30',10),
+    max_concurrent:parseInt(document.getElementById('rf-maxconcurrent').value||'1',10),
   };
   if(editKey){
     await apiFetch(`/resources/${editKey}`,{method:'PUT',body:JSON.stringify(body)});
@@ -1907,6 +1955,7 @@ function updateClock(){const n=new Date();document.getElementById('currentTime')
 // === Init ===
 async function init(){
   updateClock();setInterval(updateClock,1000);
+  updateScheduleDateUI();
   document.querySelectorAll('.room').forEach(el=>{el.addEventListener('click',()=>showRoomDetail(el.dataset.room));});
   document.getElementById('assignModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeAssignModal();});
   document.getElementById('resourceFormOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeResourceForm();});

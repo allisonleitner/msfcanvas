@@ -968,7 +968,16 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
 
     @api.get("/appointments/today")
     def get_todays_appointments(self) -> list[Response | Effect]:
-        start, end = self._today_range()
+        date_str = self.request.query_params.get("date", "")
+        if date_str:
+            try:
+                day = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                start = datetime.combine(day.date(), time.min, tzinfo=timezone.utc)
+                end = start + timedelta(days=1)
+            except ValueError:
+                start, end = self._today_range()
+        else:
+            start, end = self._today_range()
 
         appointments = Appointment.objects.filter(
             start_time__gte=start,
