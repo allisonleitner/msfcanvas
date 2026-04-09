@@ -1018,23 +1018,42 @@ function renderCart() {
   summary.textContent = cart.length + ' segment' + (cart.length !== 1 ? 's' : '') + ' · ' + totalMin + ' min total';
   bookBtn.disabled = !patientId || !cart.length;
 
+  const bookableRooms = Object.values(rooms).filter(r => r.bookable);
+  const roomOptHtml = bookableRooms.map(r => '<option value="' + r.key + '">' + r.name + '</option>').join('');
+
   body.innerHTML = cart.map((c, i) => {
     const h = Math.floor(c.hour);
     const m = Math.round((c.hour - h) * 60);
     const timeStr = (h > 12 ? h - 12 : h) + ':' + String(m).padStart(2, '0') + (h >= 12 ? ' PM' : ' AM');
-    const roomName = c.room_key ? (rooms[c.room_key]?.name || c.room_key) : '';
-    return `<div class="cart-item">
+    const roomSelOpts = bookableRooms.map(r => '<option value="' + r.key + '"' + (r.key === c.room_key ? ' selected' : '') + '>' + r.name + '</option>').join('');
+    const missingRoom = !c.room_key;
+    return `<div class="cart-item" style="${missingRoom ? 'border-color:var(--blush)' : ''}">
       <span class="cart-item-num">${i + 1}</span>
       <span class="cart-item-name">${c.colName}</span>
       <button class="cart-item-remove" onclick="removeCartItem(${i})">&times;</button>
-      <div class="cart-item-detail">${timeStr}${roomName ? ' · ' + roomName : ''}</div>
+      <div class="cart-item-detail">${timeStr}</div>
       <div class="cart-item-dur">
         <label>Duration:</label>
         <input type="number" min="5" step="5" value="${c.duration}" onchange="updateCartDuration(${i}, this.value)"> min
       </div>
+      <div class="cart-item-dur">
+        <label>Room${missingRoom ? ' <span style="color:var(--blush-dark)">*</span>' : ''}:</label>
+        <select style="flex:1;padding:3px 6px;border:1px solid ${missingRoom ? 'var(--blush)' : 'var(--border)'};border-radius:4px;font-size:11px" onchange="updateCartRoom(${i}, this.value)">
+          <option value="">-- Select --</option>${roomSelOpts}
+        </select>
+      </div>
     </div>`;
   }).join('');
+
+  // Disable book button if any segment missing a room
+  const allHaveRooms = cart.every(c => !!c.room_key);
+  bookBtn.disabled = !patientId || !cart.length || !allHaveRooms;
 }
+
+function updateCartRoom(idx, val) {
+  cart[idx].room_key = val;
+  renderCart();
+  renderSchedule();
 
 // Cart patient search
 let cartPatientTimeout = null;
