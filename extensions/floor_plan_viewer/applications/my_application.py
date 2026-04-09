@@ -87,6 +87,36 @@ class FHIRClient:
         )
         return dict(resp.json())
 
+    def create_appointment(
+        self,
+        patient_id: str,
+        practitioner_id: str,
+        start: str,
+        end: str,
+        location_id: str = "",
+        status: str = "proposed",
+    ) -> dict:
+        """Create a FHIR Appointment."""
+        payload = {
+            "resourceType": "Appointment",
+            "status": status,
+            "start": start,
+            "end": end,
+            "participant": [
+                {"actor": {"reference": f"Patient/{patient_id}"}, "status": "accepted"},
+                {"actor": {"reference": f"Practitioner/{practitioner_id}"}, "status": "accepted"},
+            ],
+        }
+        if location_id:
+            payload["supportingInformation"] = [{"reference": f"Location/{location_id}"}]
+        resp = http_requests.post(
+            f"{self.fhir_url}/Appointment",
+            json=payload,
+            headers=self._headers(),
+            timeout=15,
+        )
+        return dict(resp.json())
+
     def create_location(self, name: str, physical_type: str = "ro") -> dict:
         """Create a FHIR Location resource. physical_type: 'ro' (room) or 'area'."""
         display = "Room" if physical_type == "ro" else "Area"
@@ -975,6 +1005,183 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                 "last_name": p.last_name or "",
             })
         return [JSONResponse({"providers": result}, status_code=HTTPStatus.OK)]
+
+    # ------------------------------------------------------------------
+    # Patient search
+    # ------------------------------------------------------------------
+
+    @api.get("/patients/search")
+    def search_patients(self) -> list[Response | Effect]:
+        from canvas_sdk.v1.data.patient import Patient
+
+        q = self.request.query_params.get("q", "").strip()
+        if len(q) < 2:
+            return [JSONResponse({"patients": []}, status_code=HTTPStatus.OK)]
+
+        qs = Patient.objects.filter(active=True)
+        # Search by first or last name
+        from django.db.models import Q
+        qs = qs.filter(Q(first_name__icontains=q) | Q(last_name__icontains=q))
+        qs = qs.order_by("last_name", "first_name")[:20]
+
+        result = []
+        for p in qs:
+            result.append({
+                "id": str(p.id),
+                "name": f"{p.first_name} {p.last_name}".strip(),
+                "first_name": p.first_name or "",
+                "last_name": p.last_name or "",
+                "dob": str(p.birth_date) if p.birth_date else "",
+            })
+        return [JSONResponse({"patients": result}, status_code=HTTPStatus.OK)]
+
+    # ------------------------------------------------------------------
+    # Multi-segment booking
+    # ------------------------------------------------------------------
+
+    @api.post("/book")
+    def book_multi_segment(self) -> list[Response | Effect]:
+        """Create multiple sequential appointments for a patient visit."""
+        from floor_plan_viewer.models.custom_data import Resource, Room, RoomAssignment
+
+        try:
+            body = json.loads(self.request.body)
+        except (json.JSONDecodeError, TypeError):
+            return [JSONResponse({"error": "Invalid JSON"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+        patient_id = body.get("patient_id", "")
+        patient_name = body.get("patient_name", "")
+        start_time = body.get("start_time", "")
+        segments = body.get("segments", [])
+
+        if not patient_id or not start_time or not segments:
+            return [JSONResponse({"error": "patient_id, start_time, and segments are required"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+        fhir = self._fhir_client()
+        staff_dbid = self._get_staff_dbid()
+
+        results = []
+        errors = []
+        current_start = start_time  # ISO string
+
+        for seg in segments:
+            provider_id = seg.get("provider_id", "")
+            resource_key = seg.get("resource_key", "")
+            duration = int(seg.get("duration", 30))
+            room_key = seg.get("room_key", "")
+            seg_name = seg.get("name", "")
+
+            # Calculate end time
+            start_dt = datetime.fromisoformat(current_start.replace("Z", "+00:00"))
+            end_dt = start_dt + timedelta(minutes=duration)
+            end_iso = end_dt.isoformat()
+
+            # Determine practitioner ID (provider or resource's practitioner)
+            practitioner_id = provider_id
+            if resource_key and not provider_id:
+                resource = Resource.objects.filter(key=resource_key).first()
+                if resource and resource.practitioner_id:
+                    practitioner_id = resource.practitioner_id
+
+            # Determine location ID
+            location_id = ""
+            if room_key:
+                room = Room.objects.filter(key=room_key).first()
+                if room and room.practice_location_id:
+                    location_id = room.practice_location_id
+
+            # Create appointment via FHIR if we have credentials and a practitioner
+            appt_id = ""
+            if fhir and practitioner_id:
+                try:
+                    resp = fhir.create_appointment(
+                        patient_id=patient_id,
+                        practitioner_id=practitioner_id,
+                        start=current_start,
+                        end=end_iso,
+                        location_id=location_id,
+                    )
+                    appt_id = resp.get("id", "")
+                    if not appt_id:
+                        errors.append(f"Segment '{seg_name}': {resp}")
+                except Exception as e:
+                    errors.append(f"Segment '{seg_name}': {e}")
+
+            # Create room assignment
+            if room_key:
+                resource_keys = [resource_key] if resource_key else []
+                RoomAssignment.objects.create(
+                    room_key=room_key,
+                    appointment_id=appt_id,
+                    patient_id=patient_id,
+                    patient_name=patient_name,
+                    appointment_type=seg_name,
+                    provider_name=seg.get("provider_name", ""),
+                    start_time=current_start,
+                    end_time=end_iso,
+                    status="scheduled",
+                    resource_keys=resource_keys,
+                    assigned_by_id=staff_dbid,
+                )
+
+            results.append({
+                "segment": seg_name,
+                "appointment_id": appt_id,
+                "room_key": room_key,
+                "start": current_start,
+                "end": end_iso,
+            })
+
+            # Next segment starts where this one ends
+            current_start = end_iso
+
+        return [JSONResponse({
+            "success": True,
+            "booked": results,
+            "errors": errors,
+        }, status_code=HTTPStatus.CREATED)]
+
+    # ------------------------------------------------------------------
+    # Check-in / Check-out
+    # ------------------------------------------------------------------
+
+    @api.post("/checkin/<appointment_id>")
+    def checkin_patient(self) -> list[Response | Effect]:
+        """Update appointment status to checked-in via FHIR."""
+        appt_id = self.request.path_params["appointment_id"]
+        fhir = self._fhir_client()
+        if not fhir:
+            return [JSONResponse({"error": "FHIR not configured"}, status_code=HTTPStatus.BAD_REQUEST)]
+        try:
+            headers = fhir._headers()
+            resp = http_requests.get(f"{fhir.fhir_url}/Appointment/{appt_id}", headers=headers, timeout=15)
+            if resp.status_code != 200:
+                return [JSONResponse({"error": f"Appointment not found: {resp.status_code}"}, status_code=HTTPStatus.NOT_FOUND)]
+            appt = resp.json()
+            appt["status"] = "checked-in"
+            resp = http_requests.put(f"{fhir.fhir_url}/Appointment/{appt_id}", json=appt, headers=headers, timeout=15)
+            return [JSONResponse({"success": True, "status": "checked-in"}, status_code=HTTPStatus.OK)]
+        except Exception as e:
+            return [JSONResponse({"error": str(e)}, status_code=HTTPStatus.BAD_GATEWAY)]
+
+    @api.post("/checkout/<appointment_id>")
+    def checkout_patient(self) -> list[Response | Effect]:
+        """Update appointment status to fulfilled via FHIR."""
+        appt_id = self.request.path_params["appointment_id"]
+        fhir = self._fhir_client()
+        if not fhir:
+            return [JSONResponse({"error": "FHIR not configured"}, status_code=HTTPStatus.BAD_REQUEST)]
+        try:
+            headers = fhir._headers()
+            resp = http_requests.get(f"{fhir.fhir_url}/Appointment/{appt_id}", headers=headers, timeout=15)
+            if resp.status_code != 200:
+                return [JSONResponse({"error": f"Appointment not found: {resp.status_code}"}, status_code=HTTPStatus.NOT_FOUND)]
+            appt = resp.json()
+            appt["status"] = "fulfilled"
+            resp = http_requests.put(f"{fhir.fhir_url}/Appointment/{appt_id}", json=appt, headers=headers, timeout=15)
+            return [JSONResponse({"success": True, "status": "fulfilled"}, status_code=HTTPStatus.OK)]
+        except Exception as e:
+            return [JSONResponse({"error": str(e)}, status_code=HTTPStatus.BAD_GATEWAY)]
 
     # ------------------------------------------------------------------
     # Sonos - Discovery & Configuration

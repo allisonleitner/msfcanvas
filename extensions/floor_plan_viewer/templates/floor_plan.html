@@ -150,6 +150,29 @@
   .sched-room-badge.assigned{background:var(--sage-light);border-color:var(--sage);color:var(--sage-dark)}
   .sched-room-select{padding:4px 8px;border-radius:8px;border:1px solid var(--gold);background:var(--gold-light);font-size:11px;color:var(--gold-dark);cursor:pointer;font-family:'Inter',sans-serif}
   .sched-room-select:focus{outline:none;box-shadow:0 0 0 2px var(--gold-light)}
+  .sched-actions{display:flex;gap:4px;margin-top:4px}
+  .sched-btn{padding:3px 8px;border-radius:6px;border:1px solid var(--border);background:var(--warm-white);font-size:10px;font-weight:600;cursor:pointer;transition:all .2s}
+  .sched-btn:hover{background:var(--cream)}
+  .sched-btn.checkin{color:var(--sage-dark);border-color:var(--sage)}
+  .sched-btn.checkin:hover{background:var(--sage-light)}
+  .sched-btn.checkout{color:var(--blush-dark);border-color:var(--blush)}
+  .sched-btn.checkout:hover{background:var(--blush-light)}
+  .sched-status{font-size:10px;font-weight:600;padding:2px 6px;border-radius:6px;margin-left:6px}
+  .sched-status.checked-in{background:var(--sage-light);color:var(--sage-dark)}
+  .sched-status.fulfilled{background:var(--sand);color:var(--taupe)}
+  /* Booking segments */
+  .book-segment{background:var(--ivory);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;position:relative}
+  .book-segment-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .book-segment-num{font-size:11px;font-weight:700;color:var(--sage-dark);background:var(--sage-light);padding:2px 8px;border-radius:6px}
+  .book-segment-remove{width:24px;height:24px;border-radius:6px;border:1px solid var(--border);background:var(--warm-white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--taupe)}
+  .book-segment-remove:hover{color:var(--blush-dark);border-color:var(--blush);background:var(--blush-light)}
+  .book-seg-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
+  .book-seg-row.three{grid-template-columns:1fr 80px 1fr}
+  .book-seg-label{font-size:10px;font-weight:600;color:var(--taupe);margin-bottom:3px}
+  .book-seg-input{width:100%;padding:6px 8px;border-radius:6px;border:1px solid var(--border);font-size:12px;font-family:'Inter',sans-serif;background:var(--warm-white)}
+  .book-seg-input:focus{border-color:var(--sage);outline:none}
+  .patient-result{padding:8px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:4px;cursor:pointer;font-size:13px;transition:all .15s}
+  .patient-result:hover{background:var(--sage-light);border-color:var(--sage)}
 
   /* CONFIGURE TAB */
   .config-panel{flex:1;padding:30px;overflow-y:auto;max-width:1100px;margin:0 auto;width:100%}
@@ -337,16 +360,18 @@
 
     <!-- SCHEDULE TAB -->
     <div class="tab-content" id="tab-schedule" style="flex-direction:column">
+      <div style="padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--warm-white)">
+        <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:20px;font-weight:600;color:var(--navy)">Today's Schedule</div>
+        <button class="btn active" onclick="openBookingModal()">Book Visit</button>
+      </div>
       <div style="padding:20px 24px;flex:1;overflow:auto">
         <div style="display:flex;gap:24px;min-height:100%">
-          <!-- Providers Column -->
           <div style="flex:1;min-width:280px">
-            <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:20px;font-weight:600;color:var(--navy);margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--sage)">Providers</div>
+            <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:18px;font-weight:600;color:var(--navy);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--sage)">Providers</div>
             <div id="scheduleProviders"></div>
           </div>
-          <!-- Resources Column -->
           <div style="flex:1;min-width:280px">
-            <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:20px;font-weight:600;color:var(--navy);margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--gold)">Resources</div>
+            <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:18px;font-weight:600;color:var(--navy);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--gold)">Resources</div>
             <div id="scheduleResources"></div>
           </div>
         </div>
@@ -397,6 +422,46 @@
           </table>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Booking Modal -->
+<div class="form-overlay" id="bookingOverlay">
+  <div class="form-modal" style="width:600px;max-height:85vh">
+    <div class="form-modal-header"><h2>Book Multi-Segment Visit</h2><button class="modal-close" onclick="closeBookingModal()">&times;</button></div>
+    <div class="form-modal-body">
+      <!-- Patient Search -->
+      <div class="form-group">
+        <label class="form-label">Patient</label>
+        <input class="form-input" id="book-patient-search" placeholder="Search by name..." oninput="searchBookingPatients()">
+        <div id="book-patient-results" style="max-height:120px;overflow-y:auto;margin-top:4px"></div>
+        <input type="hidden" id="book-patient-id">
+        <div id="book-patient-selected" style="margin-top:6px;font-weight:600;color:var(--navy);display:none"></div>
+      </div>
+      <!-- Start Time -->
+      <div class="form-group">
+        <label class="form-label">Start Time</label>
+        <input class="form-input" id="book-start-time" type="datetime-local">
+      </div>
+      <!-- Segments -->
+      <div style="margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <label class="form-label" style="margin:0">Visit Segments</label>
+          <button class="btn" style="padding:4px 12px;font-size:11px" onclick="addBookingSegment()">+ Add Segment</button>
+        </div>
+        <div id="book-segments"></div>
+      </div>
+      <!-- Timeline Preview -->
+      <div id="book-timeline" style="background:var(--cream);border-radius:10px;padding:12px;margin-top:8px;display:none">
+        <div class="form-label" style="margin-bottom:6px">Timeline Preview</div>
+        <div id="book-timeline-bars" style="display:flex;border-radius:6px;overflow:hidden;height:28px"></div>
+        <div id="book-timeline-labels" style="display:flex;margin-top:4px"></div>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeBookingModal()">Cancel</button>
+      <button class="btn active" onclick="submitBooking()">Book All Segments</button>
     </div>
   </div>
 </div>
@@ -794,10 +859,20 @@ function renderSchedule() {
           const assignedRoom = getAssignedRoom(a.id);
           const assignId = getAssignmentId(a.id);
           const roomName = assignedRoom ? (rooms[assignedRoom]?.name || assignedRoom) : '';
+          const apptStatus = (a.status || '').toLowerCase();
+          const isCheckedIn = apptStatus.includes('check');
+          const isFulfilled = apptStatus.includes('fulfil');
+          let statusBadge = '';
+          if (isCheckedIn) statusBadge = '<span class="sched-status checked-in">Checked In</span>';
+          else if (isFulfilled) statusBadge = '<span class="sched-status fulfilled">Complete</span>';
+          let actionBtns = '';
+          if (!isFulfilled && !isCheckedIn) actionBtns = `<button class="sched-btn checkin" onclick="checkinPatient('${a.id}','${a.patient_name.replace(/'/g,"\\'")}')">Check In</button>`;
+          else if (isCheckedIn) actionBtns = `<button class="sched-btn checkout" onclick="checkoutPatient('${a.id}','${a.patient_name.replace(/'/g,"\\'")}')">Check Out</button>`;
           return `<div class="sched-appt">
             <div class="sched-appt-info">
-              <div class="sched-appt-time">${formatTime(a.start_time)} - ${formatTime(a.end_time)}</div>
+              <div class="sched-appt-time">${formatTime(a.start_time)} - ${formatTime(a.end_time)}${statusBadge}</div>
               <div class="sched-appt-patient">${a.patient_name}</div>
+              <div class="sched-actions">${actionBtns}</div>
             </div>
             <div class="sched-appt-room">
               ${assignedRoom
@@ -859,6 +934,174 @@ async function schedAssignRoom(roomKey, apptId, patientName, providerName, start
   });
   showToast(patientName + ' assigned to ' + (rooms[roomKey]?.name || roomKey));
   await refreshData();
+}
+
+// === Check-in / Check-out ===
+async function checkinPatient(apptId, name) {
+  const r = await apiFetch('/checkin/' + apptId, { method: 'POST' });
+  if (r.success) { showToast(name + ' checked in'); await refreshData(); }
+  else { showToast(r.error || 'Check-in failed', 'error'); }
+}
+async function checkoutPatient(apptId, name) {
+  const r = await apiFetch('/checkout/' + apptId, { method: 'POST' });
+  if (r.success) { showToast(name + ' checked out'); await refreshData(); }
+  else { showToast(r.error || 'Check-out failed', 'error'); }
+}
+
+// === Booking Modal ===
+let bookingSegmentCount = 0;
+
+function openBookingModal() {
+  document.getElementById('bookingOverlay').classList.add('visible');
+  document.getElementById('book-patient-search').value = '';
+  document.getElementById('book-patient-id').value = '';
+  document.getElementById('book-patient-selected').style.display = 'none';
+  document.getElementById('book-patient-results').innerHTML = '';
+  document.getElementById('book-segments').innerHTML = '';
+  document.getElementById('book-timeline').style.display = 'none';
+  bookingSegmentCount = 0;
+  // Default start time to next 30-min slot
+  const now = new Date();
+  now.setMinutes(Math.ceil(now.getMinutes() / 30) * 30, 0, 0);
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  document.getElementById('book-start-time').value = local;
+  addBookingSegment();
+}
+
+function closeBookingModal() { document.getElementById('bookingOverlay').classList.remove('visible'); }
+
+let patientSearchTimeout = null;
+function searchBookingPatients() {
+  clearTimeout(patientSearchTimeout);
+  const q = document.getElementById('book-patient-search').value.trim();
+  if (q.length < 2) { document.getElementById('book-patient-results').innerHTML = ''; return; }
+  patientSearchTimeout = setTimeout(async () => {
+    const d = await apiFetch('/patients/search?q=' + encodeURIComponent(q));
+    const el = document.getElementById('book-patient-results');
+    if (!d.patients || !d.patients.length) { el.innerHTML = '<div style="padding:8px;color:var(--taupe);font-size:12px">No patients found</div>'; return; }
+    el.innerHTML = d.patients.map(p =>
+      `<div class="patient-result" onclick="selectBookingPatient('${p.id}','${p.name.replace(/'/g, "\\'")}')">${p.name}${p.dob ? ' <span style="color:var(--taupe);font-size:11px">DOB: ' + p.dob + '</span>' : ''}</div>`
+    ).join('');
+  }, 300);
+}
+
+function selectBookingPatient(id, name) {
+  document.getElementById('book-patient-id').value = id;
+  document.getElementById('book-patient-search').value = '';
+  document.getElementById('book-patient-results').innerHTML = '';
+  const sel = document.getElementById('book-patient-selected');
+  sel.textContent = name;
+  sel.style.display = 'block';
+}
+
+function addBookingSegment() {
+  bookingSegmentCount++;
+  const n = bookingSegmentCount;
+  const bookableRooms = Object.values(rooms).filter(r => r.bookable);
+  const roomOpts = bookableRooms.map(r => `<option value="${r.key}">${r.name}</option>`).join('');
+  const provOpts = providers.map(p => `<option value="${p.id}" data-name="${p.name}">${p.name}</option>`).join('');
+  const resOpts = resources.map(r => `<option value="${r.key}" data-name="${r.name}" data-room="${r.room_key}" data-dur="${r.default_duration_minutes}">${r.name} (${r.default_duration_minutes}min)</option>`).join('');
+
+  const html = `<div class="book-segment" id="book-seg-${n}">
+    <div class="book-segment-header"><span class="book-segment-num">Segment ${n}</span><button class="book-segment-remove" onclick="removeBookingSegment(${n})">&times;</button></div>
+    <div class="book-seg-row">
+      <div><div class="book-seg-label">Provider</div><select class="book-seg-input" id="seg-${n}-provider"><option value="">-- Optional --</option>${provOpts}</select></div>
+      <div><div class="book-seg-label">Resource / Service</div><select class="book-seg-input" id="seg-${n}-resource" onchange="onSegResourceChange(${n})"><option value="">-- Optional --</option>${resOpts}</select></div>
+    </div>
+    <div class="book-seg-row three">
+      <div><div class="book-seg-label">Room</div><select class="book-seg-input" id="seg-${n}-room"><option value="">-- Select --</option>${roomOpts}</select></div>
+      <div><div class="book-seg-label">Duration</div><input class="book-seg-input" id="seg-${n}-duration" type="number" min="5" step="5" value="30" onchange="updateTimeline()"></div>
+      <div><div class="book-seg-label">Label</div><input class="book-seg-input" id="seg-${n}-label" placeholder="e.g. Doctor Visit" oninput="updateTimeline()"></div>
+    </div>
+  </div>`;
+  document.getElementById('book-segments').insertAdjacentHTML('beforeend', html);
+  updateTimeline();
+}
+
+function removeBookingSegment(n) {
+  const el = document.getElementById('book-seg-' + n);
+  if (el) el.remove();
+  updateTimeline();
+}
+
+function onSegResourceChange(n) {
+  const sel = document.getElementById('seg-' + n + '-resource');
+  const opt = sel.options[sel.selectedIndex];
+  if (opt && opt.dataset.dur) document.getElementById('seg-' + n + '-duration').value = opt.dataset.dur;
+  if (opt && opt.dataset.room) document.getElementById('seg-' + n + '-room').value = opt.dataset.room;
+  if (opt && opt.dataset.name && !document.getElementById('seg-' + n + '-label').value) document.getElementById('seg-' + n + '-label').value = opt.dataset.name;
+  updateTimeline();
+}
+
+function getBookingSegments() {
+  const segs = [];
+  document.querySelectorAll('.book-segment').forEach(el => {
+    const n = el.id.replace('book-seg-', '');
+    const provSel = document.getElementById('seg-' + n + '-provider');
+    const provName = provSel.options[provSel.selectedIndex]?.dataset?.name || '';
+    segs.push({
+      provider_id: document.getElementById('seg-' + n + '-provider').value,
+      provider_name: provName,
+      resource_key: document.getElementById('seg-' + n + '-resource').value,
+      room_key: document.getElementById('seg-' + n + '-room').value,
+      duration: parseInt(document.getElementById('seg-' + n + '-duration').value || '30', 10),
+      name: document.getElementById('seg-' + n + '-label').value || 'Segment',
+    });
+  });
+  return segs;
+}
+
+const SEG_COLORS = ['var(--sage)','var(--gold)','var(--blush)','var(--navy-light)','var(--taupe)'];
+function updateTimeline() {
+  const segs = getBookingSegments();
+  const tl = document.getElementById('book-timeline');
+  if (!segs.length) { tl.style.display = 'none'; return; }
+  tl.style.display = 'block';
+  const totalMin = segs.reduce((s, x) => s + x.duration, 0);
+  const bars = document.getElementById('book-timeline-bars');
+  const labels = document.getElementById('book-timeline-labels');
+  bars.innerHTML = segs.map((s, i) => `<div style="flex:${s.duration};background:${SEG_COLORS[i % SEG_COLORS.length]};opacity:0.7"></div>`).join('');
+  const startVal = document.getElementById('book-start-time').value;
+  let t = startVal ? new Date(startVal) : new Date();
+  labels.innerHTML = segs.map((s, i) => {
+    const label = `<div style="flex:${s.duration};font-size:10px;color:var(--charcoal);text-align:center"><strong>${s.name}</strong><br>${formatTime(t.toISOString())} - ${formatTime(new Date(t.getTime()+s.duration*60000).toISOString())}${s.room_key?' &middot; '+(rooms[s.room_key]?.name||s.room_key):''}</div>`;
+    t = new Date(t.getTime() + s.duration * 60000);
+    return label;
+  }).join('');
+}
+
+async function submitBooking() {
+  const patientId = document.getElementById('book-patient-id').value;
+  const patientName = document.getElementById('book-patient-selected').textContent;
+  const startTime = document.getElementById('book-start-time').value;
+  const segs = getBookingSegments();
+
+  if (!patientId) { showToast('Select a patient first', 'error'); return; }
+  if (!startTime) { showToast('Set a start time', 'error'); return; }
+  if (!segs.length) { showToast('Add at least one segment', 'error'); return; }
+
+  const startISO = new Date(startTime).toISOString();
+  showToast('Booking ' + segs.length + ' segment(s)...');
+
+  const r = await apiFetch('/book', {
+    method: 'POST',
+    body: JSON.stringify({
+      patient_id: patientId,
+      patient_name: patientName,
+      start_time: startISO,
+      segments: segs,
+    }),
+  });
+
+  if (r.success) {
+    const count = (r.booked || []).length;
+    closeBookingModal();
+    showToast(patientName + ': ' + count + ' segment(s) booked');
+    if (r.errors && r.errors.length) showToast('Some errors: ' + r.errors[0], 'error');
+    await refreshData();
+  } else {
+    showToast(r.error || 'Booking failed', 'error');
+  }
 }
 
 // === Resource Form ===
@@ -1184,6 +1427,7 @@ async function init(){
   document.querySelectorAll('.room').forEach(el=>{el.addEventListener('click',()=>showRoomDetail(el.dataset.room));});
   document.getElementById('assignModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeAssignModal();});
   document.getElementById('resourceFormOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeResourceForm();});
+  document.getElementById('bookingOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeBookingModal();});
   document.getElementById('presetFormOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closePresetForm();});
   document.getElementById('speakerDiscoveryModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeSpeakerDiscovery();});
   await refreshData();
