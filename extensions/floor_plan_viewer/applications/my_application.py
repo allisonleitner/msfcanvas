@@ -131,7 +131,14 @@ class FHIRClient:
             headers=self._headers(),
             timeout=15,
         )
-        return dict(resp.json())
+        # Canvas returns 201 with empty body; get ID from Location header
+        if resp.status_code == 201:
+            loc = resp.headers.get("location", "")
+            appt_id = loc.rsplit("/", 1)[-1] if loc else ""
+            return {"id": appt_id, "status": 201}
+        if resp.content:
+            return dict(resp.json())
+        return {"error": f"HTTP {resp.status_code}", "status": resp.status_code}
 
     def create_location(self, name: str, physical_type: str = "ro") -> dict:
         """Create a FHIR Location resource. physical_type: 'ro' (room) or 'area'."""
