@@ -158,6 +158,7 @@
   .cal-now-dot{position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:50%;background:var(--blush)}
   /* Pending blocks (cart items on calendar) */
   .cal-block.pending{background:rgba(44,51,69,.08);border:2px dashed var(--navy);color:var(--navy);z-index:3;cursor:default}
+  .cal-block.pending{user-select:none}
   .cal-block.pending .cal-block-patient{font-style:italic;opacity:.7}
   .cal-pending-num{position:absolute;top:2px;right:4px;width:18px;height:18px;border-radius:50%;background:var(--navy);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center}
   /* Clickable column body */
@@ -941,6 +942,7 @@ function toggleBookingMode() {
 
 // Drag state
 let dragState = null; // {colType, colId, colName, resourceKey, roomKey, defaultDur, startY, startHour, body}
+let pendingDragState = null; // {cartIdx, startY, origHour, blockEl}
 
 function yToHour(y) {
   const raw = CAL_START_HOUR + y / PX_PER_HOUR;
@@ -1022,6 +1024,51 @@ document.addEventListener('mouseup', function(e) {
   if (preview) preview.style.display = 'none';
   dragState = null;
 
+  renderSchedule();
+  renderCart();
+});
+
+// Drag-to-reposition pending blocks
+function startPendingDrag(e, cartIdx) {
+  e.preventDefault();
+  const block = e.currentTarget;
+  const body = block.parentElement; // cal-col-body
+  const rect = body.getBoundingClientRect();
+  pendingDragState = {
+    cartIdx: cartIdx,
+    startY: e.clientY,
+    origHour: cart[cartIdx].hour,
+    body: body,
+    rect: rect,
+  };
+  block.style.cursor = 'grabbing';
+  block.style.opacity = '0.7';
+  block.style.zIndex = '20';
+}
+
+document.addEventListener('mousemove', function(e) {
+  if (!pendingDragState) return;
+  const ps = pendingDragState;
+  const dy = e.clientY - ps.startY;
+  const dHours = dy / PX_PER_HOUR;
+  const newHour = Math.round((ps.origHour + dHours) * 4) / 4; // snap 15min
+  const clamped = Math.max(CAL_START_HOUR, Math.min(CAL_END_HOUR - 0.25, newHour));
+  cart[ps.cartIdx].hour = clamped;
+  // Move block visually
+  const block = ps.body.querySelector('.cal-block.pending[onmousedown*="' + ps.cartIdx + '"]');
+  if (block) {
+    block.style.top = ((clamped - CAL_START_HOUR) * PX_PER_HOUR) + 'px';
+    const h = Math.floor(clamped);
+    const m = Math.round((clamped - h) * 60);
+    const timeStr = (h > 12 ? h - 12 : h) + ':' + String(m).padStart(2, '0') + (h >= 12 ? 'p' : 'a');
+    const timeEl = block.querySelector('.cal-block-time');
+    if (timeEl) timeEl.textContent = timeStr + ' \u00b7 ' + cart[ps.cartIdx].duration + 'min';
+  }
+});
+
+document.addEventListener('mouseup', function(e) {
+  if (!pendingDragState) return;
+  pendingDragState = null;
   renderSchedule();
   renderCart();
 });
@@ -1137,10 +1184,10 @@ async function submitCartBooking() {
   // Sort cart by time
   const sorted = [...cart].sort((a, b) => a.hour - b.hour);
 
-  // Build segments with absolute ISO times
-  const today = new Date();
+  // Build segments with absolute ISO times (using selected schedule date)
+  const sd = scheduleDate;
   const segments = sorted.map(c => {
-    const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), Math.floor(c.hour), Math.round((c.hour % 1) * 60));
+    const startDate = new Date(sd.getFullYear(), sd.getMonth(), sd.getDate(), Math.floor(c.hour), Math.round((c.hour % 1) * 60));
     return {
       provider_id: c.provider_id || '',
       provider_name: c.colType === 'provider' ? c.colName : '',
@@ -1260,7 +1307,7 @@ function renderSchedule() {
       const h = Math.floor(c.hour);
       const m = Math.round((c.hour - h) * 60);
       const timeStr = (h > 12 ? h - 12 : h) + ':' + String(m).padStart(2, '0') + (h >= 12 ? 'p' : 'a');
-      return `<div class="cal-block pending" style="top:${top}px;height:${height}px">
+      return `<div class="cal-block pending" style="top:${top}px;height:${height}px;cursor:grab" onmousedown="event.stopPropagation();startPendingDrag(event,${cartIdx})">
         <span class="cal-pending-num">${cartIdx + 1}</span>
         <div class="cal-block-patient">Pending</div>
         <div class="cal-block-time">${timeStr} · ${c.duration}min</div>
