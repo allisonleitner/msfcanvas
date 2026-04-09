@@ -690,9 +690,20 @@ function renderResourceTable(){
       <td class="price-cell">${formatPrice(r.price_cents)}</td>
       <td class="credit-cell">${r.credit_amount||'-'}</td>
       <td>${hasCal?'<span class="calendar-badge on"><span class="sync-dot synced"></span>Schedulable</span>':`<button class="table-btn add-cal" onclick="addToCalendar('${r.key}')">Add to Calendar</button>`}</td>
-      <td><button class="table-btn" onclick="editResource('${r.key}')">Edit</button></td>
+      <td style="display:flex;gap:4px"><button class="table-btn" onclick="editResource('${r.key}')">Edit</button><button class="table-btn" style="color:var(--blush-dark);border-color:var(--blush)" onclick="confirmDeleteResource('${r.key}','${r.name.replace(/'/g,"\\'")}')">Delete</button></td>
     </tr>`;
   }).join('');
+}
+
+function confirmDeleteResource(key, name) {
+  if (!confirm('Are you sure you want to delete "' + name + '"? This cannot be undone.')) return;
+  deleteResource(key);
+}
+
+async function deleteResource(key) {
+  const r = await apiFetch('/resources/' + key, { method: 'DELETE' });
+  if (r.success) { showToast('Resource deleted'); await refreshData(); }
+  else { showToast(r.error || 'Failed to delete', 'error'); }
 }
 
 async function addToCalendar(key){
