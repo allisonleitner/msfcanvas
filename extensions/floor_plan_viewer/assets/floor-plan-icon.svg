@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Background circle -->
+  <circle cx="50" cy="50" r="46" fill="#E8F0E9" stroke="#7A9E7E" stroke-width="2"/>
+
+  <!-- Floor plan outline -->
+  <rect x="22" y="24" width="56" height="52" rx="3" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linejoin="round"/>
+
+  <!-- Horizontal divider (corridor) -->
+  <line x1="22" y1="50" x2="78" y2="50" stroke="#7A9E7E" stroke-width="2.5"/>
+
+  <!-- Vertical dividers - top row -->
+  <line x1="42" y1="24" x2="42" y2="50" stroke="#7A9E7E" stroke-width="2"/>
+  <line x1="60" y1="24" x2="60" y2="50" stroke="#7A9E7E" stroke-width="2"/>
+
+  <!-- Vertical dividers - bottom row -->
+  <line x1="50" y1="50" x2="50" y2="76" stroke="#7A9E7E" stroke-width="2"/>
+
+  <!-- Door openings (gaps in walls) -->
+  <line x1="34" y1="50" x2="38" y2="50" stroke="#E8F0E9" stroke-width="3"/>
+  <line x1="53" y1="24" x2="57" y2="24" stroke="#E8F0E9" stroke-width="3"/>
+  <line x1="62" y1="50" x2="66" y2="50" stroke="#E8F0E9" stroke-width="3"/>
+
+  <!-- Small room indicator dots -->
+  <circle cx="32" cy="37" r="2.5" fill="#7A9E7E" opacity="0.5"/>
+  <circle cx="51" cy="37" r="2.5" fill="#7A9E7E" opacity="0.5"/>
+  <circle cx="69" cy="37" r="2.5" fill="#7A9E7E" opacity="0.5"/>
+  <circle cx="36" cy="63" r="2.5" fill="#7A9E7E" opacity="0.5"/>
+  <circle cx="64" cy="63" r="2.5" fill="#7A9E7E" opacity="0.5"/>
+</svg>

@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Elle Medicine - Floor Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ivory: #FAF7F2;
+    --ivory-dark: #F0EBE3;
+    --cream: #F5F0E8;
+    --warm-white: #FFFDF9;
+    --sage: #7A9E7E;
+    --sage-light: #E8F0E9;
+    --sage-dark: #5C7E60;
+    --blush: #C4908A;
+    --blush-light: #F5E6E4;
+    --blush-dark: #A67069;
+    --gold: #BFA065;
+    --gold-light: #F5EDD8;
+    --gold-dark: #9A7E4A;
+    --navy: #2C3345;
+    --navy-light: #3D4660;
+    --charcoal: #4A4A4A;
+    --taupe: #9B9285;
+    --taupe-light: #C4BBB0;
+    --sand: #E8E0D4;
+    --border: #E2DCD3;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--ivory);
+    color: var(--navy);
+    height: 100vh;
+    overflow: hidden;
+  }
+  .app { display: flex; height: 100vh; }
+
+  /* ===== SIDEBAR ===== */
+  .sidebar {
+    width: 370px;
+    background: var(--warm-white);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    box-shadow: 2px 0 20px rgba(44,51,69,0.04);
+  }
+  .sidebar-header {
+    padding: 24px 24px 20px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, var(--warm-white) 0%, var(--cream) 100%);
+  }
+  .brand-mark { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+  .brand-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--sage) 0%, var(--sage-dark) 100%);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .brand-icon svg { width: 20px; height: 20px; }
+  .sidebar-header h1 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 24px; font-weight: 600; color: var(--navy); letter-spacing: 0.5px;
+  }
+  .sidebar-header .subtitle {
+    font-size: 11px; color: var(--taupe); margin-top: 2px;
+    text-transform: uppercase; letter-spacing: 2px; font-weight: 500;
+  }
+  .date-display {
+    font-size: 13px; color: var(--charcoal); margin-top: 12px; font-weight: 400;
+    padding-top: 12px; border-top: 1px solid var(--border);
+  }
+
+  /* Legend */
+  .legend {
+    padding: 14px 24px; border-bottom: 1px solid var(--border);
+    display: flex; gap: 16px; flex-wrap: wrap; background: var(--warm-white);
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--charcoal); font-weight: 500; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .legend-dot.available { background: var(--sage); box-shadow: 0 0 0 2px var(--sage-light); }
+  .legend-dot.occupied { background: var(--blush); box-shadow: 0 0 0 2px var(--blush-light); }
+  .legend-dot.partial { background: var(--gold); box-shadow: 0 0 0 2px var(--gold-light); }
+  .legend-dot.non-bookable { background: var(--taupe-light); box-shadow: 0 0 0 2px var(--sand); }
+
+  /* Stats */
+  .stats-bar {
+    padding: 16px 24px; border-bottom: 1px solid var(--border);
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; background: var(--cream);
+  }
+  .stat {
+    text-align: center; padding: 10px 6px;
+    background: var(--warm-white); border-radius: 12px; border: 1px solid var(--border);
+  }
+  .stat-value { font-size: 24px; font-weight: 700; font-family: 'Cormorant Garamond', Georgia, serif; }
+  .stat-value.green { color: var(--sage-dark); }
+  .stat-value.red { color: var(--blush-dark); }
+  .stat-value.yellow { color: var(--gold-dark); }
+  .stat-label { font-size: 9px; color: var(--taupe); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; font-weight: 600; }
+
+  /* Detail panel */
+  .room-detail { flex: 1; overflow-y: auto; padding: 20px 24px; }
+  .room-detail.empty-state { display: flex; align-items: center; justify-content: center; }
+  .empty-hint { text-align: center; color: var(--taupe); }
+  .empty-hint svg { width: 48px; height: 48px; margin-bottom: 16px; opacity: 0.35; color: var(--taupe-light); }
+  .empty-hint p { font-size: 13px; line-height: 1.6; }
+
+  .detail-header { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .detail-room-name { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 24px; font-weight: 600; color: var(--navy); }
+  .detail-room-type { font-size: 12px; color: var(--taupe); margin-top: 4px; }
+  .detail-status {
+    display: inline-block; padding: 4px 14px; border-radius: 20px;
+    font-size: 11px; font-weight: 600; margin-top: 10px; letter-spacing: 0.3px;
+  }
+  .detail-status.available { background: var(--sage-light); color: var(--sage-dark); }
+  .detail-status.occupied { background: var(--blush-light); color: var(--blush-dark); }
+  .detail-status.partial { background: var(--gold-light); color: var(--gold-dark); }
+  .detail-status.non-bookable { background: var(--sand); color: var(--taupe); }
+
+  .equipment-list { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .equipment-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 8px; background: var(--gold-light); border: 1px solid var(--gold);
+    border-radius: 6px; font-size: 10px; color: var(--gold-dark); font-weight: 600;
+  }
+
+  .section-title {
+    font-size: 11px; font-weight: 600; color: var(--taupe);
+    text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px;
+  }
+
+  /* Action buttons */
+  .action-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  .action-btn {
+    flex: 1; padding: 10px 16px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--warm-white); color: var(--charcoal);
+    font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .action-btn:hover { background: var(--cream); border-color: var(--taupe-light); }
+  .action-btn.primary {
+    background: var(--sage); border-color: var(--sage-dark); color: white;
+  }
+  .action-btn.primary:hover { background: var(--sage-dark); }
+  .action-btn.danger { color: var(--blush-dark); }
+  .action-btn.danger:hover { background: var(--blush-light); border-color: var(--blush); }
+  .action-btn svg { width: 14px; height: 14px; }
+
+  /* Appointment cards */
+  .appt-card {
+    background: var(--warm-white); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px; margin-bottom: 8px; transition: all 0.2s;
+  }
+  .appt-card:hover { border-color: var(--taupe-light); box-shadow: 0 2px 8px rgba(44,51,69,0.06); }
+  .appt-card.current { border-left: 3px solid var(--blush); background: var(--blush-light); }
+  .appt-card.upcoming { border-left: 3px solid var(--gold); }
+  .appt-card.past { border-left: 3px solid var(--sand); opacity: 0.55; }
+  .appt-time { font-size: 12px; font-weight: 600; color: var(--charcoal); }
+  .appt-patient { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 17px; font-weight: 600; color: var(--navy); margin-top: 3px; }
+  .appt-type { font-size: 12px; color: var(--taupe); margin-top: 2px; }
+  .appt-provider { font-size: 11px; color: var(--taupe-light); margin-top: 6px; }
+  .appt-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 10px; font-weight: 600; margin-left: 8px;
+  }
+  .appt-badge.in-progress { background: var(--blush-light); color: var(--blush-dark); }
+  .appt-badge.completed { background: var(--sage-light); color: var(--sage-dark); }
+  .appt-badge.scheduled { background: var(--gold-light); color: var(--gold-dark); }
+
+  .no-appts { text-align: center; padding: 30px 20px; color: var(--taupe); font-size: 13px; font-style: italic; }
+
+  /* ===== MAIN ===== */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--ivory); }
+  .toolbar {
+    padding: 12px 24px; background: var(--warm-white); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .time-display {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 26px; font-weight: 600; color: var(--navy); font-variant-numeric: tabular-nums;
+  }
+  .time-label { font-size: 10px; color: var(--taupe); text-transform: uppercase; letter-spacing: 1px; font-weight: 500; }
+  .toolbar-right { display: flex; gap: 8px; }
+  .btn {
+    padding: 8px 16px; border-radius: 20px; border: 1px solid var(--border);
+    background: var(--warm-white); color: var(--charcoal);
+    font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s;
+  }
+  .btn:hover { background: var(--cream); border-color: var(--taupe-light); }
+  .btn.active { background: var(--navy); border-color: var(--navy); color: var(--warm-white); }
+
+  .floor-container {
+    flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center;
+    padding: 30px; background: linear-gradient(180deg, var(--ivory) 0%, var(--cream) 100%);
+  }
+
+  /* SVG */
+  svg.floor-plan { width: 100%; max-width: 1000px; height: auto; filter: drop-shadow(0 4px 24px rgba(44,51,69,0.08)); }
+  .room { cursor: pointer; transition: all 0.25s ease; }
+  .room rect { stroke-width: 1; transition: all 0.25s ease; rx: 6; ry: 6; }
+  .room:hover rect { stroke-width: 2; filter: brightness(0.97); }
+  .room.selected rect { stroke-width: 2.5; }
+  .room-label {
+    font-family: 'Cormorant Garamond', Georgia, serif; font-size: 10px;
+    fill: var(--navy); font-weight: 600; pointer-events: none; text-anchor: middle; letter-spacing: 0.5px;
+  }
+  .room-sublabel { font-size: 6.5px; fill: var(--taupe); pointer-events: none; text-anchor: middle; font-family: 'Inter', sans-serif; }
+  .room-count { font-size: 7px; pointer-events: none; text-anchor: middle; font-family: 'Inter', sans-serif; font-weight: 600; }
+
+  .room-available rect { fill: var(--sage-light); stroke: var(--sage); }
+  .room-occupied rect { fill: var(--blush-light); stroke: var(--blush); }
+  .room-partial rect { fill: var(--gold-light); stroke: var(--gold); }
+  .room-non-bookable rect { fill: var(--ivory-dark); stroke: var(--taupe-light); }
+
+  .wall-fill { fill: var(--warm-white); stroke: var(--border); stroke-width: 1; }
+
+  @keyframes softPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+  .room-occupied .pulse-dot { animation: softPulse 3s ease-in-out infinite; }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--ivory); }
+  ::-webkit-scrollbar-thumb { background: var(--sand); border-radius: 10px; }
+
+  /* ===== ASSIGN MODAL ===== */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(44,51,69,0.3);
+    z-index: 1000; align-items: center; justify-content: center;
+    backdrop-filter: blur(2px);
+  }
+  .modal-overlay.visible { display: flex; }
+  .modal {
+    background: var(--warm-white); border-radius: 16px; width: 480px; max-height: 70vh;
+    display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(44,51,69,0.15);
+    border: 1px solid var(--border);
+  }
+  .modal-header {
+    padding: 20px 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-header h2 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 20px; font-weight: 600; }
+  .modal-close {
+    width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--warm-white); cursor: pointer; display: flex; align-items: center;
+    justify-content: center; font-size: 16px; color: var(--taupe); transition: all 0.2s;
+  }
+  .modal-close:hover { background: var(--cream); color: var(--navy); }
+  .modal-body { padding: 20px 24px; overflow-y: auto; flex: 1; }
+  .search-box {
+    width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--ivory); font-size: 13px; color: var(--navy); outline: none;
+    font-family: 'Inter', sans-serif; margin-bottom: 16px;
+  }
+  .search-box:focus { border-color: var(--sage); box-shadow: 0 0 0 3px var(--sage-light); }
+  .search-box::placeholder { color: var(--taupe-light); }
+
+  .appt-option {
+    padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px;
+    margin-bottom: 8px; cursor: pointer; transition: all 0.2s;
+  }
+  .appt-option:hover { background: var(--sage-light); border-color: var(--sage); }
+  .appt-option .opt-patient { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 16px; font-weight: 600; color: var(--navy); }
+  .appt-option .opt-detail { font-size: 12px; color: var(--taupe); margin-top: 2px; }
+  .appt-option.assigned { opacity: 0.4; pointer-events: none; }
+  .appt-option.assigned::after { content: " (assigned)"; font-size: 10px; color: var(--taupe-light); }
+
+  /* Loading */
+  .loading { text-align: center; padding: 40px; color: var(--taupe); font-style: italic; font-size: 13px; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 2000;
+    padding: 12px 20px; border-radius: 10px; font-size: 13px; font-weight: 500;
+    box-shadow: 0 8px 24px rgba(44,51,69,0.15); transform: translateY(100px);
+    opacity: 0; transition: all 0.3s ease;
+  }
+  .toast.visible { transform: translateY(0); opacity: 1; }
+  .toast.success { background: var(--sage); color: white; }
+  .toast.error { background: var(--blush-dark); color: white; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="brand-mark">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+        </div>
+        <div>
+          <h1>Elle Medicine</h1>
+          <div class="subtitle">Floor Plan</div>
+        </div>
+      </div>
+      <div class="date-display" id="dateDisplay"></div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot available"></div>Available</div>
+      <div class="legend-item"><div class="legend-dot occupied"></div>Occupied</div>
+      <div class="legend-item"><div class="legend-dot partial"></div>Upcoming</div>
+      <div class="legend-item"><div class="legend-dot non-bookable"></div>Non-clinical</div>
+    </div>
+    <div class="stats-bar">
+      <div class="stat"><div class="stat-value green" id="statAvail">-</div><div class="stat-label">Available</div></div>
+      <div class="stat"><div class="stat-value red" id="statOccupied">-</div><div class="stat-label">Occupied</div></div>
+      <div class="stat"><div class="stat-value yellow" id="statUpcoming">-</div><div class="stat-label">Upcoming</div></div>
+    </div>
+    <div class="room-detail empty-state" id="roomDetail">
+      <div class="empty-hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
+        <p>Select a room on the floor plan<br>to view its schedule</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="toolbar">
+      <div>
+        <div class="time-display" id="currentTime"></div>
+        <div class="time-label">Current Time</div>
+      </div>
+      <div class="toolbar-right">
+        <button class="btn" onclick="refreshData()">Refresh</button>
+        <button class="btn" id="seedBtn" onclick="seedRooms()">Setup Rooms</button>
+      </div>
+    </div>
+    <div class="floor-container">
+      <svg class="floor-plan" viewBox="0 0 820 500" xmlns="http://www.w3.org/2000/svg">
+        <rect x="0" y="0" width="820" height="500" fill="var(--ivory)" rx="12"/>
+        <rect class="wall-fill" x="20" y="20" width="780" height="460" rx="8"/>
+
+        <!-- TOP ROW -->
+        <g class="room" data-room="hub"><rect x="25" y="25" width="110" height="140"/><text class="room-label" x="80" y="90">THE HUB</text><text class="room-sublabel" x="80" y="104">Workroom</text></g>
+        <g class="room" data-room="studio-two"><rect x="140" y="25" width="120" height="140"/><text class="room-label" x="200" y="85">STUDIO</text><text class="room-label" x="200" y="99">TWO</text><text class="room-sublabel" x="200" y="114">Room 113</text><text class="room-count pulse-dot" x="200" y="132" id="count-studio-two"></text></g>
+        <g class="room" data-room="cafe"><rect x="265" y="25" width="115" height="140"/><text class="room-label" x="322" y="88">THE CAFE</text><text class="room-sublabel" x="322" y="102">Break Room</text></g>
+        <g class="room" data-room="lab"><rect x="385" y="25" width="110" height="140"/><text class="room-label" x="440" y="90">LAB</text><text class="room-sublabel" x="440" y="104">Room 115</text><text class="room-count pulse-dot" x="440" y="124" id="count-lab"></text></g>
+        <g class="room" data-room="it"><rect x="500" y="80" width="80" height="85"/><text class="room-label" x="540" y="120">IT</text><text class="room-sublabel" x="540" y="133">Server</text></g>
+        <g class="room" data-room="hallway"><rect x="500" y="25" width="100" height="50"/><text class="room-label" x="550" y="50">HALLWAY</text><text class="room-sublabel" x="550" y="62">RR</text></g>
+        <g class="room" data-room="entry"><rect x="610" y="70" width="70" height="95"/><text class="room-label" x="645" y="115">ENTRY</text><text class="room-sublabel" x="645" y="128">100</text></g>
+        <g class="room" data-room="lounge"><rect x="690" y="25" width="105" height="145"/><text class="room-label" x="742" y="92">LOUNGE</text><text class="room-sublabel" x="742" y="106">102</text></g>
+
+        <!-- CORRIDOR -->
+        <rect x="140" y="170" width="540" height="45" rx="4" fill="var(--ivory-dark)" stroke="var(--border)" stroke-width="0.5" stroke-dasharray="6 3"/>
+        <text style="font-size:7px;fill:var(--taupe-light);text-anchor:middle;font-family:Inter,sans-serif;letter-spacing:2px" x="410" y="197">CORRIDOR</text>
+
+        <!-- BOTTOM ROW -->
+        <g class="room" data-room="physician"><rect x="25" y="170" width="110" height="160"/><text class="room-label" x="80" y="240">PHYSICIAN'S</text><text class="room-label" x="80" y="254">SUITE</text><text class="room-sublabel" x="80" y="268">Office 111</text></g>
+        <g class="room" data-room="elle-one"><rect x="140" y="220" width="120" height="130"/><text class="room-label" x="200" y="275">ELLE ONE</text><text class="room-sublabel" x="200" y="290">Exam Room A</text><text class="room-count pulse-dot" x="200" y="318" id="count-elle-one"></text></g>
+        <g class="room" data-room="elle-two"><rect x="265" y="220" width="120" height="130"/><text class="room-label" x="325" y="275">ELLE TWO</text><text class="room-sublabel" x="325" y="290">Exam Room B</text><text class="room-count pulse-dot" x="325" y="318" id="count-elle-two"></text></g>
+        <g class="room" data-room="restore"><rect x="390" y="220" width="130" height="130"/><text class="room-label" x="455" y="278">RESTORE</text><text class="room-sublabel" x="455" y="293">Wellness A</text><text class="room-count pulse-dot" x="455" y="318" id="count-restore"></text></g>
+        <g class="room" data-room="thrive"><rect x="525" y="220" width="115" height="130"/><text class="room-label" x="582" y="278">THRIVE</text><text class="room-sublabel" x="582" y="293">Exam Room C</text><text class="room-count pulse-dot" x="582" y="318" id="count-thrive"></text></g>
+        <g class="room" data-room="studio-one"><rect x="645" y="170" width="150" height="100"/><text class="room-label" x="720" y="215">STUDIO ONE</text><text class="room-sublabel" x="720" y="230">Room 104</text><text class="room-count pulse-dot" x="720" y="252" id="count-studio-one"></text></g>
+        <g class="room" data-room="collective"><rect x="645" y="275" width="150" height="75"/><text class="room-label" x="720" y="308">THE COLLECTIVE</text><text class="room-sublabel" x="720" y="322">Conference</text><text class="room-count pulse-dot" x="720" y="340" id="count-collective"></text></g>
+        <g class="room" data-room="float"><rect x="645" y="355" width="150" height="120"/><text class="room-label" x="720" y="408">FLOAT</text><text class="room-sublabel" x="720" y="423">Wellness B</text><text class="room-count pulse-dot" x="720" y="448" id="count-float"></text></g>
+
+        <!-- BOTTOM LEFT -->
+        <g class="room" data-room="workroom"><rect x="25" y="335" width="110" height="140"/><text class="room-label" x="80" y="400">WORKROOM</text><text class="room-sublabel" x="80" y="415">112</text></g>
+
+        <!-- OPEN AREA -->
+        <rect x="140" y="355" width="500" height="120" rx="6" fill="var(--ivory-dark)" stroke="var(--border)" stroke-width="0.5"/>
+        <text style="font-size:7px;fill:var(--taupe-light);text-anchor:middle;font-family:Inter,sans-serif;letter-spacing:2px" x="390" y="420">OPEN AREA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Modal -->
+<div class="modal-overlay" id="assignModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="assignModalTitle">Assign Patient</h2>
+      <button class="modal-close" onclick="closeAssignModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="text" class="search-box" id="apptSearch" placeholder="Search by patient name..." oninput="filterAppointments()">
+      <div id="apptList"><div class="loading">Loading appointments...</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '/plugin-io/api/floor_plan_viewer';
+
+// ----- State -----
+let rooms = {};          // key -> room data
+let assignments = [];    // today's assignments
+let appointments = [];   // today's Canvas appointments
+let selectedRoom = null;
+
+// ----- API helpers -----
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(`${API}${path}`, {
+    headers: { 'Content-Type': 'application/json', ...opts.headers },
+    ...opts,
+  });
+  return res.json();
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} visible`;
+  setTimeout(() => t.classList.remove('visible'), 3000);
+}
+
+// ----- Data loading -----
+async function loadRooms() {
+  const data = await apiFetch('/rooms');
+  rooms = {};
+  (data.rooms || []).forEach(r => rooms[r.key] = r);
+}
+
+async function loadAssignments() {
+  const data = await apiFetch('/assignments');
+  assignments = data.assignments || [];
+}
+
+async function loadAppointments() {
+  const data = await apiFetch('/appointments/today');
+  appointments = data.appointments || [];
+}
+
+async function refreshData() {
+  await Promise.all([loadRooms(), loadAssignments(), loadAppointments()]);
+  updateFloorPlan();
+  if (selectedRoom) showRoomDetail(selectedRoom);
+}
+
+async function seedRooms() {
+  await apiFetch('/rooms/seed', { method: 'POST' });
+  showToast('Rooms configured successfully');
+  await refreshData();
+}
+
+// ----- Room status -----
+function getRoomAssignments(roomKey) {
+  const now = new Date();
+  return assignments.filter(a => a.room_key === roomKey);
+}
+
+function getRoomStatus(roomKey) {
+  const room = rooms[roomKey];
+  if (!room || !room.bookable) return 'non-bookable';
+
+  const now = new Date();
+  const roomAssignments = getRoomAssignments(roomKey);
+
+  const hasInProgress = roomAssignments.some(a => a.status === 'in-progress');
+  if (hasInProgress) return 'occupied';
+
+  const hasScheduled = roomAssignments.some(a => {
+    if (a.status !== 'scheduled') return false;
+    const start = new Date(a.start_time);
+    const oneHour = new Date(now.getTime() + 60 * 60 * 1000);
+    return start <= oneHour;
+  });
+  if (hasScheduled) return 'partial';
+
+  return 'available';
+}
+
+// ----- Rendering -----
+function updateFloorPlan() {
+  let avail = 0, occ = 0, upcoming = 0;
+
+  document.querySelectorAll('.room').forEach(el => {
+    const key = el.dataset.room;
+    const status = getRoomStatus(key);
+    el.classList.remove('room-available', 'room-occupied', 'room-partial', 'room-non-bookable');
+    el.classList.add('room-' + status);
+
+    // Count indicator
+    const countEl = document.getElementById(`count-${key}`);
+    if (countEl) {
+      const roomAssignments = getRoomAssignments(key);
+      const active = roomAssignments.filter(a => a.status !== 'completed' && a.status !== 'cancelled');
+      if (active.length > 0 && status !== 'non-bookable') {
+        countEl.textContent = active.length === 1 ? active[0].patient_name.split(' ')[0] : `${active.length} patients`;
+        countEl.setAttribute('fill', status === 'occupied' ? 'var(--blush-dark)' : 'var(--gold-dark)');
+      } else {
+        countEl.textContent = '';
+      }
+    }
+
+    if (rooms[key]?.bookable) {
+      if (status === 'available') avail++;
+      else if (status === 'occupied') occ++;
+      else if (status === 'partial') upcoming++;
+    }
+  });
+
+  document.getElementById('statAvail').textContent = avail;
+  document.getElementById('statOccupied').textContent = occ;
+  document.getElementById('statUpcoming').textContent = upcoming;
+}
+
+function formatTime(iso) {
+  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
+function showRoomDetail(roomKey) {
+  document.querySelectorAll('.room.selected').forEach(el => el.classList.remove('selected'));
+
+  if (selectedRoom === roomKey) {
+    selectedRoom = null;
+    showEmptyState();
+    return;
+  }
+
+  selectedRoom = roomKey;
+  const el = document.querySelector(`[data-room="${roomKey}"]`);
+  if (el) el.classList.add('selected');
+
+  const room = rooms[roomKey] || { name: roomKey, room_type: '', number: '', bookable: false, equipment: [] };
+  const status = getRoomStatus(roomKey);
+  const roomAssignments = getRoomAssignments(roomKey).sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+  const statusLabels = { available: 'Available', occupied: 'In Session', partial: 'Upcoming', 'non-bookable': 'Non-clinical' };
+
+  const detail = document.getElementById('roomDetail');
+  detail.classList.remove('empty-state');
+
+  let equipHtml = '';
+  if (room.equipment?.length) {
+    equipHtml = '<div class="equipment-list">' +
+      room.equipment.map(e => `<span class="equipment-tag">${e}</span>`).join('') +
+    '</div>';
+  }
+
+  let actionsHtml = '';
+  if (room.bookable) {
+    actionsHtml = '<div class="action-row">';
+    actionsHtml += `<button class="action-btn primary" onclick="openAssignModal('${roomKey}')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Assign Patient
+    </button>`;
+    actionsHtml += '</div>';
+  }
+
+  let assignmentsHtml = '';
+  if (room.bookable && roomAssignments.length > 0) {
+    assignmentsHtml = `<div class="section-title">Today's Assignments</div>`;
+    roomAssignments.forEach(a => {
+      const cardClass = a.status === 'in-progress' ? 'current' : (a.status === 'completed' ? 'past' : 'upcoming');
+      let badgeHtml = '';
+      if (a.status === 'in-progress') badgeHtml = '<span class="appt-badge in-progress">In Session</span>';
+      else if (a.status === 'completed') badgeHtml = '<span class="appt-badge completed">Complete</span>';
+      else if (a.status === 'scheduled') badgeHtml = '<span class="appt-badge scheduled">Scheduled</span>';
+
+      let actionBtns = '';
+      if (a.status === 'scheduled') {
+        actionBtns = `<div style="margin-top:8px;display:flex;gap:6px">
+          <button class="action-btn" style="flex:0;padding:4px 10px;font-size:11px;border-radius:8px" onclick="updateStatus(${a.id},'in-progress')">Start Session</button>
+          <button class="action-btn danger" style="flex:0;padding:4px 10px;font-size:11px;border-radius:8px" onclick="removeAssignment(${a.id})">Remove</button>
+        </div>`;
+      } else if (a.status === 'in-progress') {
+        actionBtns = `<div style="margin-top:8px;display:flex;gap:6px">
+          <button class="action-btn" style="flex:0;padding:4px 10px;font-size:11px;border-radius:8px" onclick="updateStatus(${a.id},'completed')">Complete</button>
+        </div>`;
+      }
+
+      assignmentsHtml += `
+        <div class="appt-card ${cardClass}">
+          <div class="appt-time">${formatTime(a.start_time)} - ${formatTime(a.end_time)}${badgeHtml}</div>
+          <div class="appt-patient">${a.patient_name || 'Walk-in'}</div>
+          <div class="appt-type">${a.appointment_type || ''}</div>
+          <div class="appt-provider">${a.provider_name || ''}</div>
+          ${actionBtns}
+        </div>`;
+    });
+  } else if (room.bookable) {
+    assignmentsHtml = '<div class="no-appts">No patients assigned today</div>';
+  } else {
+    assignmentsHtml = '<div class="no-appts">Non-clinical space</div>';
+  }
+
+  detail.innerHTML = `
+    <div class="detail-header">
+      <div class="detail-room-name">${room.name}</div>
+      <div class="detail-room-type">${room.room_type}${room.number ? ' &middot; Room ' + room.number : ''}</div>
+      <div class="detail-status ${status}">${statusLabels[status]}</div>
+      ${equipHtml}
+    </div>
+    ${actionsHtml}
+    ${assignmentsHtml}
+  `;
+}
+
+function showEmptyState() {
+  const detail = document.getElementById('roomDetail');
+  detail.classList.add('empty-state');
+  detail.innerHTML = `
+    <div class="empty-hint">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
+      <p>Select a room on the floor plan<br>to view its schedule</p>
+    </div>`;
+}
+
+// ----- Assignment actions -----
+async function updateStatus(assignmentId, newStatus) {
+  await apiFetch(`/assignments/${assignmentId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ status: newStatus }),
+  });
+  showToast(newStatus === 'completed' ? 'Session completed' : 'Session started');
+  await refreshData();
+}
+
+async function removeAssignment(assignmentId) {
+  await apiFetch(`/assignments/${assignmentId}`, { method: 'DELETE' });
+  showToast('Assignment removed');
+  await refreshData();
+}
+
+// ----- Assign modal -----
+let assigningRoomKey = null;
+
+function openAssignModal(roomKey) {
+  assigningRoomKey = roomKey;
+  const room = rooms[roomKey] || {};
+  document.getElementById('assignModalTitle').textContent = `Assign to ${room.name || roomKey}`;
+  document.getElementById('assignModal').classList.add('visible');
+  document.getElementById('apptSearch').value = '';
+  renderAppointmentList();
+}
+
+function closeAssignModal() {
+  document.getElementById('assignModal').classList.remove('visible');
+  assigningRoomKey = null;
+}
+
+function filterAppointments() {
+  renderAppointmentList();
+}
+
+function renderAppointmentList() {
+  const query = document.getElementById('apptSearch').value.toLowerCase();
+  const assignedApptIds = new Set(assignments.filter(a => a.status !== 'cancelled').map(a => a.appointment_id));
+
+  const filtered = appointments.filter(a => {
+    if (query && !a.patient_name.toLowerCase().includes(query)) return false;
+    return true;
+  });
+
+  const container = document.getElementById('apptList');
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="no-appts">No appointments found</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(a => {
+    const isAssigned = assignedApptIds.has(a.id);
+    return `
+      <div class="appt-option ${isAssigned ? 'assigned' : ''}" onclick="${isAssigned ? '' : `assignAppointment('${a.id}')`}">
+        <div class="opt-patient">${a.patient_name}</div>
+        <div class="opt-detail">${formatTime(a.start_time)} - ${formatTime(a.end_time)} &middot; ${a.provider_name}</div>
+      </div>`;
+  }).join('');
+}
+
+async function assignAppointment(apptId) {
+  const appt = appointments.find(a => a.id === apptId);
+  if (!appt || !assigningRoomKey) return;
+
+  await apiFetch('/assignments', {
+    method: 'POST',
+    body: JSON.stringify({
+      room_key: assigningRoomKey,
+      appointment_id: appt.id,
+      patient_id: appt.patient_id,
+      patient_name: appt.patient_name,
+      appointment_type: appt.appointment_type || '',
+      provider_name: appt.provider_name,
+      start_time: appt.start_time,
+      end_time: appt.end_time,
+      status: 'scheduled',
+    }),
+  });
+
+  closeAssignModal();
+  showToast(`${appt.patient_name} assigned to ${rooms[assigningRoomKey]?.name || assigningRoomKey}`);
+  await refreshData();
+}
+
+// ----- Clock -----
+function updateClock() {
+  const now = new Date();
+  document.getElementById('currentTime').textContent = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
+  document.getElementById('dateDisplay').textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+// ----- Init -----
+async function init() {
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // Room click handlers
+  document.querySelectorAll('.room').forEach(el => {
+    el.addEventListener('click', () => showRoomDetail(el.dataset.room));
+  });
+
+  // Close modal on overlay click
+  document.getElementById('assignModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeAssignModal();
+  });
+
+  // Load data
+  await refreshData();
+
+  // Auto-refresh every 30 seconds
+  setInterval(refreshData, 30000);
+}
+
+init();
+</script>
+</body>
+</html>

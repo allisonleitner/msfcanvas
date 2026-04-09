@@ -1,6 +1,6 @@
 {
     "sdk_version": "0.112.0",
-    "plugin_version": "canvas-2.0.0",
+    "plugin_version": "canvas-2.1.0",
     "name": "revenue_cycle_worklist",
     "description": "Revenue Cycle Worklist with claims queue management, column views, reviewed tracking, balance, remit, and adjustment data",
     "url_permissions": [],
@@ -31,10 +31,6 @@
         "views": []
     },
     "secrets": [],
-    "custom_data": {
-        "namespace": "revenue_cycle_worklist",
-        "access": "read_write"
-    },
     "tags": {},
     "references": [],
     "license": "",

@@ -19,7 +19,6 @@ from canvas_sdk.v1.data.line_item_transaction import NewLineItemAdjustment
 from canvas_sdk.v1.data.note import NoteStates, NoteTypeCategories, NoteType
 from canvas_sdk.v1.data.posting import BasePosting, CoveragePosting
 from canvas_sdk.v1.data.task import TaskLabel, TaskStatus
-from revenue_cycle_worklist.models.custom_data import ColumnViewConfig, ReviewedClaim
 
 
 class MyApplication(Application):
@@ -148,6 +147,7 @@ class RevenueCycleApi(StaffSessionAuthMixin, SimpleAPI):
             claim = note.get_claim()
             claim_queue = claim.current_queue.name if claim else None
             claim_id = str(claim.id) if claim else None
+            claim_dbid = claim.dbid if claim else None
 
             # Calculate days in queue from claim modified date
             days_in_queue = None
@@ -238,6 +238,7 @@ class RevenueCycleApi(StaffSessionAuthMixin, SimpleAPI):
                 "uncommitted_commands": note.staged_commands_count,
                 "delegated_orders": delegated_commands,
                 "claim_id": claim_id,
+                "claim_dbid": claim_dbid,
                 "claim_queue": claim_queue,
                 "days_in_queue": days_in_queue,
                 "insurance": insurance,
@@ -387,29 +388,38 @@ class RevenueCycleApi(StaffSessionAuthMixin, SimpleAPI):
             label["id"] = str(label["id"])
         return [JSONResponse({"tags": labels}, status_code=HTTPStatus.OK)]
 
-    # --- Reviewed state endpoints ---
+    # ── Reviewed claims (per-user) ──────────────────────────────────────
 
-    @api.get("/reviewed")
-    def get_reviewed(self) -> list[Response | Effect]:
-        """Get all reviewed claim IDs for the logged-in user."""
-        staff_id = self.request.headers.get("canvas-logged-in-user-id")
-        if not staff_id:
+    def _get_staff_dbid(self) -> int:
+        """Resolve the logged-in staff UUID to the integer dbid used by CustomModel FKs."""
+        staff_uuid = self.request.headers["canvas-logged-in-user-id"]
+        return Staff.objects.filter(id=staff_uuid).values_list("dbid", flat=True).first()
+
+    @api.get("/reviewed_claims")
+    def get_reviewed_claims(self) -> list[Response | Effect]:
+        """Return all reviewed claim_ids for the logged-in user."""
+        from revenue_cycle_worklist.models.custom_data import ReviewedClaim
+
+        staff_dbid = self._get_staff_dbid()
+        if staff_dbid is None:
             return [JSONResponse({"reviewed": {}}, status_code=HTTPStatus.OK)]
 
-        staff = Staff.objects.filter(id=staff_id).first()
-        if not staff:
-            return [JSONResponse({"reviewed": {}}, status_code=HTTPStatus.OK)]
+        rows = ReviewedClaim.objects.filter(staff_id=staff_dbid, reviewed=True)
+        reviewed = {
+            row.claim_id: row.reviewed_at.isoformat() if row.reviewed_at else None
+            for row in rows
+        }
+        return [JSONResponse({"reviewed": reviewed}, status_code=HTTPStatus.OK)]
 
-        records = ReviewedClaim.objects.filter(staff=staff, reviewed=True)
-        reviewed_map = {}
-        for r in records:
-            reviewed_map[r.claim_id] = r.reviewed_at.isoformat() if r.reviewed_at else None
+    @api.post("/reviewed_claims")
+    def set_reviewed_claim(self) -> list[Response | Effect]:
+        """Toggle the reviewed state of a single claim for the logged-in user."""
+        from revenue_cycle_worklist.models.custom_data import ReviewedClaim
 
-        return [JSONResponse({"reviewed": reviewed_map}, status_code=HTTPStatus.OK)]
+        staff_dbid = self._get_staff_dbid()
+        if staff_dbid is None:
+            return [JSONResponse({"error": "Staff not found"}, status_code=HTTPStatus.BAD_REQUEST)]
 
-    @api.post("/reviewed")
-    def set_reviewed(self) -> list[Response | Effect]:
-        """Mark or unmark a claim as reviewed for the logged-in user."""
         try:
             body = json.loads(self.request.body)
         except (json.JSONDecodeError, TypeError):
@@ -421,58 +431,61 @@ class RevenueCycleApi(StaffSessionAuthMixin, SimpleAPI):
         if not claim_id:
             return [JSONResponse({"error": "claim_id is required"}, status_code=HTTPStatus.BAD_REQUEST)]
 
-        staff_id = self.request.headers.get("canvas-logged-in-user-id")
-        staff = Staff.objects.filter(id=staff_id).first()
-        if not staff:
-            return [JSONResponse({"error": "Staff not found"}, status_code=HTTPStatus.NOT_FOUND)]
+        existing = ReviewedClaim.objects.filter(staff_id=staff_dbid, claim_id=claim_id).first()
 
         if reviewed:
-            obj, created = ReviewedClaim.objects.get_or_create(
-                staff=staff,
-                claim_id=claim_id,
-                defaults={"reviewed": True, "reviewed_at": datetime.now(timezone.utc)},
-            )
-            if not created:
-                obj.reviewed = True
-                obj.reviewed_at = datetime.now(timezone.utc)
-                obj.save()
-            return [JSONResponse({
-                "claim_id": claim_id,
-                "reviewed": True,
-                "reviewed_at": obj.reviewed_at.isoformat(),
-            }, status_code=HTTPStatus.OK)]
+            now = datetime.now(timezone.utc)
+            if existing:
+                existing.reviewed = True
+                existing.reviewed_at = now
+                existing.save()
+            else:
+                ReviewedClaim.objects.create(
+                    staff_id=staff_dbid,
+                    claim_id=claim_id,
+                    reviewed=True,
+                    reviewed_at=now,
+                )
+            return [JSONResponse({"success": True, "reviewed_at": now.isoformat()}, status_code=HTTPStatus.OK)]
         else:
-            ReviewedClaim.objects.filter(staff=staff, claim_id=claim_id).delete()
-            return [JSONResponse({
-                "claim_id": claim_id,
-                "reviewed": False,
-            }, status_code=HTTPStatus.OK)]
+            if existing:
+                existing.reviewed = False
+                existing.reviewed_at = None
+                existing.save()
+            return [JSONResponse({"success": True}, status_code=HTTPStatus.OK)]
 
-    # --- Saved views endpoints ---
+    # ── Column view configs (per-user) ───────────────────────────────────
 
-    @api.get("/views")
-    def get_views(self) -> list[Response | Effect]:
-        """Get all saved column views for the logged-in user."""
-        staff_id = self.request.headers.get("canvas-logged-in-user-id")
-        staff = Staff.objects.filter(id=staff_id).first()
-        if not staff:
+    @api.get("/column_views")
+    def get_column_views(self) -> list[Response | Effect]:
+        """Return all saved column views for the logged-in user."""
+        from revenue_cycle_worklist.models.custom_data import ColumnViewConfig
+
+        staff_dbid = self._get_staff_dbid()
+        if staff_dbid is None:
             return [JSONResponse({"views": []}, status_code=HTTPStatus.OK)]
 
-        views = ColumnViewConfig.objects.filter(staff=staff).order_by("config_name")
-        result = []
-        for v in views:
-            result.append({
-                "id": v.dbid,
-                "config_name": v.config_name,
-                "columns": v.columns,
-                "is_default": v.is_default,
-            })
+        rows = ColumnViewConfig.objects.filter(staff_id=staff_dbid).order_by("config_name")
+        views = [
+            {
+                "id": str(row.id),
+                "config_name": row.config_name,
+                "columns": row.columns,
+                "is_default": row.is_default,
+            }
+            for row in rows
+        ]
+        return [JSONResponse({"views": views}, status_code=HTTPStatus.OK)]
 
-        return [JSONResponse({"views": result}, status_code=HTTPStatus.OK)]
+    @api.post("/column_views")
+    def save_column_view(self) -> list[Response | Effect]:
+        """Create or update a column view for the logged-in user."""
+        from revenue_cycle_worklist.models.custom_data import ColumnViewConfig
 
-    @api.post("/views")
-    def save_view(self) -> list[Response | Effect]:
-        """Save or update a column view configuration."""
+        staff_dbid = self._get_staff_dbid()
+        if staff_dbid is None:
+            return [JSONResponse({"error": "Staff not found"}, status_code=HTTPStatus.BAD_REQUEST)]
+
         try:
             body = json.loads(self.request.body)
         except (json.JSONDecodeError, TypeError):
@@ -480,56 +493,45 @@ class RevenueCycleApi(StaffSessionAuthMixin, SimpleAPI):
 
         config_name = body.get("config_name", "Default")
         columns = body.get("columns", [])
-        is_default = body.get("is_default", False)
 
-        staff_id = self.request.headers.get("canvas-logged-in-user-id")
-        staff = Staff.objects.filter(id=staff_id).first()
-        if not staff:
-            return [JSONResponse({"error": "Staff not found"}, status_code=HTTPStatus.NOT_FOUND)]
+        # Clear is_default on all views for this user, then set the new one
+        ColumnViewConfig.objects.filter(staff_id=staff_dbid).update(is_default=False)
 
-        # If setting as default, clear other defaults
-        if is_default:
-            ColumnViewConfig.objects.filter(staff=staff, is_default=True).update(is_default=False)
+        existing = ColumnViewConfig.objects.filter(staff_id=staff_dbid, config_name=config_name).first()
+        if existing:
+            existing.columns = columns
+            existing.is_default = True
+            existing.save()
+            view_id = str(existing.id)
+        else:
+            obj = ColumnViewConfig.objects.create(
+                staff_id=staff_dbid,
+                config_name=config_name,
+                columns=columns,
+                is_default=True,
+            )
+            view_id = str(obj.id)
 
-        obj, created = ColumnViewConfig.objects.get_or_create(
-            staff=staff,
-            config_name=config_name,
-            defaults={"columns": columns, "is_default": is_default},
-        )
-        if not created:
-            obj.columns = columns
-            obj.is_default = is_default
-            obj.save()
+        return [JSONResponse({"success": True, "id": view_id}, status_code=HTTPStatus.OK)]
 
-        return [JSONResponse({
-            "id": obj.dbid,
-            "config_name": obj.config_name,
-            "columns": obj.columns,
-            "is_default": obj.is_default,
-        }, status_code=HTTPStatus.OK)]
+    @api.delete("/column_views")
+    def delete_column_view(self) -> list[Response | Effect]:
+        """Delete a column view for the logged-in user."""
+        from revenue_cycle_worklist.models.custom_data import ColumnViewConfig
 
-    @api.post("/views/delete")
-    def delete_view(self) -> list[Response | Effect]:
-        """Delete a saved view by name."""
-        try:
-            body = json.loads(self.request.body)
-        except (json.JSONDecodeError, TypeError):
-            return [JSONResponse({"error": "Invalid JSON body"}, status_code=HTTPStatus.BAD_REQUEST)]
+        staff_dbid = self._get_staff_dbid()
+        if staff_dbid is None:
+            return [JSONResponse({"error": "Staff not found"}, status_code=HTTPStatus.BAD_REQUEST)]
 
-        config_name = body.get("config_name")
+        config_name = self.request.query_params.get("config_name")
         if not config_name:
             return [JSONResponse({"error": "config_name is required"}, status_code=HTTPStatus.BAD_REQUEST)]
 
-        staff_id = self.request.headers.get("canvas-logged-in-user-id")
-        staff = Staff.objects.filter(id=staff_id).first()
-        if not staff:
-            return [JSONResponse({"error": "Staff not found"}, status_code=HTTPStatus.NOT_FOUND)]
-
-        deleted_count, _ = ColumnViewConfig.objects.filter(
-            staff=staff, config_name=config_name
+        deleted, _ = ColumnViewConfig.objects.filter(
+            staff_id=staff_dbid, config_name=config_name
         ).delete()
 
-        return [JSONResponse({"deleted": deleted_count > 0}, status_code=HTTPStatus.OK)]
+        return [JSONResponse({"success": True, "deleted": deleted > 0}, status_code=HTTPStatus.OK)]
 
     @api.get("/export_csv")
     def export_csv(self) -> list[Response | Effect]:
@@ -693,10 +695,10 @@ class RevenueCycleApi(StaffSessionAuthMixin, SimpleAPI):
         csv_content = "\n".join(rows)
         return [Response(
             status_code=HTTPStatus.OK,
-            body=csv_content,
+            content=csv_content.encode("utf-8"),
             headers={
                 "Content-Type": "text/csv",
-                "Content-Disposition": f"attachment; filename=encounter_worklist_{arrow.now().format('YYYY-MM-DD')}.csv",
+                "Content-Disposition": f"attachment; filename=revenue_cycle_worklist_{arrow.now().format('YYYY-MM-DD')}.csv",
             },
         )]
 

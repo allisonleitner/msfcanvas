@@ -304,6 +304,102 @@
             border-color: #1d4ed8;
         }
 
+        .hf-multi {
+            position: relative;
+            width: 100%;
+        }
+
+        .hf-multi-trigger {
+            width: 100%;
+            padding: 4px 20px 4px 6px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #333;
+            background: white;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            box-sizing: border-box;
+            min-height: 26px;
+            position: relative;
+        }
+
+        .hf-multi-trigger::after {
+            content: '▾';
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 10px;
+            color: #999;
+            pointer-events: none;
+        }
+
+        .hf-multi-trigger:hover, .hf-multi-trigger.open {
+            border-color: #1d4ed8;
+        }
+
+        .hf-multi-trigger .hf-count {
+            background: #dbeafe;
+            color: #1d4ed8;
+            border-radius: 8px;
+            padding: 0 5px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .hf-multi-panel {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            min-width: 180px;
+            max-height: 220px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 0 0 4px 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 9999;
+        }
+
+        .hf-multi-panel.show { display: block; }
+
+        .hf-multi-search {
+            padding: 4px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .hf-multi-search input {
+            width: 100%;
+            padding: 3px 5px;
+            border: 1px solid #d1d5db;
+            border-radius: 3px;
+            font-size: 11px;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        .hf-multi-option {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 6px;
+            font-size: 11px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .hf-multi-option:hover { background: #f3f4f6; }
+
+        .hf-multi-option input[type="checkbox"] {
+            transform: scale(0.85);
+            margin: 0;
+            pointer-events: none;
+        }
+
         .header-filter-checkbox {
             transform: scale(1.1);
             cursor: pointer;
@@ -978,173 +1074,31 @@
             <span class="encounter-count" id="encounterCount">Loading encounters...</span>
         </div>
         
-        <div class="filters-section">
-            <div class="filters-container">
-                <div class="filters-group search-group">
-                    <div class="filter-field wide">
-                        <label class="filter-label">Patient Search</label>
-                        <input type="text" id="patientSearchInput" class="patient-search-input" placeholder="Search by name...">
-                    </div>
+        <!-- Hidden inputs to keep JS references working -->
+        <input type="hidden" id="patientSearchInput">
+        <input type="hidden" id="dosStartInput">
+        <input type="hidden" id="dosEndInput">
+        <input type="hidden" id="billableFilter" type="checkbox">
+        <input type="hidden" id="uncommittedCommandsFilter" type="checkbox">
+        <input type="hidden" id="delegatedOrdersFilter" type="checkbox">
 
-                    <div class="filter-field">
-                        <label class="filter-label">DOS</label>
-                        <div class="date-range-inputs">
-                            <input type="date" id="dosStartInput" class="date-input">
-                            <span>to</span>
-                            <input type="date" id="dosEndInput" class="date-input">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="filters-group">
-                    <div class="filter-field">
-                        <label class="filter-label">Owner</label>
-                        <div class="filter-dropdown" id="providerFilter" data-values="">
-                            <div class="selected-value">
-                                <span class="placeholder-text">All Owners</span>
-                            </div>
-                            <div class="dropdown-options" id="provider-options">
-                                <div class="dropdown-search">
-                                    <input type="text" id="provider-search" placeholder="Search owners..." class="search-input">
-                                </div>
-                                <div class="dropdown-option" data-value="">
-                                    <input type="checkbox" id="provider-all" checked>
-                                    <label for="provider-all">All Owners</label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="filter-field wide">
-                        <label class="filter-label">Location</label>
-                        <div class="filter-dropdown" id="locationFilter" data-values="">
-                            <div class="selected-value">
-                                <span class="placeholder-text">All Locations</span>
-                            </div>
-                            <div class="dropdown-options" id="location-options">
-                                <div class="dropdown-search">
-                                    <input type="text" id="location-search" placeholder="Search locations..." class="search-input">
-                                </div>
-                                <div class="dropdown-option" data-value="">
-                                    <input type="checkbox" id="location-all" checked>
-                                    <label for="location-all">All Locations</label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="filter-field">
-                        <label class="filter-label">Note Type</label>
-                        <div class="filter-dropdown" id="noteTypeFilter" data-values="">
-                            <div class="selected-value">
-                                <span class="placeholder-text">All Note Types</span>
-                            </div>
-                            <div class="dropdown-options" id="note-type-options">
-                                <div class="dropdown-search">
-                                    <input type="text" id="note-type-search" placeholder="Search note types..." class="search-input">
-                                </div>
-                                <div class="dropdown-option" data-value="">
-                                    <input type="checkbox" id="note-type-all" checked>
-                                    <label for="note-type-all">All Note Types</label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="filter-field">
-                        <label class="filter-label">Claim Queue</label>
-                        <div class="filter-dropdown" id="claimQueueFilter" data-values="">
-                            <div class="selected-value">
-                                <span class="placeholder-text">All Statuses</span>
-                            </div>
-                            <div class="dropdown-options" id="claim-queue-options">
-                                <div class="dropdown-search">
-                                    <input type="text" id="claim-queue-search" placeholder="Search statuses..." class="search-input">
-                                </div>
-                                <div class="dropdown-option" data-value="">
-                                    <input type="checkbox" id="claim-queue-all" checked>
-                                    <label for="claim-queue-all">All Statuses</label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="filter-field">
-                        <label class="filter-label">Insurance</label>
-                        <div class="filter-dropdown" id="insuranceFilter" data-values="">
-                            <div class="selected-value">
-                                <span class="placeholder-text">All Insurances</span>
-                            </div>
-                            <div class="dropdown-options" id="insurance-options">
-                                <div class="dropdown-search">
-                                    <input type="text" id="insurance-search" placeholder="Search insurances..." class="search-input">
-                                </div>
-                                <div class="dropdown-option" data-value="">
-                                    <input type="checkbox" id="insurance-all" checked>
-                                    <label for="insurance-all">All Insurances</label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="filter-field">
-                        <label class="filter-label">Tags</label>
-                        <div class="filter-dropdown" id="tagFilter" data-values="">
-                            <div class="selected-value">
-                                <span class="placeholder-text">All Tags</span>
-                            </div>
-                            <div class="dropdown-options" id="tag-options">
-                                <div class="dropdown-search">
-                                    <input type="text" id="tag-search" placeholder="Search tags..." class="search-input">
-                                </div>
-                                <div class="dropdown-option" data-value="">
-                                    <input type="checkbox" id="tag-all" checked>
-                                    <label for="tag-all">All Tags</label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-                
-                <div class="filters-group checkbox-group">
-                    <label class="checkbox-filter">
-                        <input type="checkbox" id="billableFilter" class="filter-checkbox">
-                        <span>Billable Only</span>
-                    </label>
-                    <label class="checkbox-filter">
-                        <input type="checkbox" id="uncommittedCommandsFilter" class="filter-checkbox">
-                        <span>Has Uncommitted Commands</span>
-                    </label>
-                    <label class="checkbox-filter">
-                        <input type="checkbox" id="delegatedOrdersFilter" class="filter-checkbox">
-                        <span>Has Delegated Orders</span>
-                    </label>
-                </div>
-                
-                <!-- Refresh, Clear and Apply buttons -->
-                <div class="filter-buttons">
-                    <button id="refreshButton" class="refresh-btn">
-                        <svg width="16" height="13" viewBox="0 0 16 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path fill-rule="evenodd" clip-rule="evenodd" d="M13.7349 5.55071L15.1929 7.00412C15.3015 7.1124 15.3635 7.26695 15.3635 7.40609C15.3635 7.54522 15.3015 7.69988 15.1929 7.80806C14.9757 8.02451 14.6035 8.02451 14.3863 7.80806L13.8591 7.2824C13.5489 10.2355 11.0362 12.5548 7.99611 12.5548C5.90202 12.5548 3.94775 11.4261 2.87753 9.61709C2.72238 9.33883 2.81553 8.99868 3.09467 8.82858C3.3738 8.67392 3.71503 8.76678 3.88568 9.04503C4.73878 10.5138 6.30529 11.4106 7.99597 11.4106C10.3691 11.4106 12.3389 9.66346 12.6957 7.39065L12.2768 7.80814C12.0597 8.0246 11.6874 8.0246 11.4703 7.80814C11.2531 7.59169 11.2531 7.22058 11.4703 7.00412L12.9283 5.55071C13.1454 5.33425 13.5177 5.33425 13.7349 5.55071ZM7.996 0.772949C10.1054 0.772949 12.0598 1.90161 13.1145 3.72609C13.161 3.81885 13.192 3.9116 13.192 4.00434C13.192 4.20538 13.0834 4.39088 12.8973 4.49917C12.6181 4.66936 12.2614 4.5765 12.1062 4.29824C11.2688 2.82952 9.68668 1.91721 7.996 1.91721C5.62289 1.91721 3.65305 3.66439 3.29631 5.9372L3.71512 5.51971C3.93226 5.30325 4.30455 5.30325 4.5217 5.51971C4.63032 5.62799 4.69232 5.78254 4.69232 5.92168C4.69232 6.06081 4.63032 6.21548 4.5217 6.32365L3.06368 7.77706C2.84654 7.99351 2.47425 7.99351 2.2571 7.77706L0.799087 6.32365C0.581945 6.1072 0.581945 5.73609 0.799087 5.51963C1.01623 5.30317 1.38851 5.30317 1.60566 5.51963L2.11751 6.02985C2.42769 3.07671 4.94043 0.772949 7.996 0.772949Z" fill="#595959"/>
-                        </svg>
-                        <span>Refresh</span>
-                    </button>
-                    <button id="clearFilters" class="clear-filters-btn">
-                        Clear All
-                    </button>
-                    <button id="applyFilters" class="apply-filters-btn">
-                        Apply Filters
-                    </button>
-                    <button id="exportCsvButton" class="export-btn">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                            <polyline points="7 10 12 15 17 10"/>
-                            <line x1="12" y1="15" x2="12" y2="3"/>
-                        </svg>
-                        Export CSV
-                    </button>
-                </div>
+        <div class="filters-section" style="padding:10px 20px;">
+            <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
+                <button id="refreshButton" class="refresh-btn">
+                    <svg width="16" height="13" viewBox="0 0 16 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M13.7349 5.55071L15.1929 7.00412C15.3015 7.1124 15.3635 7.26695 15.3635 7.40609C15.3635 7.54522 15.3015 7.69988 15.1929 7.80806C14.9757 8.02451 14.6035 8.02451 14.3863 7.80806L13.8591 7.2824C13.5489 10.2355 11.0362 12.5548 7.99611 12.5548C5.90202 12.5548 3.94775 11.4261 2.87753 9.61709C2.72238 9.33883 2.81553 8.99868 3.09467 8.82858C3.3738 8.67392 3.71503 8.76678 3.88568 9.04503C4.73878 10.5138 6.30529 11.4106 7.99597 11.4106C10.3691 11.4106 12.3389 9.66346 12.6957 7.39065L12.2768 7.80814C12.0597 8.0246 11.6874 8.0246 11.4703 7.80814C11.2531 7.59169 11.2531 7.22058 11.4703 7.00412L12.9283 5.55071C13.1454 5.33425 13.5177 5.33425 13.7349 5.55071ZM7.996 0.772949C10.1054 0.772949 12.0598 1.90161 13.1145 3.72609C13.161 3.81885 13.192 3.9116 13.192 4.00434C13.192 4.20538 13.0834 4.39088 12.8973 4.49917C12.6181 4.66936 12.2614 4.5765 12.1062 4.29824C11.2688 2.82952 9.68668 1.91721 7.996 1.91721C5.62289 1.91721 3.65305 3.66439 3.29631 5.9372L3.71512 5.51971C3.93226 5.30325 4.30455 5.30325 4.5217 5.51971C4.63032 5.62799 4.69232 5.78254 4.69232 5.92168C4.69232 6.06081 4.63032 6.21548 4.5217 6.32365L3.06368 7.77706C2.84654 7.99351 2.47425 7.99351 2.2571 7.77706L0.799087 6.32365C0.581945 6.1072 0.581945 5.73609 0.799087 5.51963C1.01623 5.30317 1.38851 5.30317 1.60566 5.51963L2.11751 6.02985C2.42769 3.07671 4.94043 0.772949 7.996 0.772949Z" fill="#595959"/>
+                    </svg>
+                    <span>Refresh</span>
+                </button>
+                <button id="clearFilters" class="clear-filters-btn">Clear All</button>
+                <button id="exportCsvButton" class="export-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    Export CSV
+                </button>
             </div>
         </div>
 
@@ -1152,6 +1106,7 @@
             <thead>
                 <tr>
                     <th data-col="reviewed" class="compact">Reviewed</th>
+                    <th data-col="claimId">Claim ID</th>
                     <th data-col="patientName">Patient Name</th>
                     <th data-col="provider">Owner</th>
                     <th data-col="location">Location</th>
@@ -1171,11 +1126,12 @@
                 </tr>
                 <tr class="header-filters">
                     <th data-col="reviewed"></th>
+                    <th data-col="claimId"></th>
                     <th data-col="patientName"><input type="text" class="header-filter-input" id="hf-patient" placeholder="Filter..."></th>
-                    <th data-col="provider"><select class="header-filter-select" id="hf-owner"><option value="">All</option></select></th>
-                    <th data-col="location"><select class="header-filter-select" id="hf-location"><option value="">All</option></select></th>
-                    <th data-col="insurance"><select class="header-filter-select" id="hf-insurance"><option value="">All</option></select></th>
-                    <th data-col="noteTitle"><select class="header-filter-select" id="hf-note-type"><option value="">All</option></select></th>
+                    <th data-col="provider"><div class="hf-multi" id="hf-owner"></div></th>
+                    <th data-col="location"><div class="hf-multi" id="hf-location"></div></th>
+                    <th data-col="insurance"><div class="hf-multi" id="hf-insurance"></div></th>
+                    <th data-col="noteTitle"><div class="hf-multi" id="hf-note-type"></div></th>
                     <th data-col="dos">
                         <div style="display:flex;gap:2px;align-items:center;">
                             <input type="date" class="header-filter-input" id="hf-dos-start" style="font-size:10px;padding:3px 2px;">
@@ -1185,13 +1141,13 @@
                     <th data-col="billable" style="text-align:center;"><input type="checkbox" class="header-filter-checkbox" id="hf-billable" title="Billable Only"></th>
                     <th data-col="uncommittedCommands" style="text-align:center;"><input type="checkbox" class="header-filter-checkbox" id="hf-uncommitted" title="Has Uncommitted Commands"></th>
                     <th data-col="delegatedOrders" style="text-align:center;"><input type="checkbox" class="header-filter-checkbox" id="hf-delegated" title="Has Delegated Orders"></th>
-                    <th data-col="claimQueue"><select class="header-filter-select" id="hf-claim-queue"><option value="">All</option></select></th>
+                    <th data-col="claimQueue"><div class="hf-multi" id="hf-claim-queue"></div></th>
                     <th data-col="daysInQueue"></th>
                     <th data-col="balance"></th>
                     <th data-col="latestRemit"></th>
                     <th data-col="adjustmentCodes"></th>
                     <th data-col="lastTouched"></th>
-                    <th data-col="tags"><select class="header-filter-select" id="hf-tags"><option value="">All</option></select></th>
+                    <th data-col="tags"><div class="hf-multi" id="hf-tags"></div></th>
                 </tr>
             </thead>
             <tbody id="worklistBody">
@@ -1260,6 +1216,7 @@
         // All available columns with defaults
         const ALL_COLUMNS = [
             { key: 'reviewed', label: 'Reviewed', visible: true, sortable: false },
+            { key: 'claimId', label: 'Claim ID', visible: true, sortable: false },
             { key: 'patientName', label: 'Patient Name', visible: true, sortable: true },
             { key: 'provider', label: 'Owner', visible: true, sortable: true },
             { key: 'location', label: 'Location', visible: true, sortable: true },
@@ -1402,6 +1359,7 @@
                     uncommittedCommands: encounter.uncommitted_commands,
                     delegatedOrders: encounter.delegated_orders,
                     claimId: encounter.claim_id,
+                    claimDbid: encounter.claim_dbid,
                     claimQueue: encounter.claim_queue,
                     daysInQueue: encounter.days_in_queue,
                     insurance: encounter.insurance,
@@ -1517,49 +1475,48 @@
 
         async function fetchReviewedState() {
             try {
-                const response = await fetch(`${API_BASE_URL}/reviewed`);
-                if (!response.ok) return;
-                const data = await response.json();
+                const resp = await fetch(`${API_BASE_URL}/reviewed_claims`);
+                const data = await resp.json();
                 reviewedMap = data.reviewed || {};
-            } catch (error) {
-                console.error('Error fetching reviewed state:', error);
+            } catch (e) {
+                console.error('Error fetching reviewed state:', e);
+                reviewedMap = {};
             }
         }
 
         async function fetchSavedViews() {
             try {
-                const response = await fetch(`${API_BASE_URL}/views`);
-                if (!response.ok) return;
-                const data = await response.json();
+                const resp = await fetch(`${API_BASE_URL}/column_views`);
+                const data = await resp.json();
                 savedViews = data.views || [];
-                // Load default view if one exists
                 const defaultView = savedViews.find(v => v.is_default);
                 if (defaultView) {
                     applyViewConfig(defaultView);
                 }
-            } catch (error) {
-                console.error('Error fetching saved views:', error);
+            } catch (e) {
+                console.error('Error fetching saved views:', e);
+                savedViews = [];
             }
         }
 
         async function toggleReviewed(claimId, checkbox) {
             const reviewed = checkbox.checked;
             try {
-                const response = await fetch(`${API_BASE_URL}/reviewed`, {
+                const resp = await fetch(`${API_BASE_URL}/reviewed_claims`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ claim_id: claimId, reviewed }),
                 });
-                if (!response.ok) throw new Error('Failed to update');
-                const data = await response.json();
+                const data = await resp.json();
                 if (reviewed) {
-                    reviewedMap[claimId] = data.reviewed_at;
+                    reviewedMap[claimId] = data.reviewed_at || new Date().toISOString();
                 } else {
                     delete reviewedMap[claimId];
                 }
-            } catch (error) {
-                console.error('Error toggling reviewed:', error);
-                checkbox.checked = !reviewed; // rollback
+            } catch (e) {
+                console.error('Error toggling reviewed state:', e);
+                // Revert checkbox on failure
+                checkbox.checked = !reviewed;
             }
         }
 
@@ -1771,6 +1728,7 @@
 
                 row.innerHTML = `
                     <td data-col="reviewed" class="compact">${createReviewedCheckbox(encounter)}</td>
+                    <td data-col="claimId">${encounter.claimDbid ? `<a href="/revenue/claims/${encounter.claimDbid}" target="_top" style="color:#1d4ed8;text-decoration:underline;font-size:13px;white-space:nowrap;">${encounter.dbid}-${encounter.claimDbid}</a>` : '<span class="empty-cell">—</span>'}</td>
                     <td data-col="patientName"><a href="${patientLink}" target="_top">${escapeHtml(encounter.patientName)}${encounter.patientDob ? ` (${escapeHtml(encounter.patientDob)})` : ''}</a></td>
                     <td data-col="provider">${escapeHtml(encounter.provider)}</td>
                     <td data-col="location">${escapeHtml(encounter.location)}</td>
@@ -1803,7 +1761,7 @@
 
         // Sorting functionality
         async function sortEncounters(columnIndex) {
-            const columns = ['reviewed', 'patientName', 'provider', 'location', 'insurance', 'noteTitle', 'dos', 'billable', 'uncommittedCommands', 'delegatedOrders', 'claimQueue', 'daysInQueue', 'balance', 'latestRemit', 'adjustmentCodes', 'lastTouched', 'tags'];
+            const columns = ['reviewed', 'claimId', 'patientName', 'provider', 'location', 'insurance', 'noteTitle', 'dos', 'billable', 'uncommittedCommands', 'delegatedOrders', 'claimQueue', 'daysInQueue', 'balance', 'latestRemit', 'adjustmentCodes', 'lastTouched', 'tags'];
             const key = columns[columnIndex];
 
             if (sortConfig.key === key) {
@@ -1841,7 +1799,7 @@
         function updateSortIndicators() {
             const headerRow = document.querySelector('.worklist-table thead tr:first-child');
             const headers = headerRow.querySelectorAll('th');
-            const columns = ['reviewed', 'patientName', 'provider', 'location', 'insurance', 'noteTitle', 'dos', 'billable', 'uncommittedCommands', 'delegatedOrders', 'claimQueue', 'daysInQueue', 'balance', 'latestRemit', 'adjustmentCodes', 'lastTouched', 'tags'];
+            const columns = ['reviewed', 'claimId', 'patientName', 'provider', 'location', 'insurance', 'noteTitle', 'dos', 'billable', 'uncommittedCommands', 'delegatedOrders', 'claimQueue', 'daysInQueue', 'balance', 'latestRemit', 'adjustmentCodes', 'lastTouched', 'tags'];
             
             headers.forEach((header, index) => {
                 const column = columns[index];
@@ -2137,22 +2095,8 @@
         }
 
         function setupFilterEventListeners() {
-            const billableFilter = document.getElementById('billableFilter');
-            const uncommittedCommandsFilter = document.getElementById('uncommittedCommandsFilter');
-            const delegatedOrdersFilter = document.getElementById('delegatedOrdersFilter');
             const clearFiltersButton = document.getElementById('clearFilters');
-            const applyFiltersButton = document.getElementById('applyFilters');
             const refreshButton = document.getElementById('refreshButton');
-            const patientSearchInput = document.getElementById('patientSearchInput');
-            const dosStartInput = document.getElementById('dosStartInput');
-            const dosEndInput = document.getElementById('dosEndInput');
-
-            setupProviderDropdown();
-            setupLocationDropdown();
-            setupNoteTypeDropdown();
-            setupClaimQueueDropdown();
-            setupInsuranceDropdown();
-            setupTagDropdown();
 
             // Export CSV button
             const exportCsvButton = document.getElementById('exportCsvButton');
@@ -2177,7 +2121,7 @@
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `encounter_worklist_${new Date().toISOString().split('T')[0]}.csv`;
+                    a.download = `revenue_cycle_worklist_${new Date().toISOString().split('T')[0]}.csv`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
@@ -2191,51 +2135,8 @@
                 }
             });
 
-            // Billable filter change
-            billableFilter.addEventListener('change', () => {
-                currentFilters.billable_only = billableFilter.checked;
-                // Don't auto-refresh, wait for action button
-            });
-
-            // Uncommitted commands filter change
-            uncommittedCommandsFilter.addEventListener('change', () => {
-                currentFilters.has_uncommitted_commands = uncommittedCommandsFilter.checked;
-            });
-
-            // Delegated orders filter change
-            delegatedOrdersFilter.addEventListener('change', () => {
-                currentFilters.has_delegated_orders = delegatedOrdersFilter.checked;
-            });
-
-            if (patientSearchInput) {
-                patientSearchInput.addEventListener('input', () => {
-                    currentFilters.patient_search = patientSearchInput.value.trim();
-                });
-
-                patientSearchInput.addEventListener('keydown', (event) => {
-                    if (event.key === 'Enter') {
-                        event.preventDefault();
-                        currentFilters.patient_search = patientSearchInput.value.trim();
-                        applyFilters();
-                    }
-                });
-            }
-
-            if (dosStartInput) {
-                dosStartInput.addEventListener('change', () => {
-                    currentFilters.dos_start = dosStartInput.value;
-                });
-            }
-
-            if (dosEndInput) {
-                dosEndInput.addEventListener('change', () => {
-                    currentFilters.dos_end = dosEndInput.value;
-                });
-            }
-
-            // Clear All button
+            // Clear All — reset all header filters and re-fetch
             clearFiltersButton.addEventListener('click', () => {
-                // Reset all filters first
                 currentFilters.provider_ids = [];
                 currentFilters.location_ids = [];
                 currentFilters.note_type_names = [];
@@ -2249,116 +2150,16 @@
                 currentFilters.dos_start = '';
                 currentFilters.dos_end = '';
 
-                // Reset UI elements
-                billableFilter.checked = false;
-                uncommittedCommandsFilter.checked = false;
-                delegatedOrdersFilter.checked = false;
-                if (patientSearchInput) {
-                    patientSearchInput.value = '';
-                }
-                if (dosStartInput) {
-                    dosStartInput.value = '';
-                }
-                if (dosEndInput) {
-                    dosEndInput.value = '';
-                }
-
-                // Helper function to reset dropdown checkboxes
-                const resetDropdownCheckboxes = (optionsId, filterKey) => {
-                    const options = document.getElementById(optionsId);
-                    if (options) {
-                        const checkboxes = options.querySelectorAll('input[type="checkbox"]');
-                        checkboxes.forEach(checkbox => {
-                            if (checkbox.id === `${filterKey}-all`) {
-                                checkbox.checked = true;
-                            } else {
-                                checkbox.checked = false;
-                            }
-                        });
-                    }
-                };
-
-                // Helper function to reset dropdown display
-                const resetDropdownDisplay = (dropdownId, placeholderText) => {
-                    const dropdown = document.getElementById(dropdownId);
-                    if (dropdown) {
-                        const selectedValue = dropdown.querySelector('.selected-value');
-                        if (selectedValue) {
-                            selectedValue.innerHTML = `<span class="placeholder-text">${placeholderText}</span>`;
-                        }
-                    }
-                };
-
-                // Reset provider dropdown
-                resetDropdownCheckboxes('provider-options', 'provider_ids');
-                resetDropdownDisplay('providerFilter', 'All Owners');
-
-                // Reset location dropdown
-                resetDropdownCheckboxes('location-options', 'location_ids');
-                resetDropdownDisplay('locationFilter', 'All Locations');
-
-                // Reset note type dropdown
-                resetDropdownCheckboxes('note-type-options', 'note_type_names');
-                resetDropdownDisplay('noteTypeFilter', 'All Note Types');
-
-                // Reset claim queue dropdown
-                resetDropdownCheckboxes('claim-queue-options', 'claim_queue_names');
-                resetDropdownDisplay('claimQueueFilter', 'All Statuses');
-
-                // Reset insurance dropdown
-                resetDropdownCheckboxes('insurance-options', 'insurance_names');
-                resetDropdownDisplay('insuranceFilter', 'All Insurances');
-
-                // Reset tags dropdown
-                resetDropdownCheckboxes('tag-options', 'tag_ids');
-                resetDropdownDisplay('tagFilter', 'All Tags');
-
-                // Sync header filters and apply
                 syncStateToHeaderFilters();
-                applyFilters();
-            });
-
-            // Apply Filters button
-            applyFiltersButton.addEventListener('click', () => {
-                const patientSearchInput = document.getElementById('patientSearchInput');
-                const dosStartInput = document.getElementById('dosStartInput');
-                const dosEndInput = document.getElementById('dosEndInput');
-                if (patientSearchInput) {
-                    currentFilters.patient_search = patientSearchInput.value.trim();
-                }
-                if (dosStartInput) {
-                    currentFilters.dos_start = dosStartInput.value;
-                }
-                if (dosEndInput) {
-                    currentFilters.dos_end = dosEndInput.value;
-                }
                 applyFilters();
             });
 
             // Refresh button
             refreshButton.addEventListener('click', async () => {
                 try {
-                    // Show loading state
                     showLoadingSpinner();
                     document.getElementById('encounterCount').textContent = 'Loading encounters...';
-                    
-                    const patientSearchInput = document.getElementById('patientSearchInput');
-                    const dosStartInput = document.getElementById('dosStartInput');
-                    const dosEndInput = document.getElementById('dosEndInput');
-                    if (patientSearchInput) {
-                        currentFilters.patient_search = patientSearchInput.value.trim();
-                    }
-                    if (dosStartInput) {
-                        currentFilters.dos_start = dosStartInput.value;
-                    }
-                    if (dosEndInput) {
-                        currentFilters.dos_end = dosEndInput.value;
-                    }
-
-                    // Refresh data with current filters and sorting
                     await fetchEncounters(currentFilters, paginationData.current_page);
-                    
-                    // Re-render the table
                     renderTable();
                     updateEncounterCount();
                     updatePaginationControls();
@@ -2372,164 +2173,152 @@
             });
         }
 
+        // --- Multi-select header filter system ---
+
+        function buildHfMulti(containerId, items, filterKey, placeholder) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+
+            const trigger = document.createElement('div');
+            trigger.className = 'hf-multi-trigger';
+            trigger.textContent = placeholder;
+            trigger.dataset.filterKey = filterKey;
+            trigger.dataset.placeholder = placeholder;
+
+            const panel = document.createElement('div');
+            panel.className = 'hf-multi-panel';
+
+            // Search
+            const searchDiv = document.createElement('div');
+            searchDiv.className = 'hf-multi-search';
+            searchDiv.innerHTML = `<input type="text" placeholder="Search...">`;
+            panel.appendChild(searchDiv);
+
+            // Options
+            items.forEach(item => {
+                const val = typeof item === 'string' ? item : (item.id || item.name);
+                const label = typeof item === 'string' ? item : item.name;
+                const opt = document.createElement('div');
+                opt.className = 'hf-multi-option';
+                opt.dataset.value = val;
+                opt.innerHTML = `<input type="checkbox" value="${escapeHtml(val)}"><span>${escapeHtml(label)}</span>`;
+                panel.appendChild(opt);
+            });
+
+            container.appendChild(trigger);
+            container.appendChild(panel);
+
+            // Toggle panel
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeAllHfPanels();
+                panel.classList.add('show');
+                trigger.classList.add('open');
+                const searchInput = searchDiv.querySelector('input');
+                if (searchInput) searchInput.focus();
+            });
+
+            // Search filtering
+            searchDiv.querySelector('input').addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase();
+                panel.querySelectorAll('.hf-multi-option').forEach(opt => {
+                    const text = opt.querySelector('span').textContent.toLowerCase();
+                    opt.style.display = text.includes(term) ? '' : 'none';
+                });
+            });
+            searchDiv.querySelector('input').addEventListener('click', (e) => e.stopPropagation());
+
+            // Option clicks
+            panel.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const opt = e.target.closest('.hf-multi-option');
+                if (!opt) return;
+                const cb = opt.querySelector('input[type="checkbox"]');
+                cb.checked = !cb.checked;
+                syncHfMultiToFilter(containerId, filterKey, placeholder);
+                applyFilters();
+            });
+        }
+
+        function syncHfMultiToFilter(containerId, filterKey, placeholder) {
+            const container = document.getElementById(containerId);
+            const trigger = container.querySelector('.hf-multi-trigger');
+            const checked = container.querySelectorAll('.hf-multi-option input[type="checkbox"]:checked');
+            const values = Array.from(checked).map(cb => cb.value);
+            currentFilters[filterKey] = values;
+
+            if (values.length === 0) {
+                trigger.textContent = placeholder;
+            } else if (values.length === 1) {
+                const label = checked[0].closest('.hf-multi-option').querySelector('span').textContent;
+                trigger.innerHTML = `${escapeHtml(label)}`;
+            } else {
+                trigger.innerHTML = `${placeholder} <span class="hf-count">${values.length}</span>`;
+            }
+        }
+
+        function closeAllHfPanels() {
+            document.querySelectorAll('.hf-multi-panel.show').forEach(p => p.classList.remove('show'));
+            document.querySelectorAll('.hf-multi-trigger.open').forEach(t => t.classList.remove('open'));
+        }
+
+        // Close panels on outside click
+        document.addEventListener('click', () => { closeAllHfPanels(); });
+
         function populateHeaderFilters() {
-            // Owner
-            const hfOwner = document.getElementById('hf-owner');
-            hfOwner.innerHTML = '<option value="">All</option>';
-            providers.forEach(p => {
-                hfOwner.innerHTML += `<option value="${p.id}">${escapeHtml(p.name)}</option>`;
-            });
-
-            // Location
-            const hfLocation = document.getElementById('hf-location');
-            hfLocation.innerHTML = '<option value="">All</option>';
-            locations.forEach(l => {
-                hfLocation.innerHTML += `<option value="${l.id}">${escapeHtml(l.name)}</option>`;
-            });
-
-            // Insurance
-            const hfInsurance = document.getElementById('hf-insurance');
-            hfInsurance.innerHTML = '<option value="">All</option>';
-            insurances.forEach(name => {
-                hfInsurance.innerHTML += `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`;
-            });
-
-            // Note Type
-            const hfNoteType = document.getElementById('hf-note-type');
-            hfNoteType.innerHTML = '<option value="">All</option>';
-            noteTypes.forEach(nt => {
-                hfNoteType.innerHTML += `<option value="${escapeHtml(nt.name)}">${escapeHtml(nt.name)}</option>`;
-            });
-
-            // Claim Queue
-            const hfClaimQueue = document.getElementById('hf-claim-queue');
-            hfClaimQueue.innerHTML = '<option value="">All</option>';
-            claimQueues.forEach(cq => {
-                hfClaimQueue.innerHTML += `<option value="${escapeHtml(cq.name)}">${escapeHtml(cq.name)}</option>`;
-            });
-
-            // Tags
-            const hfTags = document.getElementById('hf-tags');
-            hfTags.innerHTML = '<option value="">All</option>';
-            tags.forEach(t => {
-                hfTags.innerHTML += `<option value="${t.id}">${escapeHtml(t.name)}</option>`;
-            });
+            buildHfMulti('hf-owner', providers, 'provider_ids', 'All Owners');
+            buildHfMulti('hf-location', locations, 'location_ids', 'All Locations');
+            buildHfMulti('hf-insurance', insurances.map(n => ({ id: n, name: n })), 'insurance_names', 'All Insurances');
+            buildHfMulti('hf-note-type', noteTypes.map(nt => ({ id: nt.name, name: nt.name })), 'note_type_names', 'All Note Types');
+            buildHfMulti('hf-claim-queue', claimQueues.map(cq => ({ id: cq.name, name: cq.name })), 'claim_queue_names', 'All Queues');
+            buildHfMulti('hf-tags', tags, 'tag_ids', 'All Tags');
         }
 
         function setupHeaderFilterListeners() {
             const debounceDelay = 500;
             let debounceTimer = null;
 
-            function headerFilterChanged() {
+            // Patient search (debounced)
+            document.getElementById('hf-patient').addEventListener('input', () => {
                 clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(() => {
-                    syncHeaderFiltersToState();
+                    currentFilters.patient_search = document.getElementById('hf-patient').value.trim();
                     applyFilters();
                 }, debounceDelay);
-            }
-
-            function headerFilterChangedImmediate() {
-                syncHeaderFiltersToState();
-                applyFilters();
-            }
-
-            // Text input - patient search (debounced)
-            document.getElementById('hf-patient').addEventListener('input', headerFilterChanged);
+            });
             document.getElementById('hf-patient').addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     clearTimeout(debounceTimer);
-                    syncHeaderFiltersToState();
+                    currentFilters.patient_search = document.getElementById('hf-patient').value.trim();
                     applyFilters();
                 }
             });
 
-            // Select dropdowns - immediate
-            ['hf-owner', 'hf-location', 'hf-insurance', 'hf-note-type', 'hf-claim-queue', 'hf-tags'].forEach(id => {
-                document.getElementById(id).addEventListener('change', headerFilterChangedImmediate);
+            // Date inputs
+            document.getElementById('hf-dos-start').addEventListener('change', () => {
+                currentFilters.dos_start = document.getElementById('hf-dos-start').value;
+                applyFilters();
+            });
+            document.getElementById('hf-dos-end').addEventListener('change', () => {
+                currentFilters.dos_end = document.getElementById('hf-dos-end').value;
+                applyFilters();
             });
 
-            // Date inputs - immediate
-            document.getElementById('hf-dos-start').addEventListener('change', headerFilterChangedImmediate);
-            document.getElementById('hf-dos-end').addEventListener('change', headerFilterChangedImmediate);
-
-            // Checkboxes - immediate
+            // Checkboxes
             ['hf-billable', 'hf-uncommitted', 'hf-delegated'].forEach(id => {
-                document.getElementById(id).addEventListener('change', headerFilterChangedImmediate);
+                document.getElementById(id).addEventListener('change', () => {
+                    currentFilters.billable_only = document.getElementById('hf-billable').checked;
+                    currentFilters.has_uncommitted_commands = document.getElementById('hf-uncommitted').checked;
+                    currentFilters.has_delegated_orders = document.getElementById('hf-delegated').checked;
+                    applyFilters();
+                });
             });
-        }
-
-        function syncHeaderFiltersToState() {
-            // Patient search
-            const patientVal = document.getElementById('hf-patient').value.trim();
-            currentFilters.patient_search = patientVal;
-            document.getElementById('patientSearchInput').value = patientVal;
-
-            // Owner
-            const ownerVal = document.getElementById('hf-owner').value;
-            currentFilters.provider_ids = ownerVal ? [ownerVal] : [];
-
-            // Location
-            const locationVal = document.getElementById('hf-location').value;
-            currentFilters.location_ids = locationVal ? [locationVal] : [];
-
-            // Insurance
-            const insuranceVal = document.getElementById('hf-insurance').value;
-            currentFilters.insurance_names = insuranceVal ? [insuranceVal] : [];
-
-            // Note Type
-            const noteTypeVal = document.getElementById('hf-note-type').value;
-            currentFilters.note_type_names = noteTypeVal ? [noteTypeVal] : [];
-
-            // DOS
-            currentFilters.dos_start = document.getElementById('hf-dos-start').value;
-            currentFilters.dos_end = document.getElementById('hf-dos-end').value;
-            document.getElementById('dosStartInput').value = currentFilters.dos_start;
-            document.getElementById('dosEndInput').value = currentFilters.dos_end;
-
-            // Billable
-            const billableVal = document.getElementById('hf-billable').checked;
-            currentFilters.billable_only = billableVal;
-            document.getElementById('billableFilter').checked = billableVal;
-
-            // Uncommitted Commands
-            const uncommittedVal = document.getElementById('hf-uncommitted').checked;
-            currentFilters.has_uncommitted_commands = uncommittedVal;
-            document.getElementById('uncommittedCommandsFilter').checked = uncommittedVal;
-
-            // Delegated Orders
-            const delegatedVal = document.getElementById('hf-delegated').checked;
-            currentFilters.has_delegated_orders = delegatedVal;
-            document.getElementById('delegatedOrdersFilter').checked = delegatedVal;
-
-            // Claim Queue
-            const claimQueueVal = document.getElementById('hf-claim-queue').value;
-            currentFilters.claim_queue_names = claimQueueVal ? [claimQueueVal] : [];
-
-            // Tags
-            const tagVal = document.getElementById('hf-tags').value;
-            currentFilters.tag_ids = tagVal ? [tagVal] : [];
-
-            // Sync the sidebar dropdowns display
-            updateDropdownDisplay('providerFilter', 'provider_ids');
-            updateDropdownDisplay('locationFilter', 'location_ids');
-            updateDropdownDisplay('insuranceFilter', 'insurance_names');
-            updateDropdownDisplay('noteTypeFilter', 'note_type_names');
-            updateDropdownDisplay('claimQueueFilter', 'claim_queue_names');
-            updateDropdownDisplay('tagFilter', 'tag_ids');
         }
 
         function syncStateToHeaderFilters() {
             // Patient
             document.getElementById('hf-patient').value = currentFilters.patient_search || '';
-
-            // Single-select syncs (use first value if array has items)
-            document.getElementById('hf-owner').value = currentFilters.provider_ids.length === 1 ? currentFilters.provider_ids[0] : '';
-            document.getElementById('hf-location').value = currentFilters.location_ids.length === 1 ? currentFilters.location_ids[0] : '';
-            document.getElementById('hf-insurance').value = currentFilters.insurance_names.length === 1 ? currentFilters.insurance_names[0] : '';
-            document.getElementById('hf-note-type').value = currentFilters.note_type_names.length === 1 ? currentFilters.note_type_names[0] : '';
-            document.getElementById('hf-claim-queue').value = currentFilters.claim_queue_names.length === 1 ? currentFilters.claim_queue_names[0] : '';
-            document.getElementById('hf-tags').value = currentFilters.tag_ids.length === 1 ? currentFilters.tag_ids[0] : '';
 
             // DOS
             document.getElementById('hf-dos-start').value = currentFilters.dos_start || '';
@@ -2539,6 +2328,23 @@
             document.getElementById('hf-billable').checked = currentFilters.billable_only;
             document.getElementById('hf-uncommitted').checked = currentFilters.has_uncommitted_commands;
             document.getElementById('hf-delegated').checked = currentFilters.has_delegated_orders;
+
+            // Multi-selects — uncheck all then re-check from filter state
+            const multiConfigs = [
+                { id: 'hf-owner', key: 'provider_ids', placeholder: 'All Owners' },
+                { id: 'hf-location', key: 'location_ids', placeholder: 'All Locations' },
+                { id: 'hf-insurance', key: 'insurance_names', placeholder: 'All Insurances' },
+                { id: 'hf-note-type', key: 'note_type_names', placeholder: 'All Note Types' },
+                { id: 'hf-claim-queue', key: 'claim_queue_names', placeholder: 'All Queues' },
+                { id: 'hf-tags', key: 'tag_ids', placeholder: 'All Tags' },
+            ];
+            multiConfigs.forEach(({ id, key, placeholder }) => {
+                const container = document.getElementById(id);
+                if (!container) return;
+                const cbs = container.querySelectorAll('.hf-multi-option input[type="checkbox"]');
+                cbs.forEach(cb => { cb.checked = currentFilters[key].includes(cb.value); });
+                syncHfMultiToFilter(id, key, placeholder);
+            });
         }
 
         async function applyFilters() {
@@ -2703,18 +2509,24 @@
                 const name = nameInput.value.trim() || 'Default';
                 const cols = ALL_COLUMNS.map(c => ({ key: c.key, visible: columnVisibility[c.key] }));
                 try {
-                    const response = await fetch(`${API_BASE_URL}/views`, {
+                    await fetch(`${API_BASE_URL}/column_views`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ config_name: name, columns: cols, is_default: true }),
+                        body: JSON.stringify({ config_name: name, columns: cols }),
                     });
-                    if (response.ok) {
-                        await fetchSavedViews();
-                        activeViewName = name;
-                        renderSavedViewChips();
+                    // Refresh from server to stay in sync
+                    savedViews.forEach(v => { v.is_default = false; });
+                    const existing = savedViews.find(v => v.config_name === name);
+                    if (existing) {
+                        existing.columns = cols;
+                        existing.is_default = true;
+                    } else {
+                        savedViews.push({ config_name: name, columns: cols, is_default: true });
                     }
-                } catch (error) {
-                    console.error('Error saving view:', error);
+                    activeViewName = name;
+                    renderSavedViewChips();
+                } catch (e) {
+                    console.error('Error saving view:', e);
                 }
             });
 
@@ -2723,12 +2535,10 @@
                 const name = nameInput.value.trim();
                 if (!name) return;
                 try {
-                    await fetch(`${API_BASE_URL}/views/delete`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ config_name: name }),
+                    await fetch(`${API_BASE_URL}/column_views?config_name=${encodeURIComponent(name)}`, {
+                        method: 'DELETE',
                     });
-                    await fetchSavedViews();
+                    savedViews = savedViews.filter(v => v.config_name !== name);
                     if (activeViewName === name) {
                         activeViewName = null;
                         ALL_COLUMNS.forEach(c => { columnVisibility[c.key] = c.visible; });
@@ -2736,8 +2546,8 @@
                     }
                     renderSavedViewChips();
                     nameInput.value = '';
-                } catch (error) {
-                    console.error('Error deleting view:', error);
+                } catch (e) {
+                    console.error('Error deleting view:', e);
                 }
             });
         }
@@ -2781,25 +2591,19 @@
         // Initialize the worklist
         document.addEventListener('DOMContentLoaded', async () => {
             try {
-                // Load initial data from APIs
+                // Load initial data from APIs (including server-side reviewed/views state)
                 await Promise.all([
+                    fetchReviewedState(),
+                    fetchSavedViews(),
                     fetchProviders(),
                     fetchLocations(),
                     fetchNoteTypes(),
                     fetchClaimQueues(),
                     fetchInsurances(),
                     fetchTags(),
-                    fetchReviewedState(),
-                    fetchSavedViews(),
                 ]);
 
-                // Populate all filter dropdowns
-                populateProviderDropdown();
-                populateLocationDropdown();
-                populateNoteTypeDropdown();
-                populateClaimQueueDropdown();
-                populateInsuranceDropdown();
-                populateTagDropdown();
+                // Populate header filter dropdowns
 
                 // Populate and setup inline header filters
                 populateHeaderFilters();
@@ -2860,7 +2664,7 @@
                 console.error('Error initializing encounter worklist:', error);
                 // Show error state in the UI
                 document.getElementById('worklistBody').innerHTML = 
-                    '<tr><td colspan="17" class="error-row">Error loading encounters. Please refresh the page.</td></tr>';
+                    '<tr><td colspan="18" class="error-row">Error loading encounters. Please refresh the page.</td></tr>';
                 document.getElementById('encounterCount').textContent = 'Error loading data';
                 hideLoadingSpinner();
             }

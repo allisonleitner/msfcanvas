@@ -1,0 +1,120 @@
+{
+  "inputs": [
+    {
+      "input": "for the plugin \"open encounter worklist\", can we have a dropdown on the queue that allows us to move the claim to different queues from the plugin?",
+      "type": "free_text"
+    },
+    {
+      "input": "can you put this into allison-training for me to test?",
+      "type": "free_text"
+    },
+    {
+      "input": "i am getting errors that it failed to move claim",
+      "type": "free_text"
+    },
+    {
+      "input": "claude can you save this work locally so i can start back tomorrow",
+      "type": "free_text"
+    },
+    {
+      "input": "I want all of this in th dashboard: - Patient filtering\n- Date filtering\n- Visit type filtering\n- Tagging\n- Queue filtering\n- Insurance filtering as well as \"days in queue\" and providers to filters. I also want to be able to export to a csv file as well at any time with the filters that are selected.",
+      "type": "free_text"
+    },
+    {
+      "input": "when i click on encounter list it does not do anything",
+      "type": "free_text"
+    },
+    {
+      "input": "can we call this something different than the encounter list, this will essentially be a different plugin",
+      "type": "free_text"
+    },
+    {
+      "input": "idk any ideas?",
+      "type": "free_text"
+    },
+    {
+      "input": "Lets fo Revenue Cycle Worklist",
+      "type": "free_text"
+    },
+    {
+      "input": "Ok, this seems to work. We might also need a complete redesign though - I want to add: -Ability to hide columns (user can create a custom view?, potentialy save this view?) - Latest Remit column - \"reviewed\" column (the user can manually mark the claim as reviewed so they know they have edited it) - amount/balance column - \"last touched\" this would be the date of the last time the claim was touched/reviewed - adjustment codes; is all of this possible?",
+      "type": "free_text"
+    },
+    {
+      "input": "1. per user 2. across devices 3. yes please",
+      "type": "free_text"
+    },
+    {
+      "input": "lets do it",
+      "type": "free_text"
+    },
+    {
+      "input": "I click on it but it does not open",
+      "type": "free_text"
+    },
+    {
+      "input": "yes, it is still now working",
+      "type": "free_text"
+    },
+    {
+      "input": "still nothing is happening",
+      "type": "free_text"
+    },
+    {
+      "input": "It works, I want to move the filters from the top (where i can multi select) to the headers (where its single select)",
+      "type": "free_text"
+    },
+    {
+      "input": "i should be able to multi-select in the filters",
+      "type": "free_text"
+    },
+    {
+      "input": "where can i put in a link to the claim?",
+      "type": "free_text"
+    },
+    {
+      "input": "yes, lets fo the claim id column",
+      "type": "free_text"
+    },
+    {
+      "input": "this is a claim URL https://allison-training.canvasmedical.com/revenue/claims/2",
+      "type": "free_text"
+    },
+    {
+      "input": "is it possible to include the entire claim id in the table and not just what is after the dash?",
+      "type": "free_text"
+    },
+    {
+      "input": "no, I am looking for this format: 112-56, like in this claim https://allison-training.canvasmedical.com/revenue/claims/56",
+      "type": "free_text"
+    },
+    {
+      "input": "csv is failing",
+      "type": "free_text"
+    },
+    {
+      "input": "when it exports, can you have it only export what is selected on the screen? like what current filters are there?",
+      "type": "free_text"
+    },
+    {
+      "input": "nvm you are right",
+      "type": "free_text"
+    },
+    {
+      "input": "/cpa:coverage",
+      "type": "slash_command"
+    },
+    {
+      "input": "log this session in notion",
+      "type": "free_text"
+    },
+    {
+      "input": "what is the name of this project for when i come back?",
+      "type": "free_text"
+    },
+    {
+      "input": "/exit",
+      "type": "slash_command"
+    }
+  ]
+}

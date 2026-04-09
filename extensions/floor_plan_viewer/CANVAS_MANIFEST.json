@@ -1,0 +1,39 @@
+{
+    "sdk_version": "0.112.0",
+    "plugin_version": "0.1.0",
+    "name": "floor_plan_viewer",
+    "description": "Interactive floor plan viewer with room status tracking, appointment-to-room assignment, and equipment management.",
+    "url_permissions": [],
+    "components": {
+        "applications": [
+            {
+                "class": "floor_plan_viewer.applications.my_application:MyApplication",
+                "name": "Floor Plan",
+                "description": "Interactive floor plan showing real-time room availability, assignments, and equipment.",
+                "scope": "global",
+                "icon": "assets/logo.png"
+            }
+        ],
+        "protocols": [
+            {
+                "class": "floor_plan_viewer.applications.my_application:FloorPlanApi",
+                "description": "REST API for rooms, room assignments, and appointment queries.",
+                "data_access": {
+                    "event": "",
+                    "read": ["Appointment", "Patient", "Staff"],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
