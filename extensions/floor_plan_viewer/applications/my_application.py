@@ -178,7 +178,7 @@ class FHIRClient:
         # Replace any existing Location refs
         si = [r for r in si if not r.get("reference", "").startswith("Location/")]
         si.append(ref)
-        appt["supportingInformation"] = si
+        appt = dict(appt, supportingInformation=si)
 
         resp = http_requests.put(
             f"{self.fhir_url}/Appointment/{appointment_id}",
@@ -1212,7 +1212,7 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
             if resp.status_code != 200:
                 return [JSONResponse({"error": f"Appointment not found: {resp.status_code}"}, status_code=HTTPStatus.NOT_FOUND)]
             appt = resp.json()
-            appt["status"] = "checked-in"
+            appt = dict(appt, status="checked-in")
             resp = http_requests.put(f"{fhir.fhir_url}/Appointment/{appt_id}", json=appt, headers=headers, timeout=15)
             return [JSONResponse({"success": True, "status": "checked-in"}, status_code=HTTPStatus.OK)]
         except Exception as e:
@@ -1231,7 +1231,7 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
             if resp.status_code != 200:
                 return [JSONResponse({"error": f"Appointment not found: {resp.status_code}"}, status_code=HTTPStatus.NOT_FOUND)]
             appt = resp.json()
-            appt["status"] = "fulfilled"
+            appt = dict(appt, status="fulfilled")
             resp = http_requests.put(f"{fhir.fhir_url}/Appointment/{appt_id}", json=appt, headers=headers, timeout=15)
             return [JSONResponse({"success": True, "status": "fulfilled"}, status_code=HTTPStatus.OK)]
         except Exception as e:
@@ -1250,7 +1250,7 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
             if resp.status_code != 200:
                 return [JSONResponse({"error": f"Appointment not found: {resp.status_code}"}, status_code=HTTPStatus.NOT_FOUND)]
             appt = resp.json()
-            appt["status"] = "cancelled"
+            appt = dict(appt, status="cancelled")
             resp = http_requests.put(f"{fhir.fhir_url}/Appointment/{appt_id}", json=appt, headers=headers, timeout=15)
             return [JSONResponse({"success": True, "status": "cancelled"}, status_code=HTTPStatus.OK)]
         except Exception as e:
