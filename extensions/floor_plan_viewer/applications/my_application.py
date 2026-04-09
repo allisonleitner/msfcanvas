@@ -675,7 +675,12 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
 
     @api.post("/resources/<key>/create-practitioner")
     def create_resource_practitioner(self) -> list[Response | Effect]:
-        """Create a Canvas Practitioner for this resource so it appears on the scheduling screen."""
+        """Create a Canvas Practitioner + Calendar for this resource."""
+        from uuid import uuid4
+
+        from canvas_sdk.effects.calendar import Calendar as CalendarEffect
+        from canvas_sdk.effects.calendar import CalendarType
+        from canvas_sdk.v1.data.practicelocation import PracticeLocation
         from floor_plan_viewer.models.custom_data import Resource
 
         key = self.request.path_params["key"]
@@ -693,11 +698,27 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
         try:
             resp = fhir.create_practitioner(resource.name, resource_key=resource.key)
             pract_id = resp.get("id", "")
-            if pract_id:
-                resource.practitioner_id = pract_id
-                resource.save()
-                return [JSONResponse({"success": True, "practitioner_id": pract_id}, status_code=HTTPStatus.OK)]
-            return [JSONResponse({"error": f"FHIR response: {resp}"}, status_code=HTTPStatus.BAD_GATEWAY)]
+            if not pract_id:
+                return [JSONResponse({"error": f"FHIR response: {resp}"}, status_code=HTTPStatus.BAD_GATEWAY)]
+
+            Resource.objects.filter(key=key).update(practitioner_id=pract_id)
+
+            # Create a calendar for this practitioner so appointments can be booked
+            location = PracticeLocation.objects.filter(active=True).first()
+            loc_id = str(location.id) if location else None
+            cal_id = str(uuid4())
+            calendar_effect = CalendarEffect(
+                id=cal_id,
+                provider=pract_id,
+                type=CalendarType.Clinic,
+                location=loc_id,
+                description=f"{resource.name} schedule",
+            ).create()
+
+            return [
+                calendar_effect,
+                JSONResponse({"success": True, "practitioner_id": pract_id, "calendar_id": cal_id}, status_code=HTTPStatus.OK),
+            ]
         except Exception as e:
             return [JSONResponse({"error": str(e)}, status_code=HTTPStatus.BAD_GATEWAY)]
 
@@ -794,26 +815,60 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
         else:
             errors.append("No PracticeLocations found in Canvas. Create one via Canvas admin first.")
 
-        # Create Practitioners for resources
-        for resource in Resource.objects.filter(active=True):
-            if resource.practitioner_id:
-                continue
-            try:
-                resp = fhir.create_practitioner(resource.name, resource_key=resource.key)
-                pract_id = resp.get("id", "")
-                if pract_id:
-                    Resource.objects.filter(pk=resource.pk).update(practitioner_id=pract_id)
-                    resources_synced = resources_synced + 1
-                else:
-                    errors.append(f"Resource {resource.key}: {resp}")
-            except Exception as e:
-                errors.append(f"Resource {resource.key}: {e}")
+        # Create Practitioners + Calendars for resources
+        from uuid import uuid4
 
-        return [JSONResponse({
+        from canvas_sdk.effects.calendar import Calendar as CalendarEffect
+        from canvas_sdk.effects.calendar import CalendarType
+        from canvas_sdk.v1.data import Calendar
+
+        cal_effects: list[Effect] = []
+        if not fallback_loc:
+            loc_id = ""
+
+        for resource in Resource.objects.filter(active=True):
+            pract_id = resource.practitioner_id
+            # Create practitioner if missing
+            if not pract_id:
+                try:
+                    resp = fhir.create_practitioner(resource.name, resource_key=resource.key)
+                    pract_id = resp.get("id", "")
+                    if pract_id:
+                        Resource.objects.filter(pk=resource.pk).update(practitioner_id=pract_id)
+                        resources_synced = resources_synced + 1
+                    else:
+                        errors.append(f"Resource {resource.key}: {resp}")
+                        continue
+                except Exception as e:
+                    errors.append(f"Resource {resource.key}: {e}")
+                    continue
+
+            # Create calendar if practitioner has none
+            if pract_id:
+                has_calendar = Calendar.objects.filter(
+                    title__startswith=resource.name
+                ).exists()
+                if not has_calendar:
+                    try:
+                        cal_effect = CalendarEffect(
+                            id=str(uuid4()),
+                            provider=pract_id,
+                            type=CalendarType.Clinic,
+                            location=loc_id,
+                            description=f"{resource.name} schedule",
+                        ).create()
+                        cal_effects.append(cal_effect)
+                    except Exception as e:
+                        errors.append(f"Calendar for {resource.key}: {e}")
+
+        response_list: list[Response | Effect] = list(cal_effects)
+        response_list.append(JSONResponse({
             "rooms_synced": rooms_synced,
             "resources_synced": resources_synced,
+            "calendars_created": len(cal_effects),
             "errors": errors,
-        }, status_code=HTTPStatus.OK)]
+        }, status_code=HTTPStatus.OK))
+        return response_list
 
     # ------------------------------------------------------------------
     # Assignments
@@ -1163,8 +1218,14 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
         log.info("[floor_plan] book: patient=%s start=%s segments=%d fhir=%s",
                  patient_id, start_time, len(segments), "yes" if fhir else "no")
 
+        from uuid import uuid4
+
+        from canvas_sdk.effects.calendar import Calendar as CalendarEffect
+        from canvas_sdk.effects.calendar import CalendarType
+
         results = []
         errors = []
+        extra_effects: list[Effect] = []
         current_start = start_time  # ISO string
 
         for seg in segments:
@@ -1196,6 +1257,21 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                                 Resource.objects.filter(key=resource_key).update(practitioner_id=pract_id)
                                 practitioner_id = pract_id
                                 log.info("[floor_plan] auto-created practitioner for '%s' -> %s", resource_key, pract_id)
+                                # Also create a calendar so appointments can be booked
+                                try:
+                                    from canvas_sdk.v1.data.practicelocation import PracticeLocation
+                                    fl = PracticeLocation.objects.filter(active=True).first()
+                                    cal_effect = CalendarEffect(
+                                        id=str(uuid4()),
+                                        provider=pract_id,
+                                        type=CalendarType.Clinic,
+                                        location=str(fl.id) if fl else None,
+                                        description=f"{resource_obj.name} schedule",
+                                    ).create()
+                                    extra_effects.append(cal_effect)
+                                    log.info("[floor_plan] auto-created calendar for '%s'", resource_key)
+                                except Exception as ce:
+                                    log.warning("[floor_plan] auto-create calendar failed: %s", ce)
                         except Exception as e:
                             log.warning("[floor_plan] auto-create practitioner failed: %s", e)
 
@@ -1283,11 +1359,13 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
             # Next segment starts where this one ends
             current_start = end_iso
 
-        return [JSONResponse({
+        response_list: list[Response | Effect] = list(extra_effects)
+        response_list.append(JSONResponse({
             "success": True,
             "booked": results,
             "errors": errors,
-        }, status_code=HTTPStatus.CREATED)]
+        }, status_code=HTTPStatus.CREATED))
+        return response_list
 
     # ------------------------------------------------------------------
     # Check-in / Check-out
