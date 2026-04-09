@@ -1208,17 +1208,19 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                 if room and room.practice_location_id:
                     location_id = room.practice_location_id
 
+            log.info("[floor_plan] segment '%s': room_key='%s' location_id='%s' before auto-sync", seg_name, room_key, location_id)
             # If no location, try to auto-sync the room to Canvas
             if not location_id and room_key:
                 if fhir:
-                    room_qs = Room.objects.filter(key=room_key, practice_location_id="")
-                    room_obj = room_qs.first()
-                    if room_obj:
+                    room_obj = Room.objects.filter(key=room_key).first()
+                    needs_sync = room_obj and (not room_obj.practice_location_id or room_obj.practice_location_id == "")
+                    log.info("[floor_plan] room '%s' needs_sync=%s current_loc='%s'", room_key, needs_sync, room_obj.practice_location_id if room_obj else 'N/A')
+                    if needs_sync:
                         try:
                             loc_resp = fhir.create_location(room_obj.name, physical_type="ro")
                             loc_id_new = loc_resp.get("id", "")
                             if loc_id_new:
-                                room_qs.update(practice_location_id=loc_id_new)
+                                Room.objects.filter(key=room_key).update(practice_location_id=loc_id_new)
                                 location_id = loc_id_new
                                 log.info("[floor_plan] auto-synced room '%s' -> location %s", room_key, loc_id_new)
                         except Exception as e:
