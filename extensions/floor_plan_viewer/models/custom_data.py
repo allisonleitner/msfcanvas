@@ -17,7 +17,7 @@ from canvas_sdk.v1.data.base import CustomModel
 class Room(CustomModel):
     """A physical room in the office floor plan."""
 
-    key: Any = CharField(max_length=50, unique=True)  # matches data-room attr in SVG
+    key: Any = CharField(max_length=50)  # matches data-room attr in SVG; uniqueness enforced via UniqueConstraint
     name: Any = CharField(max_length=100)
     room_type: Any = CharField(max_length=50)  # exam, wellness, treatment, lab, conference, office, utility
     number: Any = CharField(max_length=20, blank=True, default="")
