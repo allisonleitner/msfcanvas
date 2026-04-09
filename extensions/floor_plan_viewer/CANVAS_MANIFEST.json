@@ -1,6 +1,6 @@
 {
     "sdk_version": "0.112.0",
-    "plugin_version": "0.1.0",
+    "plugin_version": "0.1.1",
     "name": "floor_plan_viewer",
     "description": "Interactive floor plan viewer with room status tracking, appointment-to-room assignment, and equipment management.",
     "url_permissions": [],
@@ -29,6 +29,10 @@
         "content": [],
         "effects": [],
         "views": []
+    },
+    "custom_data": {
+        "namespace": "floor__plan__viewer",
+        "access": "read_write"
     },
     "secrets": [],
     "tags": {},
