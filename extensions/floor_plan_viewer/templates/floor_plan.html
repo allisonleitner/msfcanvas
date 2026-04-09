@@ -633,15 +633,17 @@ async function loadSonosPresets() { const d=await apiFetch('/sonos/presets'); so
 async function loadSonosStatus() { const d=await apiFetch('/sonos/status'); sonosConfigured=!!d.configured; sonosDemoMode=!!d.demo_mode; }
 
 async function refreshData() {
-  await Promise.all([loadRooms(),loadAssignments(),loadAppointments(),loadResources(),loadWaiting(),loadProviders(),loadSonosSpeakers(),loadSonosPresets(),loadSonosStatus()]);
-  updateFloorPlan();
-  renderResourceTable();
-  renderSchedule();
-  renderSpeakerMapTable();
-  renderPresetTable();
-  updateSonosStatusBanner();
-  checkSonosTimers();
-  if (selectedRoom) showRoomDetail(selectedRoom);
+  // Each load wrapped to prevent one failure from breaking everything
+  const safe = fn => fn().catch(e => console.warn('load error:', e));
+  await Promise.all([safe(loadRooms),safe(loadAssignments),safe(loadAppointments),safe(loadResources),safe(loadWaiting),safe(loadProviders),safe(loadSonosSpeakers),safe(loadSonosPresets),safe(loadSonosStatus)]);
+  try { updateFloorPlan(); } catch(e) { console.warn('updateFloorPlan error:', e); }
+  try { renderResourceTable(); } catch(e) { console.warn('renderResourceTable error:', e); }
+  try { renderSchedule(); } catch(e) { console.warn('renderSchedule error:', e); }
+  try { renderSpeakerMapTable(); } catch(e) { console.warn('renderSpeakerMapTable:', e); }
+  try { renderPresetTable(); } catch(e) { console.warn('renderPresetTable:', e); }
+  try { updateSonosStatusBanner(); } catch(e) { console.warn('sonosBanner:', e); }
+  try { checkSonosTimers(); } catch(e) { console.warn('sonosTimers:', e); }
+  if (selectedRoom) try { showRoomDetail(selectedRoom); } catch(e) {}
 }
 async function seedRooms() { await apiFetch('/rooms/seed',{method:'POST'}); showToast('Rooms, resources & audio presets configured'); await refreshData(); }
 async function syncToCanvas() {
