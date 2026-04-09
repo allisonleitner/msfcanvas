@@ -781,9 +781,9 @@ async function updateStatus(id,s){
     else if(r.sonos.paused)msg+=' \u2014 audio paused';
     else if(r.sonos.error)msg+=' (Sonos error)';
   }
-  showToast(msg);await refreshData();
+  showToast(msg);await refreshData();showEmptyState();
 }
-async function removeAssignment(id){await apiFetch(`/assignments/${id}`,{method:'DELETE'});showToast('Removed');await refreshData();}
+async function removeAssignment(id){await apiFetch(`/assignments/${id}`,{method:'DELETE'});showToast('Removed');await refreshData();showEmptyState();}
 
 // === Assign Modal ===
 let assigningRoomKey=null;
@@ -1401,12 +1401,12 @@ async function schedAssignRoom(roomKey, apptId, patientName, providerName, start
 // === Check-in / Check-out / Cancel ===
 async function checkinAppt(apptId) {
   const r = await apiFetch('/checkin/' + apptId, { method: 'POST' });
-  if (r.success) { showToast('Checked in'); await refreshData(); }
+  if (r.success) { showToast('Checked in'); await refreshData(); showEmptyState(); }
   else { showToast(r.error || 'Check-in failed', 'error'); }
 }
 async function checkoutAppt(apptId) {
   const r = await apiFetch('/checkout/' + apptId, { method: 'POST' });
-  if (r.success) { showToast('Checked out'); await refreshData(); }
+  if (r.success) { showToast('Checked out'); await refreshData(); showEmptyState(); }
   else { showToast(r.error || 'Check-out failed', 'error'); }
 }
 async function cancelAppt(apptId, assignId) {
@@ -1425,6 +1425,7 @@ async function cancelAppt(apptId, assignId) {
   }
   showToast('Cancelled');
   await refreshData();
+  showEmptyState();
 }
 // Keep legacy names for floor plan tab
 async function checkinPatient(id, name) { return checkinAppt(id); }
