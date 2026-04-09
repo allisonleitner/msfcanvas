@@ -156,19 +156,43 @@
   .cal-block .cal-block-room{font-size:9px;opacity:.7}
   .cal-now-line{position:absolute;left:0;right:0;height:2px;background:var(--blush);z-index:5}
   .cal-now-dot{position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:50%;background:var(--blush)}
-  /* Booking segments */
-  .book-segment{background:var(--ivory);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;position:relative}
-  .book-segment-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-  .book-segment-num{font-size:11px;font-weight:700;color:var(--sage-dark);background:var(--sage-light);padding:2px 8px;border-radius:6px}
-  .book-segment-remove{width:24px;height:24px;border-radius:6px;border:1px solid var(--border);background:var(--warm-white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--taupe)}
-  .book-segment-remove:hover{color:var(--blush-dark);border-color:var(--blush);background:var(--blush-light)}
-  .book-seg-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
-  .book-seg-row.three{grid-template-columns:1fr 80px 1fr}
-  .book-seg-label{font-size:10px;font-weight:600;color:var(--taupe);margin-bottom:3px}
-  .book-seg-input{width:100%;padding:6px 8px;border-radius:6px;border:1px solid var(--border);font-size:12px;font-family:'Inter',sans-serif;background:var(--warm-white)}
-  .book-seg-input:focus{border-color:var(--sage);outline:none}
+  /* Pending blocks (cart items on calendar) */
+  .cal-block.pending{background:rgba(44,51,69,.08);border:2px dashed var(--navy);color:var(--navy);z-index:3;cursor:default}
+  .cal-block.pending .cal-block-patient{font-style:italic;opacity:.7}
+  .cal-pending-num{position:absolute;top:2px;right:4px;width:18px;height:18px;border-radius:50%;background:var(--navy);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  /* Clickable column body */
+  .cal-col-body.booking-mode{cursor:crosshair}
+  .cal-col-body.booking-mode:hover{background:rgba(44,51,69,.02)}
+  /* Cart panel */
+  .cart-panel{width:320px;flex-shrink:0;border-left:1px solid var(--border);background:var(--warm-white);display:flex;flex-direction:column;transition:width .3s}
+  .cart-panel.hidden{width:0;overflow:hidden;border:none}
+  .cart-header{padding:16px 20px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,var(--warm-white),var(--cream))}
+  .cart-header h3{font-family:'Cormorant Garamond',Georgia,serif;font-size:18px;font-weight:600;color:var(--navy)}
+  .cart-header .cart-sub{font-size:11px;color:var(--taupe);margin-top:2px}
+  .cart-body{flex:1;overflow-y:auto;padding:16px 20px}
+  .cart-item{background:var(--ivory);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;position:relative}
+  .cart-item-num{font-size:10px;font-weight:700;color:#fff;background:var(--navy);width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-right:6px}
+  .cart-item-name{font-size:13px;font-weight:600;color:var(--navy);display:inline}
+  .cart-item-detail{font-size:11px;color:var(--taupe);margin-top:4px}
+  .cart-item-dur{display:flex;align-items:center;gap:6px;margin-top:6px}
+  .cart-item-dur label{font-size:10px;color:var(--taupe);font-weight:500}
+  .cart-item-dur input{width:60px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:11px;text-align:center}
+  .cart-item-remove{position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:4px;border:none;background:none;cursor:pointer;color:var(--taupe);font-size:14px}
+  .cart-item-remove:hover{color:var(--blush-dark);background:var(--blush-light)}
+  .cart-footer{padding:14px 20px;border-top:1px solid var(--border)}
+  .cart-patient-row{margin-bottom:10px}
+  .cart-patient-input{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--ivory);font-family:'Inter',sans-serif}
+  .cart-patient-input:focus{border-color:var(--sage);outline:none;box-shadow:0 0 0 3px var(--sage-light)}
+  .cart-patient-results{max-height:100px;overflow-y:auto;margin-top:4px}
+  .cart-patient-selected{font-weight:600;color:var(--navy);font-size:13px;margin-top:4px}
+  .cart-book-btn{width:100%;padding:10px;border-radius:10px;border:none;background:var(--navy);color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:background .2s;font-family:'Inter',sans-serif}
+  .cart-book-btn:hover{background:var(--navy-light)}
+  .cart-book-btn:disabled{opacity:.4;cursor:not-allowed}
+  .cart-clear-btn{width:100%;padding:6px;border-radius:8px;border:1px solid var(--border);background:var(--warm-white);color:var(--taupe);font-size:11px;cursor:pointer;margin-top:6px;font-family:'Inter',sans-serif}
+  .cart-clear-btn:hover{background:var(--blush-light);color:var(--blush-dark);border-color:var(--blush)}
   .patient-result{padding:8px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:4px;cursor:pointer;font-size:13px;transition:all .15s}
   .patient-result:hover{background:var(--sage-light);border-color:var(--sage)}
+  .booking-hint{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:10px;color:var(--taupe);pointer-events:none;z-index:4}
 
   /* CONFIGURE TAB */
   .config-panel{flex:1;padding:30px;overflow-y:auto;max-width:1100px;margin:0 auto;width:100%}
@@ -355,16 +379,39 @@
     </div>
 
     <!-- SCHEDULE TAB -->
-    <div class="tab-content" id="tab-schedule" style="flex-direction:column">
-      <div style="padding:10px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--warm-white);flex-shrink:0">
-        <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:20px;font-weight:600;color:var(--navy)">Today's Schedule</div>
-        <button class="btn active" onclick="openBookingModal()">Book Visit</button>
+    <div class="tab-content" id="tab-schedule" style="flex-direction:row">
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+        <div style="padding:10px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--warm-white);flex-shrink:0">
+          <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:20px;font-weight:600;color:var(--navy)">Today's Schedule</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span id="bookingModeHint" style="font-size:11px;color:var(--taupe);display:none">Click on the calendar to add segments</span>
+            <button class="btn" id="toggleBookBtn" onclick="toggleBookingMode()">Start Booking</button>
+          </div>
+        </div>
+        <div class="cal-wrapper" id="calWrapper">
+          <div class="cal-time-col" id="calTimeCol"></div>
+          <div class="cal-grid" id="calGrid"></div>
+        </div>
       </div>
-      <div class="cal-wrapper" id="calWrapper">
-        <!-- Time column -->
-        <div class="cal-time-col" id="calTimeCol"></div>
-        <!-- Provider + Resource columns -->
-        <div class="cal-grid" id="calGrid"></div>
+      <!-- Cart Panel -->
+      <div class="cart-panel hidden" id="cartPanel">
+        <div class="cart-header">
+          <h3>Booking Cart</h3>
+          <div class="cart-sub" id="cartSummary">Click on the calendar to add segments</div>
+        </div>
+        <div class="cart-body" id="cartBody">
+          <div style="text-align:center;padding:30px 10px;color:var(--taupe);font-size:12px;font-style:italic">Click on a provider or resource column at the desired time to add a visit segment</div>
+        </div>
+        <div class="cart-footer">
+          <div class="cart-patient-row">
+            <input class="cart-patient-input" id="cart-patient-search" placeholder="Search patient..." oninput="searchCartPatients()">
+            <div class="cart-patient-results" id="cart-patient-results"></div>
+            <input type="hidden" id="cart-patient-id">
+            <div class="cart-patient-selected" id="cart-patient-selected" style="display:none"></div>
+          </div>
+          <button class="cart-book-btn" id="cartBookBtn" disabled onclick="submitCartBooking()">Book All Segments</button>
+          <button class="cart-clear-btn" onclick="clearCart()">Clear Cart</button>
+        </div>
       </div>
     </div>
 
@@ -809,17 +856,194 @@ async function addToCalendar(key){
 }
 
 // === Schedule Tab ===
-// === Calendar Grid ===
-const CAL_START_HOUR = 7;  // 7 AM
-const CAL_END_HOUR = 19;   // 7 PM
-const CAL_HOURS = CAL_END_HOUR - CAL_START_HOUR; // 12 hours
+// === Calendar Grid + Click-to-Book ===
+const CAL_START_HOUR = 7;
+const CAL_END_HOUR = 19;
+const CAL_HOURS = CAL_END_HOUR - CAL_START_HOUR;
 const PX_PER_HOUR = 60;
-const CAL_HEIGHT = CAL_HOURS * PX_PER_HOUR; // 720px
+const CAL_HEIGHT = CAL_HOURS * PX_PER_HOUR;
+
+let bookingMode = false;
+let cart = []; // {colType, colId, colName, hour, duration, room_key, resource_key, provider_id}
 
 function timeToY(isoStr) {
   const d = new Date(isoStr);
   const hours = d.getHours() + d.getMinutes() / 60;
   return (hours - CAL_START_HOUR) * PX_PER_HOUR;
+}
+
+function toggleBookingMode() {
+  bookingMode = !bookingMode;
+  const btn = document.getElementById('toggleBookBtn');
+  const hint = document.getElementById('bookingModeHint');
+  const panel = document.getElementById('cartPanel');
+  if (bookingMode) {
+    btn.textContent = 'Cancel Booking';
+    btn.classList.add('active');
+    hint.style.display = 'inline';
+    panel.classList.remove('hidden');
+  } else {
+    btn.textContent = 'Start Booking';
+    btn.classList.remove('active');
+    hint.style.display = 'none';
+    panel.classList.add('hidden');
+    cart = [];
+  }
+  renderSchedule();
+}
+
+function onCalColClick(e, colType, colId, colName, resourceKey, roomKey, defaultDur) {
+  if (!bookingMode) return;
+  const body = e.currentTarget;
+  const rect = body.getBoundingClientRect();
+  const y = e.clientY - rect.top + body.parentElement.parentElement.parentElement.scrollTop;
+  // Snap to nearest 15-min
+  const rawHour = CAL_START_HOUR + y / PX_PER_HOUR;
+  const snapped = Math.round(rawHour * 4) / 4; // 15-min increments
+  const hour = Math.max(CAL_START_HOUR, Math.min(CAL_END_HOUR - 0.25, snapped));
+
+  cart.push({
+    colType: colType,
+    colId: colId,
+    colName: colName,
+    hour: hour,
+    duration: defaultDur || 30,
+    room_key: roomKey || '',
+    resource_key: resourceKey || '',
+    provider_id: colType === 'provider' ? colId : '',
+  });
+  renderSchedule();
+  renderCart();
+}
+
+function removeCartItem(idx) {
+  cart.splice(idx, 1);
+  renderSchedule();
+  renderCart();
+}
+
+function updateCartDuration(idx, val) {
+  cart[idx].duration = parseInt(val, 10) || 30;
+  renderSchedule();
+  renderCart();
+}
+
+function clearCart() {
+  cart = [];
+  document.getElementById('cart-patient-id').value = '';
+  document.getElementById('cart-patient-search').value = '';
+  document.getElementById('cart-patient-selected').style.display = 'none';
+  document.getElementById('cart-patient-results').innerHTML = '';
+  renderSchedule();
+  renderCart();
+}
+
+function renderCart() {
+  const body = document.getElementById('cartBody');
+  const summary = document.getElementById('cartSummary');
+  const bookBtn = document.getElementById('cartBookBtn');
+  const patientId = document.getElementById('cart-patient-id').value;
+
+  if (!cart.length) {
+    body.innerHTML = '<div style="text-align:center;padding:30px 10px;color:var(--taupe);font-size:12px;font-style:italic">Click on a provider or resource column at the desired time</div>';
+    summary.textContent = 'Click on the calendar to add segments';
+    bookBtn.disabled = true;
+    return;
+  }
+
+  const totalMin = cart.reduce((s, c) => s + c.duration, 0);
+  summary.textContent = cart.length + ' segment' + (cart.length !== 1 ? 's' : '') + ' · ' + totalMin + ' min total';
+  bookBtn.disabled = !patientId || !cart.length;
+
+  body.innerHTML = cart.map((c, i) => {
+    const h = Math.floor(c.hour);
+    const m = Math.round((c.hour - h) * 60);
+    const timeStr = (h > 12 ? h - 12 : h) + ':' + String(m).padStart(2, '0') + (h >= 12 ? ' PM' : ' AM');
+    const roomName = c.room_key ? (rooms[c.room_key]?.name || c.room_key) : '';
+    return `<div class="cart-item">
+      <span class="cart-item-num">${i + 1}</span>
+      <span class="cart-item-name">${c.colName}</span>
+      <button class="cart-item-remove" onclick="removeCartItem(${i})">&times;</button>
+      <div class="cart-item-detail">${timeStr}${roomName ? ' · ' + roomName : ''}</div>
+      <div class="cart-item-dur">
+        <label>Duration:</label>
+        <input type="number" min="5" step="5" value="${c.duration}" onchange="updateCartDuration(${i}, this.value)"> min
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Cart patient search
+let cartPatientTimeout = null;
+function searchCartPatients() {
+  clearTimeout(cartPatientTimeout);
+  const q = document.getElementById('cart-patient-search').value.trim();
+  if (q.length < 2) { document.getElementById('cart-patient-results').innerHTML = ''; return; }
+  cartPatientTimeout = setTimeout(async () => {
+    const d = await apiFetch('/patients/search?q=' + encodeURIComponent(q));
+    const el = document.getElementById('cart-patient-results');
+    if (!d.patients || !d.patients.length) { el.innerHTML = '<div style="padding:6px;color:var(--taupe);font-size:11px">No patients found</div>'; return; }
+    el.innerHTML = d.patients.map(p =>
+      `<div class="patient-result" onclick="selectCartPatient('${p.id}','${p.name.replace(/'/g, "\\'")}')">${p.name}${p.dob ? ' <span style="color:var(--taupe);font-size:10px">DOB: ' + p.dob + '</span>' : ''}</div>`
+    ).join('');
+  }, 300);
+}
+
+function selectCartPatient(id, name) {
+  document.getElementById('cart-patient-id').value = id;
+  document.getElementById('cart-patient-search').value = '';
+  document.getElementById('cart-patient-results').innerHTML = '';
+  const sel = document.getElementById('cart-patient-selected');
+  sel.textContent = name;
+  sel.style.display = 'block';
+  document.getElementById('cartBookBtn').disabled = !cart.length;
+}
+
+async function submitCartBooking() {
+  const patientId = document.getElementById('cart-patient-id').value;
+  const patientName = document.getElementById('cart-patient-selected').textContent;
+  if (!patientId || !cart.length) return;
+
+  // Sort cart by time
+  const sorted = [...cart].sort((a, b) => a.hour - b.hour);
+
+  // Build segments with absolute ISO times
+  const today = new Date();
+  const segments = sorted.map(c => {
+    const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), Math.floor(c.hour), Math.round((c.hour % 1) * 60));
+    return {
+      provider_id: c.provider_id || '',
+      provider_name: c.colType === 'provider' ? c.colName : '',
+      resource_key: c.resource_key || '',
+      room_key: c.room_key || '',
+      duration: c.duration,
+      name: c.colName,
+      start_iso: startDate.toISOString(),
+    };
+  });
+
+  showToast('Booking ' + segments.length + ' segment(s)...');
+
+  // Use the first segment's start as the visit start; each segment uses its own absolute time
+  const r = await apiFetch('/book', {
+    method: 'POST',
+    body: JSON.stringify({
+      patient_id: patientId,
+      patient_name: patientName,
+      start_time: segments[0].start_iso,
+      segments: segments,
+    }),
+  });
+
+  if (r.success) {
+    showToast(patientName + ': ' + (r.booked || []).length + ' segment(s) booked');
+    if (r.errors && r.errors.length) { r.errors.forEach(e => showToast(e, 'error')); }
+    cart = [];
+    toggleBookingMode();
+    await refreshData();
+  } else {
+    showToast(r.error || 'Booking failed', 'error');
+  }
 }
 
 function renderSchedule() {
@@ -876,6 +1100,26 @@ function renderSchedule() {
     </div>`;
   }
 
+  // Helper: render pending cart blocks for a column
+  function pendingBlocks(colId) {
+    if (!bookingMode) return '';
+    return cart.filter(c => c.colId === colId).map((c, idx) => {
+      const cartIdx = cart.indexOf(c);
+      const top = (c.hour - CAL_START_HOUR) * PX_PER_HOUR;
+      const height = Math.max(18, (c.duration / 60) * PX_PER_HOUR);
+      const h = Math.floor(c.hour);
+      const m = Math.round((c.hour - h) * 60);
+      const timeStr = (h > 12 ? h - 12 : h) + ':' + String(m).padStart(2, '0') + (h >= 12 ? 'p' : 'a');
+      return `<div class="cal-block pending" style="top:${top}px;height:${height}px">
+        <span class="cal-pending-num">${cartIdx + 1}</span>
+        <div class="cal-block-patient">Pending</div>
+        <div class="cal-block-time">${timeStr} · ${c.duration}min</div>
+      </div>`;
+    }).join('');
+  }
+
+  const bmClass = bookingMode ? ' booking-mode' : '';
+
   // Provider columns
   activeProviders.forEach(p => {
     const appts = providerAppts[p.id];
@@ -884,14 +1128,15 @@ function renderSchedule() {
       const assign = assignments.find(x => x.appointment_id === a.id && x.status !== 'cancelled');
       blocks += renderBlock(a, 'provider', assign ? assign.room_key : '');
     });
-    gridHtml += `<div class="cal-col"><div class="cal-col-header provider">${p.name}<div class="cal-col-sub">${appts.length} appt${appts.length !== 1 ? 's' : ''}</div></div><div class="cal-col-body">${hourLines()}${blocks}</div></div>`;
+    blocks += pendingBlocks(p.id);
+    const escapedName = p.name.replace(/'/g, "\\'");
+    gridHtml += `<div class="cal-col"><div class="cal-col-header provider">${p.name}<div class="cal-col-sub">${appts.length} appt${appts.length !== 1 ? 's' : ''}</div></div><div class="cal-col-body${bmClass}" onclick="onCalColClick(event,'provider','${p.id}','${escapedName}','','',30)">${hourLines()}${blocks}</div></div>`;
   });
 
   // Resource columns
   resources.forEach(r => {
     const resAssignments = assignments.filter(a => (a.resource_keys || []).includes(r.key) && a.status !== 'cancelled');
     let blocks = '';
-    // Check for conflicts (overlapping assignments when max_concurrent = 1)
     const maxC = r.max_concurrent || 1;
     resAssignments.forEach(a => {
       let isConflict = false;
@@ -908,9 +1153,11 @@ function renderSchedule() {
       }
       blocks += renderBlock(a, isConflict ? 'conflict' : 'resource', a.room_key);
     });
+    blocks += pendingBlocks(r.key);
     const roomName = rooms[r.room_key]?.name || '';
     const maxLabel = maxC === 0 ? 'Unlimited' : maxC === 1 ? 'No double-book' : 'Max ' + maxC;
-    gridHtml += `<div class="cal-col"><div class="cal-col-header resource">${r.name}<div class="cal-col-sub">${roomName ? roomName + ' · ' : ''}${maxLabel}</div></div><div class="cal-col-body">${hourLines()}${blocks}</div></div>`;
+    const escapedName = r.name.replace(/'/g, "\\'");
+    gridHtml += `<div class="cal-col"><div class="cal-col-header resource">${r.name}<div class="cal-col-sub">${roomName ? roomName + ' · ' : ''}${maxLabel}</div></div><div class="cal-col-body${bmClass}" onclick="onCalColClick(event,'resource','${r.key}','${escapedName}','${r.key}','${r.room_key}',${r.default_duration_minutes || 30})">${hourLines()}${blocks}</div></div>`;
   });
 
   if (!activeProviders.length && !resources.length) {
@@ -940,7 +1187,7 @@ async function checkoutPatient(apptId, name) {
   else { showToast(r.error || 'Check-out failed', 'error'); }
 }
 
-// === Booking Modal ===
+// (Legacy booking modal functions kept for backward compat)
 let bookingSegmentCount = 0;
 
 function openBookingModal() {
