@@ -1542,27 +1542,44 @@ function showPatientTab(tab) {
     return;
   }
 
-  container.innerHTML = appts.map(a => {
+  container.innerHTML = appts.map((a, i) => {
     const status = (a.status || '').toLowerCase();
+    const isActive = !status.includes('fulfil') && !status.includes('cancel');
     let badge = '';
     if (status.includes('check')) badge = '<span style="background:var(--sage-light);color:var(--sage-dark);padding:1px 6px;border-radius:4px;font-size:9px;font-weight:600;margin-left:6px">Checked In</span>';
     else if (status.includes('fulfil')) badge = '<span style="background:var(--sand);color:var(--taupe);padding:1px 6px;border-radius:4px;font-size:9px;font-weight:600;margin-left:6px">Complete</span>';
     else if (status.includes('cancel')) badge = '<span style="background:var(--blush-light);color:var(--blush-dark);padding:1px 6px;border-radius:4px;font-size:9px;font-weight:600;margin-left:6px">Cancelled</span>';
 
-    // Find matching room assignment
     const matchAssign = assigns.find(x => x.appointment_id === a.id || (tab === 'today' && x.start_time === a.start_time));
     const roomName = matchAssign ? (rooms[matchAssign.room_key]?.name || matchAssign.room_key) : '';
     const resNames = matchAssign ? (matchAssign.resource_keys || []).map(rk => { const r = resources.find(x => x.key === rk); return r ? r.name : rk; }) : [];
-
     const dateStr = tab !== 'today' ? new Date(a.start_time).toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ' &middot; ' : '';
+    const assignId = matchAssign ? matchAssign.id : null;
 
-    return '<div style="padding:8px 0;border-bottom:1px solid var(--border)">' +
+    // Action buttons for active appointments
+    let actBtns = '';
+    if (isActive) {
+      actBtns = '<div id="ptab-actions-' + i + '" style="display:none;margin-top:6px;display:flex;gap:4px;flex-wrap:wrap">';
+      if (!status.includes('check')) actBtns += '<button class="action-btn primary" style="flex:0;padding:3px 8px;font-size:10px;border-radius:6px" onclick="checkinAppt(\'' + a.id + '\')">Check In</button>';
+      if (status.includes('check')) actBtns += '<button class="action-btn" style="flex:0;padding:3px 8px;font-size:10px;border-radius:6px" onclick="checkoutAppt(\'' + a.id + '\')">Check Out</button>';
+      actBtns += '<button class="action-btn danger" style="flex:0;padding:3px 8px;font-size:10px;border-radius:6px" onclick="cancelAppt(\'' + a.id + '\',' + (assignId || 'null') + ')">Cancel</button>';
+      actBtns += '</div>';
+    }
+
+    return '<div style="padding:8px 0;border-bottom:1px solid var(--border);cursor:' + (isActive ? 'pointer' : 'default') + '" onclick="togglePtabActions(' + i + ')">' +
       '<div style="font-size:11px;color:var(--charcoal);font-weight:600">' + dateStr + formatTime(a.start_time) + ' - ' + formatTime(a.end_time) + badge + '</div>' +
       '<div style="font-size:12px;color:var(--navy);margin-top:1px">' + (a.provider_name || '') + '</div>' +
       (roomName ? '<div style="font-size:11px;color:var(--taupe)">' + roomName + '</div>' : '') +
       (resNames.length ? '<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px">' + resNames.map(n => '<span class="equipment-tag" style="font-size:9px;padding:1px 5px">' + n + '</span>').join('') + '</div>' : '') +
+      actBtns +
     '</div>';
   }).join('');
+}
+
+function togglePtabActions(idx) {
+  const el = document.getElementById('ptab-actions-' + idx);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'flex' : 'none';
 }
 
 async function changeAssignmentRoom(assignId, newRoomKey) {

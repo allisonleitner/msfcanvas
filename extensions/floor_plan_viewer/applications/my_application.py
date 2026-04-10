@@ -1319,18 +1319,24 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                 resource_obj = Resource.objects.filter(key=resource_key).first()
 
             if not practitioner_id:
-                # Find a real staff member with a calendar to book against
-                from canvas_sdk.v1.data import Calendar as CalendarModel
-                first_cal = CalendarModel.objects.first()
-                if first_cal:
-                    # Calendar title format: "ProviderName: CalendarType: LocationName"
-                    # Extract provider from the calendar's staff reference
-                    cal_staff = Staff.objects.filter(
-                        active=True
-                    ).first()
-                    if cal_staff:
-                        practitioner_id = str(cal_staff.id)
-                        log.info("[floor_plan] using fallback provider %s for resource '%s'", practitioner_id, resource_key)
+                # Find a schedulable staff member with a real calendar
+                from floor_plan_viewer.models.custom_data import StaffConfig
+                schedulable_config = StaffConfig.objects.filter(active=True, schedulable=True).first()
+                if schedulable_config:
+                    practitioner_id = schedulable_config.staff_id
+                    log.info("[floor_plan] using schedulable provider %s (%s) for resource '%s'",
+                             practitioner_id, schedulable_config.staff_name, resource_key)
+                else:
+                    # Last resort: first staff with a calendar
+                    from canvas_sdk.v1.data import Calendar as CalendarModel
+                    first_cal = CalendarModel.objects.first()
+                    if first_cal:
+                        cal_staff = Staff.objects.filter(active=True).exclude(
+                            last_name__icontains="bot"
+                        ).first()
+                        if cal_staff:
+                            practitioner_id = str(cal_staff.id)
+                            log.info("[floor_plan] using fallback provider %s for resource '%s'", practitioner_id, resource_key)
 
             # Auto-resolve room from resource's home room if not specified
             if not room_key and resource_obj and resource_obj.room_key:
