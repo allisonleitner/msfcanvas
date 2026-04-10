@@ -1521,6 +1521,271 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
             return [JSONResponse({"error": str(e)}, status_code=HTTPStatus.BAD_GATEWAY)]
 
     # ------------------------------------------------------------------
+    # Membership Management
+    # ------------------------------------------------------------------
+
+    @api.get("/memberships/tiers")
+    def get_membership_tiers(self) -> list[Response | Effect]:
+        from floor_plan_viewer.models.custom_data import MembershipTier
+        tiers = MembershipTier.objects.filter(active=True).order_by("key")
+        return [JSONResponse({
+            "tiers": [
+                {
+                    "id": t.pk,
+                    "key": t.key,
+                    "name": t.name,
+                    "description": t.description or "",
+                    "price_cents": t.price_cents or 0,
+                    "benefits": t.benefits or [],
+                    "stripe_price_id": t.stripe_price_id or "",
+                }
+                for t in tiers
+            ]
+        }, status_code=HTTPStatus.OK)]
+
+    @api.post("/memberships/tiers/seed")
+    def seed_membership_tiers(self) -> list[Response | Effect]:
+        """Seed the Foundation and Premier membership tiers."""
+        from floor_plan_viewer.models.custom_data import MembershipTier
+
+        foundation_benefits = [
+            {"key": "annual_exam", "name": "Annual Comprehensive Exam + Labs + Pap", "quantity": 1, "period": "year"},
+            {"key": "gyn_care", "name": "Gynecologic Care", "quantity": 0, "period": "unlimited"},
+            {"key": "hormone_eval", "name": "Hormone Evaluation & Management", "quantity": 0, "period": "unlimited"},
+            {"key": "inbody", "name": "InBody Body Composition Analysis", "quantity": 1, "period": "year"},
+            {"key": "nutrition_extended", "name": "Extended Nutrition Consultation (RD)", "quantity": 2, "period": "year"},
+            {"key": "physician_followup", "name": "Quarterly Physician Follow-up", "quantity": 4, "period": "year"},
+            {"key": "wellness_planning", "name": "Physician-Guided Wellness Planning", "quantity": 1, "period": "year"},
+            {"key": "wellness_suite", "name": "Wellness & Meditation Suite Access", "quantity": 4, "period": "year"},
+            {"key": "urgent_access", "name": "Same-Day / Next-Day Urgent Appointments", "quantity": 0, "period": "unlimited"},
+            {"key": "direct_access", "name": "24/7 Direct Access to Dr. Heintges", "quantity": 0, "period": "unlimited"},
+            {"key": "extended_appts", "name": "Extended Appointment Times", "quantity": 0, "period": "unlimited"},
+            {"key": "specialist_coord", "name": "Specialist Care Coordination", "quantity": 0, "period": "unlimited"},
+        ]
+
+        premier_benefits = [
+            {"key": "annual_exam", "name": "Annual Comprehensive Exam + Labs + Pap", "quantity": 1, "period": "year"},
+            {"key": "gyn_care", "name": "Gynecologic Care", "quantity": 0, "period": "unlimited"},
+            {"key": "hormone_program", "name": "Comprehensive Hormone Program + Pellet Therapy", "quantity": 0, "period": "unlimited"},
+            {"key": "micronutrient_eval", "name": "Advanced Micronutrient & Metabolic Evaluations", "quantity": 1, "period": "year"},
+            {"key": "inbody", "name": "InBody Body Composition Analysis", "quantity": 1, "period": "year"},
+            {"key": "nutrition_extended", "name": "Extended Nutrition Consultation (RD)", "quantity": 2, "period": "year"},
+            {"key": "nutrition_followup", "name": "Follow-up Nutrition Consultation (RD)", "quantity": 4, "period": "year"},
+            {"key": "dietitian_messaging", "name": "Direct Messaging with Registered Dietitian", "quantity": 0, "period": "unlimited"},
+            {"key": "advanced_nutrition", "name": "Advanced Nutrition Planning (Lab-Based)", "quantity": 1, "period": "year"},
+            {"key": "physician_followup", "name": "Quarterly Physician Follow-up", "quantity": 4, "period": "year"},
+            {"key": "wellness_planning", "name": "Physician-Guided Wellness Planning", "quantity": 1, "period": "year"},
+            {"key": "wellness_suite", "name": "Wellness & Meditation Suite Access", "quantity": 12, "period": "year"},
+            {"key": "urgent_access", "name": "Same-Day / Next-Day Urgent Appointments", "quantity": 0, "period": "unlimited"},
+            {"key": "direct_access", "name": "24/7 Direct Access to Dr. Heintges", "quantity": 0, "period": "unlimited"},
+            {"key": "extended_appts", "name": "Extended Appointment Times", "quantity": 0, "period": "unlimited"},
+            {"key": "specialist_coord", "name": "Specialist Care Coordination", "quantity": 0, "period": "unlimited"},
+        ]
+
+        MembershipTier.objects.update_or_create(
+            key="foundation",
+            defaults={"name": "Foundation", "description": "Comprehensive primary and gynecologic care with personalized wellness planning", "price_cents": 0, "benefits": foundation_benefits},
+        )
+        MembershipTier.objects.update_or_create(
+            key="premier",
+            defaults={"name": "Premier", "description": "Deeper metabolic optimization and ongoing nutrition partnership. Includes all Foundation benefits plus expanded support.", "price_cents": 0, "benefits": premier_benefits},
+        )
+        return [JSONResponse({"success": True}, status_code=HTTPStatus.OK)]
+
+    @api.get("/memberships/patient/<patient_id>")
+    def get_patient_membership(self) -> list[Response | Effect]:
+        """Get a patient's membership, benefits checklist, and usage."""
+        from floor_plan_viewer.models.custom_data import BenefitUsage, MembershipTier, PatientMembership
+
+        patient_id = self.request.path_params["patient_id"]
+
+        membership = PatientMembership.objects.filter(patient_id=patient_id, active=True).first()
+        if not membership:
+            return [JSONResponse({"membership": None, "checklist": []}, status_code=HTTPStatus.OK)]
+
+        tier = MembershipTier.objects.filter(key=membership.tier_key, active=True).first()
+        benefits = tier.benefits if tier else []
+
+        # Get all usage for this patient in the current membership period
+        usages = BenefitUsage.objects.filter(patient_id=patient_id)
+        if membership.start_date:
+            usages = usages.filter(used_date__gte=membership.start_date)
+
+        # Build usage counts per benefit key
+        usage_counts = {}
+        usage_dates: dict[str, list[dict[str, str]]] = {}
+        for u in usages:
+            key = u.benefit_key
+            if key not in usage_counts:
+                usage_counts[key] = 0
+                usage_dates[key] = []
+            usage_counts[key] = usage_counts[key] + 1
+            usage_dates[key].append({"date": u.used_date.isoformat(), "notes": u.notes or ""})
+
+        checklist = []
+        for b in benefits:
+            used = usage_counts.get(b["key"], 0)
+            total = b.get("quantity", 0)
+            checklist.append({
+                "key": b["key"],
+                "name": b["name"],
+                "total": total,
+                "used": used,
+                "remaining": max(0, total - used) if total > 0 else -1,
+                "unlimited": total == 0,
+                "period": b.get("period", "year"),
+                "usage_history": usage_dates.get(b["key"], []),
+            })
+
+        return [JSONResponse({
+            "membership": {
+                "id": membership.pk,
+                "patient_id": membership.patient_id,
+                "patient_name": membership.patient_name,
+                "tier_key": membership.tier_key,
+                "tier_name": tier.name if tier else membership.tier_key,
+                "start_date": membership.start_date.isoformat() if membership.start_date else "",
+                "renewal_date": membership.renewal_date.isoformat() if membership.renewal_date else "",
+                "status": membership.status,
+                "stripe_customer_id": membership.stripe_customer_id or "",
+                "stripe_subscription_id": membership.stripe_subscription_id or "",
+            },
+            "checklist": checklist,
+        }, status_code=HTTPStatus.OK)]
+
+    @api.post("/memberships/assign")
+    def assign_membership(self) -> list[Response | Effect]:
+        from floor_plan_viewer.models.custom_data import PatientMembership
+
+        try:
+            body = json.loads(self.request.body)
+        except (json.JSONDecodeError, TypeError):
+            return [JSONResponse({"error": "Invalid JSON"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+        patient_id = body.get("patient_id", "")
+        tier_key = body.get("tier_key", "")
+        if not patient_id or not tier_key:
+            return [JSONResponse({"error": "patient_id and tier_key required"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+        PatientMembership.objects.update_or_create(
+            patient_id=patient_id,
+            tier_key=tier_key,
+            defaults={
+                "patient_name": body.get("patient_name", ""),
+                "start_date": body.get("start_date", datetime.now(timezone.utc).isoformat()),
+                "renewal_date": body.get("renewal_date", ""),
+                "status": body.get("status", "active"),
+                "stripe_customer_id": body.get("stripe_customer_id", ""),
+                "stripe_subscription_id": body.get("stripe_subscription_id", ""),
+                "active": True,
+            },
+        )
+        return [JSONResponse({"success": True}, status_code=HTTPStatus.CREATED)]
+
+    @api.post("/memberships/usage")
+    def record_benefit_usage(self) -> list[Response | Effect]:
+        from floor_plan_viewer.models.custom_data import BenefitUsage
+
+        try:
+            body = json.loads(self.request.body)
+        except (json.JSONDecodeError, TypeError):
+            return [JSONResponse({"error": "Invalid JSON"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+        staff_dbid = self._get_staff_dbid()
+        BenefitUsage.objects.create(
+            patient_id=body.get("patient_id", ""),
+            benefit_key=body.get("benefit_key", ""),
+            used_date=body.get("used_date", datetime.now(timezone.utc).isoformat()),
+            appointment_id=body.get("appointment_id", ""),
+            notes=body.get("notes", ""),
+            recorded_by_id=staff_dbid,
+        )
+        return [JSONResponse({"success": True}, status_code=HTTPStatus.CREATED)]
+
+    @api.delete("/memberships/usage/<id>")
+    def delete_benefit_usage(self) -> list[Response | Effect]:
+        from floor_plan_viewer.models.custom_data import BenefitUsage
+
+        pk = self.request.path_params["id"]
+        deleted, _ = BenefitUsage.objects.filter(pk=pk).delete()
+        return [JSONResponse({"success": True, "deleted": deleted > 0}, status_code=HTTPStatus.OK)]
+
+    # ------------------------------------------------------------------
+    # Stripe Integration
+    # ------------------------------------------------------------------
+
+    @api.post("/stripe/checkout")
+    def create_stripe_checkout(self) -> list[Response | Effect]:
+        """Create a Stripe Checkout session for membership or credit purchase."""
+        stripe_secret = self.secrets.get("STRIPE_SECRET_KEY", "")
+        if not stripe_secret:
+            return [JSONResponse({"error": "Stripe not configured. Set STRIPE_SECRET_KEY secret."}, status_code=HTTPStatus.BAD_REQUEST)]
+
+        try:
+            body = json.loads(self.request.body)
+        except (json.JSONDecodeError, TypeError):
+            return [JSONResponse({"error": "Invalid JSON"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+        mode = body.get("mode", "subscription")  # "subscription" or "payment"
+        price_id = body.get("price_id", "")
+        patient_id = body.get("patient_id", "")
+        patient_name = body.get("patient_name", "")
+        success_url = body.get("success_url", "")
+        cancel_url = body.get("cancel_url", "")
+
+        if not price_id:
+            return [JSONResponse({"error": "price_id is required"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+        # Create Stripe checkout session via API
+        try:
+            resp = http_requests.post(
+                "https://api.stripe.com/v1/checkout/sessions",
+                headers={"Authorization": f"Bearer {stripe_secret}"},
+                data={
+                    "mode": mode,
+                    "line_items[0][price]": price_id,
+                    "line_items[0][quantity]": "1",
+                    "success_url": success_url or "https://ellemedicine.com/success",
+                    "cancel_url": cancel_url or "https://ellemedicine.com/cancel",
+                    "metadata[patient_id]": patient_id,
+                    "metadata[patient_name]": patient_name,
+                },
+                timeout=15,
+            )
+            data = resp.json()
+            if "url" in data:
+                return [JSONResponse({"success": True, "checkout_url": data["url"], "session_id": data.get("id", "")}, status_code=HTTPStatus.OK)]
+            return [JSONResponse({"error": data}, status_code=HTTPStatus.BAD_GATEWAY)]
+        except Exception as e:
+            return [JSONResponse({"error": str(e)}, status_code=HTTPStatus.BAD_GATEWAY)]
+
+    @api.post("/stripe/webhook")
+    def stripe_webhook(self) -> list[Response | Effect]:
+        """Handle Stripe webhook events (subscription created, payment completed, etc.)."""
+        from floor_plan_viewer.models.custom_data import PatientMembership
+
+        try:
+            body = json.loads(self.request.body)
+        except (json.JSONDecodeError, TypeError):
+            return [JSONResponse({"error": "Invalid JSON"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+        event_type = body.get("type", "")
+        data_obj = body.get("data", {}).get("object", {})
+
+        if event_type == "checkout.session.completed":
+            patient_id = data_obj.get("metadata", {}).get("patient_id", "")
+            customer_id = data_obj.get("customer", "")
+            subscription_id = data_obj.get("subscription", "")
+            if patient_id and subscription_id:
+                PatientMembership.objects.filter(patient_id=patient_id, active=True).update(
+                    stripe_customer_id=customer_id,
+                    stripe_subscription_id=subscription_id,
+                )
+                log.info("[floor_plan] Stripe: membership updated for patient %s", patient_id)
+
+        return [JSONResponse({"received": True}, status_code=HTTPStatus.OK)]
+
+    # ------------------------------------------------------------------
     # Sonos - Discovery & Configuration
     # ------------------------------------------------------------------
 

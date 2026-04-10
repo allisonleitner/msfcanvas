@@ -209,6 +209,25 @@
   .patient-result:hover{background:var(--sage-light);border-color:var(--sage)}
   .booking-hint{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:10px;color:var(--taupe);pointer-events:none;z-index:4}
 
+  /* MEMBERSHIP TAB */
+  .mem-card{background:var(--warm-white);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:16px}
+  .mem-tier-badge{display:inline-block;padding:4px 14px;border-radius:16px;font-size:12px;font-weight:700;letter-spacing:.5px}
+  .mem-tier-badge.foundation{background:var(--alpaca);color:var(--warm-gray)}
+  .mem-tier-badge.premier{background:var(--evergreen);color:#fff}
+  .mem-checklist{list-style:none;padding:0}
+  .mem-check-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+  .mem-check-item:last-child{border-bottom:none}
+  .mem-check-icon{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;margin-top:1px}
+  .mem-check-icon.available{background:var(--sage-light);color:var(--eucalyptus)}
+  .mem-check-icon.used{background:var(--linen);color:var(--latte)}
+  .mem-check-icon.unlimited{background:var(--sage-light);color:var(--eucalyptus)}
+  .mem-check-info{flex:1}
+  .mem-check-name{font-size:13px;font-weight:600;color:var(--navy)}
+  .mem-check-status{font-size:11px;color:var(--taupe);margin-top:2px}
+  .mem-check-history{font-size:10px;color:var(--latte);margin-top:3px}
+  .mem-check-actions{display:flex;gap:4px;flex-shrink:0}
+  .mem-assign-row{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
+
   /* CONFIGURE TAB */
   .config-panel{flex:1;padding:30px;overflow-y:auto;max-width:1100px;margin:0 auto;width:100%}
   .config-section{margin-bottom:30px}
@@ -355,6 +374,7 @@
     <div class="tab-bar">
       <button class="tab active" onclick="switchTab('floorplan')">Floor Plan</button>
       <button class="tab" onclick="switchTab('schedule')">Schedule</button>
+      <button class="tab" onclick="switchTab('membership')">Membership</button>
       <button class="tab" onclick="switchTab('configure')">Configure</button>
     </div>
 
@@ -428,6 +448,25 @@
         <div class="cart-footer">
           <button class="cart-book-btn" id="cartBookBtn" disabled onclick="submitCartBooking()">Book All Segments</button>
           <button class="cart-clear-btn" onclick="clearCart()">Clear Cart</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MEMBERSHIP TAB -->
+    <div class="tab-content" id="tab-membership" style="flex-direction:column">
+      <div style="padding:24px;flex:1;overflow-y:auto;max-width:900px;margin:0 auto;width:100%">
+        <!-- Patient Search -->
+        <div style="margin-bottom:20px">
+          <div style="font-family:var(--font-headline);font-size:22px;font-weight:400;color:var(--navy);margin-bottom:12px">Manage Membership</div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <input class="form-input" id="mem-patient-search" placeholder="Search patient by name..." style="flex:1" oninput="searchMemPatients()">
+            <button class="btn" onclick="seedMembershipTiers()">Setup Tiers</button>
+          </div>
+          <div id="mem-patient-results" style="max-height:120px;overflow-y:auto;margin-top:4px"></div>
+        </div>
+        <!-- Selected Patient Membership -->
+        <div id="mem-content">
+          <div style="text-align:center;padding:50px 20px;color:var(--taupe);font-style:italic">Search for a patient to view their membership</div>
         </div>
       </div>
     </div>
@@ -1802,6 +1841,194 @@ async function submitBooking() {
     await refreshData();
   } else {
     showToast(r.error || 'Booking failed', 'error');
+  }
+}
+
+// === Membership Tab ===
+let memPatientTimeout = null;
+let memSelectedPatient = null;
+let memTiers = [];
+
+async function loadMemTiers() {
+  const d = await apiFetch('/memberships/tiers');
+  memTiers = d.tiers || [];
+}
+
+function searchMemPatients() {
+  clearTimeout(memPatientTimeout);
+  const q = document.getElementById('mem-patient-search').value.trim();
+  if (q.length < 2) { document.getElementById('mem-patient-results').innerHTML = ''; return; }
+  memPatientTimeout = setTimeout(async () => {
+    const d = await apiFetch('/patients/search?q=' + encodeURIComponent(q));
+    const el = document.getElementById('mem-patient-results');
+    if (!d.patients || !d.patients.length) { el.innerHTML = '<div style="padding:8px;color:var(--taupe);font-size:12px">No patients found</div>'; return; }
+    el.innerHTML = d.patients.map(p =>
+      '<div class="patient-result" onclick="selectMemPatient(\'' + p.id + '\',\'' + p.name.replace(/'/g,'') + '\')">' + p.name + (p.dob ? ' <span style="color:var(--taupe);font-size:11px">DOB: ' + p.dob + '</span>' : '') + '</div>'
+    ).join('');
+  }, 300);
+}
+
+async function selectMemPatient(id, name) {
+  memSelectedPatient = { id: id, name: name };
+  document.getElementById('mem-patient-search').value = '';
+  document.getElementById('mem-patient-results').innerHTML = '';
+  await loadMemTiers();
+  await renderMemContent();
+}
+
+async function renderMemContent() {
+  if (!memSelectedPatient) return;
+  const container = document.getElementById('mem-content');
+  container.innerHTML = '<div style="color:var(--taupe);font-style:italic;padding:20px">Loading...</div>';
+
+  const data = await apiFetch('/memberships/patient/' + memSelectedPatient.id);
+  const mem = data.membership;
+  const checklist = data.checklist || [];
+
+  let html = '';
+
+  // Patient header
+  html += '<div class="mem-card">';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">';
+  html += '<div><div style="font-family:var(--font-headline);font-size:22px;color:var(--navy)">' + memSelectedPatient.name + '</div>';
+  html += '<a href="/patient/' + memSelectedPatient.id + '" target="_top" style="color:var(--eucalyptus);text-decoration:underline;font-size:12px">Open Chart</a></div>';
+
+  if (mem) {
+    html += '<span class="mem-tier-badge ' + mem.tier_key + '">' + mem.tier_name + '</span>';
+  } else {
+    html += '<span style="color:var(--taupe);font-size:13px">No membership</span>';
+  }
+  html += '</div>';
+
+  if (mem) {
+    html += '<div style="display:flex;gap:20px;font-size:12px;color:var(--taupe)">';
+    html += '<div>Started: <strong style="color:var(--navy)">' + (mem.start_date ? new Date(mem.start_date).toLocaleDateString() : '-') + '</strong></div>';
+    html += '<div>Renewal: <strong style="color:var(--navy)">' + (mem.renewal_date ? new Date(mem.renewal_date).toLocaleDateString() : '-') + '</strong></div>';
+    html += '<div>Status: <strong style="color:' + (mem.status === 'active' ? 'var(--eucalyptus)' : 'var(--clay)') + '">' + mem.status + '</strong></div>';
+    html += '</div>';
+    if (mem.stripe_subscription_id) {
+      html += '<div style="font-size:11px;color:var(--latte);margin-top:6px">Stripe: ' + mem.stripe_subscription_id + '</div>';
+    }
+  }
+
+  // Assign / Change membership
+  html += '<div class="mem-assign-row">';
+  const tierOpts = memTiers.map(t => '<option value="' + t.key + '"' + (mem && mem.tier_key === t.key ? ' selected' : '') + '>' + t.name + '</option>').join('');
+  html += '<select class="form-input" style="width:auto;font-size:12px" id="mem-tier-select"><option value="">-- Select Tier --</option>' + tierOpts + '</select>';
+  html += '<button class="action-btn primary" style="flex:0;padding:6px 14px;font-size:12px;border-radius:16px" onclick="assignMemTier()">Assign / Update</button>';
+
+  // Stripe checkout button
+  if (mem) {
+    html += '<button class="action-btn" style="flex:0;padding:6px 14px;font-size:12px;border-radius:16px" onclick="openStripeCheckout()">Pay via Stripe</button>';
+  }
+  html += '</div>';
+  html += '</div>';
+
+  // Benefits checklist
+  if (mem && checklist.length) {
+    html += '<div class="mem-card">';
+    html += '<div style="font-family:var(--font-headline);font-size:18px;color:var(--navy);margin-bottom:12px">Benefits Checklist</div>';
+    html += '<ul class="mem-checklist">';
+    checklist.forEach(function(b) {
+      const isUnlimited = b.unlimited;
+      const allUsed = !isUnlimited && b.total > 0 && b.remaining === 0;
+      const iconClass = isUnlimited ? 'unlimited' : (allUsed ? 'used' : 'available');
+      const iconText = isUnlimited ? '&infin;' : (allUsed ? '&check;' : b.remaining);
+
+      let statusText = '';
+      if (isUnlimited) {
+        statusText = 'Unlimited' + (b.used > 0 ? ' &middot; Used ' + b.used + ' time' + (b.used !== 1 ? 's' : '') : '');
+      } else {
+        statusText = b.used + ' of ' + b.total + ' used &middot; ' + b.remaining + ' remaining';
+      }
+
+      let historyHtml = '';
+      if (b.usage_history && b.usage_history.length > 0) {
+        historyHtml = b.usage_history.map(function(h) {
+          return new Date(h.date).toLocaleDateString('en-US', {month:'short', day:'numeric'}) + (h.notes ? ' - ' + h.notes : '');
+        }).join(' &middot; ');
+      }
+
+      html += '<li class="mem-check-item">';
+      html += '<div class="mem-check-icon ' + iconClass + '">' + iconText + '</div>';
+      html += '<div class="mem-check-info">';
+      html += '<div class="mem-check-name">' + b.name + '</div>';
+      html += '<div class="mem-check-status">' + statusText + '</div>';
+      if (historyHtml) html += '<div class="mem-check-history">' + historyHtml + '</div>';
+      html += '</div>';
+      html += '<div class="mem-check-actions">';
+      if (!allUsed || isUnlimited) {
+        html += '<button class="action-btn" style="flex:0;padding:3px 8px;font-size:10px;border-radius:8px" onclick="recordBenefitUsage(\'' + b.key + '\',\'' + b.name.replace(/'/g,'') + '\')">Record Use</button>';
+      }
+      html += '</div>';
+      html += '</li>';
+    });
+    html += '</ul>';
+    html += '</div>';
+  }
+
+  container.innerHTML = html;
+}
+
+async function assignMemTier() {
+  if (!memSelectedPatient) return;
+  const tierKey = document.getElementById('mem-tier-select').value;
+  if (!tierKey) { showToast('Select a tier', 'error'); return; }
+
+  await apiFetch('/memberships/assign', {
+    method: 'POST',
+    body: JSON.stringify({
+      patient_id: memSelectedPatient.id,
+      patient_name: memSelectedPatient.name,
+      tier_key: tierKey,
+      start_date: new Date().toISOString(),
+    }),
+  });
+  showToast(memSelectedPatient.name + ' assigned to ' + tierKey);
+  await renderMemContent();
+}
+
+async function recordBenefitUsage(benefitKey, benefitName) {
+  if (!memSelectedPatient) return;
+  await apiFetch('/memberships/usage', {
+    method: 'POST',
+    body: JSON.stringify({
+      patient_id: memSelectedPatient.id,
+      benefit_key: benefitKey,
+      used_date: new Date().toISOString(),
+    }),
+  });
+  showToast('Recorded: ' + benefitName);
+  await renderMemContent();
+}
+
+async function seedMembershipTiers() {
+  await apiFetch('/memberships/tiers/seed', { method: 'POST' });
+  showToast('Membership tiers configured');
+  await loadMemTiers();
+}
+
+async function openStripeCheckout() {
+  if (!memSelectedPatient) return;
+  const tierKey = document.getElementById('mem-tier-select').value;
+  const tier = memTiers.find(function(t) { return t.key === tierKey; });
+  if (!tier || !tier.stripe_price_id) {
+    showToast('No Stripe price ID configured for this tier. Set it in the tier config.', 'error');
+    return;
+  }
+  const r = await apiFetch('/stripe/checkout', {
+    method: 'POST',
+    body: JSON.stringify({
+      mode: 'subscription',
+      price_id: tier.stripe_price_id,
+      patient_id: memSelectedPatient.id,
+      patient_name: memSelectedPatient.name,
+    }),
+  });
+  if (r.checkout_url) {
+    window.open(r.checkout_url, '_blank');
+  } else {
+    showToast(r.error || 'Stripe error', 'error');
   }
 }
 

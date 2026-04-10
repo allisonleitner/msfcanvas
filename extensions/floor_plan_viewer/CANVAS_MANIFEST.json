@@ -1,6 +1,6 @@
 {
     "sdk_version": "0.112.0",
-    "plugin_version": "0.18.2",
+    "plugin_version": "0.19.0",
     "name": "floor_plan_viewer",
     "description": "Interactive floor plan viewer with room & resource scheduling, Canvas calendar integration, and equipment management.",
     "url_permissions": [
@@ -14,6 +14,10 @@
         },
         {
             "url": "https://api.ws.sonos.com/*",
+            "permissions": []
+        },
+        {
+            "url": "https://api.stripe.com/*",
             "permissions": []
         }
     ],
@@ -52,7 +56,8 @@
         "FHIR_CLIENT_SECRET",
         "SONOS_CLIENT_ID",
         "SONOS_CLIENT_SECRET",
-        "SONOS_REFRESH_TOKEN"
+        "SONOS_REFRESH_TOKEN",
+        "STRIPE_SECRET_KEY"
     ],
     "tags": {},
     "references": [],

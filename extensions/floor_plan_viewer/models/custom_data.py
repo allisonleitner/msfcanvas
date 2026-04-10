@@ -97,6 +97,71 @@ class RoomAssignment(CustomModel):
         return f"{self.room_key}: {self.patient_name} ({self.status})"
 
 
+class MembershipTier(CustomModel):
+    """Defines a membership tier (Foundation, Premier) with benefits."""
+
+    key: Any = CharField(max_length=50)  # "foundation", "premier"
+    name: Any = CharField(max_length=100)
+    description: Any = TextField(blank=True, default="")
+    price_cents: Any = IntegerField(default=0)  # annual price in cents
+    benefits: Any = JSONField(default=list)  # [{key, name, quantity, period}]
+    stripe_price_id: Any = CharField(max_length=256, blank=True, default="")
+    active: Any = BooleanField(default=True)
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(fields=["key"], name="uq_fp_membership_tier_key"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.key})"
+
+
+class PatientMembership(CustomModel):
+    """Links a patient to a membership tier with dates and Stripe info."""
+
+    patient_id: Any = CharField(max_length=256, db_index=True)
+    patient_name: Any = CharField(max_length=256)
+    tier_key: Any = CharField(max_length=50)
+    start_date: Any = DateTimeField()
+    renewal_date: Any = DateTimeField(null=True, blank=True)
+    end_date: Any = DateTimeField(null=True, blank=True)
+    status: Any = CharField(max_length=50, default="active")  # active, expired, cancelled
+    stripe_customer_id: Any = CharField(max_length=256, blank=True, default="")
+    stripe_subscription_id: Any = CharField(max_length=256, blank=True, default="")
+    notes: Any = TextField(blank=True, default="")
+    active: Any = BooleanField(default=True)
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(fields=["patient_id", "tier_key"], name="uq_fp_patient_membership"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.patient_name}: {self.tier_key} ({self.status})"
+
+
+class BenefitUsage(CustomModel):
+    """Tracks when a patient uses a membership benefit."""
+
+    patient_id: Any = CharField(max_length=256, db_index=True)
+    benefit_key: Any = CharField(max_length=100)  # matches benefit key in tier
+    used_date: Any = DateTimeField()
+    appointment_id: Any = CharField(max_length=256, blank=True, default="")
+    notes: Any = TextField(blank=True, default="")
+    recorded_by: Any = ForeignKey(
+        Staff,
+        to_field="dbid",
+        on_delete=DO_NOTHING,
+        related_name="%(app_label)s_benefit_usages",
+        null=True,
+        blank=True,
+    )
+
+    def __str__(self) -> str:
+        return f"{self.patient_id}: {self.benefit_key} on {self.used_date}"
+
+
 class StaffConfig(CustomModel):
     """Per-staff scheduling configuration (schedulable flag, default room)."""
 
