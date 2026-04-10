@@ -1187,6 +1187,80 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
             })
         return [JSONResponse({"patients": result}, status_code=HTTPStatus.OK)]
 
+    @api.get("/patients/<patient_id>/appointments")
+    def get_patient_appointments(self) -> list[Response | Effect]:
+        """Return all appointments for a patient: today, past, and future."""
+        from canvas_sdk.v1.data.patient import Patient
+
+        patient_id = self.request.path_params["patient_id"]
+        today_start, today_end = self._today_range()
+
+        # Get patient info
+        patient = Patient.objects.filter(id=patient_id).first()
+        patient_info = {}
+        if patient:
+            patient_info = {
+                "id": str(patient.id),
+                "name": f"{patient.first_name} {patient.last_name}".strip(),
+                "dob": str(patient.birth_date) if patient.birth_date else "",
+            }
+
+        def format_appt(appt: Appointment) -> dict:
+            provider_name = ""
+            if appt.provider:
+                provider_name = (
+                    getattr(appt.provider, "credentialed_name", "")
+                    or f"{appt.provider.first_name} {appt.provider.last_name}".strip()
+                )
+            duration = appt.duration_minutes or 30
+            end_time = appt.start_time + timedelta(minutes=duration)
+            return {
+                "id": str(appt.id),
+                "provider_name": provider_name,
+                "provider_id": str(appt.provider.id) if appt.provider else "",
+                "start_time": appt.start_time.isoformat(),
+                "end_time": end_time.isoformat(),
+                "duration_minutes": duration,
+                "status": getattr(appt, "status", ""),
+            }
+
+        base_qs = Appointment.objects.filter(
+            patient__id=patient_id,
+        ).select_related("provider").order_by("start_time")
+
+        today = [format_appt(a) for a in base_qs.filter(start_time__gte=today_start, start_time__lt=today_end)]
+        past = [format_appt(a) for a in base_qs.filter(start_time__lt=today_start).order_by("-start_time")[:10]]
+        future = [format_appt(a) for a in base_qs.filter(start_time__gte=today_end)[:10]]
+
+        # Also get room assignments for today
+        from floor_plan_viewer.models.custom_data import RoomAssignment
+        today_assignments = RoomAssignment.objects.filter(
+            patient_id=patient_id,
+            start_time__lt=today_end,
+            end_time__gt=today_start,
+        ).exclude(status="cancelled").order_by("start_time")
+
+        assign_list = [
+            {
+                "id": a.pk,
+                "room_key": a.room_key,
+                "appointment_type": a.appointment_type,
+                "start_time": a.start_time.isoformat(),
+                "end_time": a.end_time.isoformat(),
+                "status": a.status,
+                "resource_keys": a.resource_keys or [],
+            }
+            for a in today_assignments
+        ]
+
+        return [JSONResponse({
+            "patient": patient_info,
+            "today": today,
+            "past": past,
+            "future": future,
+            "assignments": assign_list,
+        }, status_code=HTTPStatus.OK)]
+
     # ------------------------------------------------------------------
     # Multi-segment booking
     # ------------------------------------------------------------------

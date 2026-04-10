@@ -1416,11 +1416,10 @@ function renderSchedule() {
 }
 
 // === Appointment Detail (sidebar) ===
-function showApptDetail(blockIdx) {
+async function showApptDetail(blockIdx) {
   const blk = window._calBlocks[blockIdx];
   if (!blk) return;
 
-  // Look up full objects
   const appt = appointments.find(a => a.id === blk.appointment_id);
   const assign = assignments.find(a =>
     (a.appointment_id === blk.appointment_id || a.id === blk.appt_id) && a.status !== 'cancelled'
@@ -1442,71 +1441,128 @@ function showApptDetail(blockIdx) {
   const isFulfilled = apptStatus.includes('fulfil');
   const isCancelled = apptStatus.includes('cancel');
   const resKeys = blk.resource_keys || (assign ? assign.resource_keys : []) || [];
-  // Get the real FHIR appointment ID (not manual- fallback IDs)
   const rawApptId = blk.appointment_id || (assign ? assign.appointment_id : '') || (appt ? appt.id : '');
   const fhirApptId = (rawApptId && !rawApptId.startsWith('manual-')) ? rawApptId : (appt ? appt.id : '');
   const assignId = assign ? assign.id : null;
-  console.log('[floor_plan] showApptDetail:', {fhirApptId, assignId, rawApptId, blk});
+  const patientId = appt ? appt.patient_id : (assign ? assign.patient_id : '');
 
   // Status badge
-  let statusHtml = '';
-  if (isCancelled) statusHtml = '<div class="detail-status" style="background:var(--blush-light);color:var(--blush-dark)">Cancelled</div>';
-  else if (isFulfilled) statusHtml = '<div class="detail-status" style="background:var(--sand);color:var(--taupe)">Complete</div>';
-  else if (isCheckedIn) statusHtml = '<div class="detail-status available">Checked In</div>';
-  else if (assignStatus === 'in-progress') statusHtml = '<div class="detail-status occupied">In Session</div>';
-  else statusHtml = '<div class="detail-status partial">Scheduled</div>';
-
-  // Room dropdown
-  const bookableRooms = Object.values(rooms).filter(r => r.bookable);
-  const roomOpts = bookableRooms.map(r => `<option value="${r.key}" ${r.key === currentRoom ? 'selected' : ''}>${r.name}</option>`).join('');
+  let statusBadge = '';
+  if (isCancelled) statusBadge = '<div class="detail-status" style="background:var(--blush-light);color:var(--blush-dark)">Cancelled</div>';
+  else if (isFulfilled) statusBadge = '<div class="detail-status" style="background:var(--sand);color:var(--taupe)">Complete</div>';
+  else if (isCheckedIn) statusBadge = '<div class="detail-status available">Checked In</div>';
+  else if (assignStatus === 'in-progress') statusBadge = '<div class="detail-status occupied">In Session</div>';
+  else statusBadge = '<div class="detail-status partial">Scheduled</div>';
 
   // Resource tags
   let resHtml = '';
   if (resKeys.length) {
-    resHtml = '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">' +
+    resHtml = '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">' +
       resKeys.map(rk => { const r = resources.find(x => x.key === rk); return '<span class="equipment-tag">' + (r ? r.name : rk) + '</span>'; }).join('') + '</div>';
   }
 
   // Action buttons
+  const bookableRooms = Object.values(rooms).filter(r => r.bookable);
+  const roomOpts = bookableRooms.map(r => '<option value="' + r.key + '"' + (r.key === currentRoom ? ' selected' : '') + '>' + r.name + '</option>').join('');
+
   let actionsHtml = '<div class="action-row" style="flex-wrap:wrap">';
   if (!isFulfilled && !isCancelled) {
-    if (!isCheckedIn && fhirApptId) {
-      actionsHtml += '<button class="action-btn primary" onclick="checkinAppt(\'' + fhirApptId + '\')">Check In</button>';
-    }
-    if (isCheckedIn && fhirApptId) {
-      actionsHtml += '<button class="action-btn" onclick="checkoutAppt(\'' + fhirApptId + '\')">Check Out</button>';
-    }
-    if (assignId && assignStatus === 'scheduled') {
-      actionsHtml += '<button class="action-btn" onclick="updateStatus(' + assignId + ',\'in-progress\')">Start Session</button>';
-    }
-    if (assignId && assignStatus === 'in-progress') {
-      actionsHtml += '<button class="action-btn" onclick="updateStatus(' + assignId + ',\'completed\')">Complete</button>';
-    }
-    // Cancel -- works for FHIR appointments, assignments, or both
+    if (!isCheckedIn && fhirApptId) actionsHtml += '<button class="action-btn primary" onclick="checkinAppt(\'' + fhirApptId + '\')">Check In</button>';
+    if (isCheckedIn && fhirApptId) actionsHtml += '<button class="action-btn" onclick="checkoutAppt(\'' + fhirApptId + '\')">Check Out</button>';
+    if (assignId && assignStatus === 'scheduled') actionsHtml += '<button class="action-btn" onclick="updateStatus(' + assignId + ',\'in-progress\')">Start</button>';
+    if (assignId && assignStatus === 'in-progress') actionsHtml += '<button class="action-btn" onclick="updateStatus(' + assignId + ',\'completed\')">Complete</button>';
     actionsHtml += '<button class="action-btn danger" onclick="cancelAppt(\'' + fhirApptId + '\',' + (assignId || 'null') + ')">Cancel</button>';
   }
   actionsHtml += '</div>';
 
-  // Room change
-  let roomChangeHtml = '';
+  let roomHtml = '';
   if (assignId) {
-    roomChangeHtml = '<div style="margin-top:12px"><div class="section-title">Change Room</div><select class="form-input" style="font-size:12px" onchange="changeAssignmentRoom(' + assignId + ',this.value)"><option value="">-- Select --</option>' + roomOpts + '</select></div>';
-  } else if (fhirApptId) {
-    roomChangeHtml = '<div style="margin-top:12px"><div class="section-title">Assign Room</div><select class="form-input" style="font-size:12px" onchange="schedAssignRoom(this.value,\'' + fhirApptId + '\',\'' + pName.replace(/'/g,'') + '\',\'' + provName.replace(/'/g,'') + '\',\'' + startTime + '\',\'' + endTime + '\')"><option value="">-- Select --</option>' + roomOpts + '</select></div>';
+    roomHtml = '<div style="margin-top:8px"><select class="form-input" style="font-size:12px" onchange="changeAssignmentRoom(' + assignId + ',this.value)"><option value="">Change room...</option>' + roomOpts + '</select></div>';
   }
 
-  detail.innerHTML =
-    '<div class="detail-header">' +
-      '<div class="detail-room-name">' + pName + '</div>' +
-      '<div class="detail-room-type">' + provName + (apptType ? ' &middot; ' + apptType : '') + '</div>' +
-      statusHtml + resHtml +
-    '</div>' +
-    '<div style="margin-bottom:12px">' +
-      '<div class="section-title">Time</div>' +
-      '<div style="font-size:14px;color:var(--navy)">' + formatTime(startTime) + ' - ' + formatTime(endTime) + '</div>' +
-      '<div style="font-size:12px;color:var(--taupe);margin-top:2px">Room: ' + currentRoomName + '</div>' +
-    '</div>' +
-    actionsHtml + roomChangeHtml;
+  // Chart link
+  const chartLink = patientId ? '<a href="/patient/' + patientId + '" target="_top" style="color:var(--sage-dark);text-decoration:underline;font-size:12px;display:inline-block;margin-top:4px">Open Chart &rarr;</a>' : '';
+
+  // Start building HTML - selected appointment section
+  let html = '<div class="detail-header">' +
+    '<div class="detail-room-name">' + pName + '</div>' +
+    chartLink +
+    '<div class="detail-room-type" style="margin-top:4px">' + provName + (apptType ? ' &middot; ' + apptType : '') + '</div>' +
+    statusBadge + resHtml +
+  '</div>' +
+  '<div style="margin-bottom:10px">' +
+    '<div style="font-size:14px;color:var(--navy)">' + formatTime(startTime) + ' - ' + formatTime(endTime) + '</div>' +
+    '<div style="font-size:12px;color:var(--taupe)">Room: ' + currentRoomName + '</div>' +
+  '</div>' +
+  actionsHtml + roomHtml;
+
+  // Fetch full patient appointment data
+  if (patientId) {
+    html += '<div id="patientApptTabs" style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">' +
+      '<div style="display:flex;gap:0;margin-bottom:10px">' +
+        '<button class="btn active" style="border-radius:8px 0 0 8px;font-size:11px;padding:5px 12px" onclick="showPatientTab(\'today\')">Today</button>' +
+        '<button class="btn" style="border-radius:0;font-size:11px;padding:5px 12px" onclick="showPatientTab(\'past\')">Past</button>' +
+        '<button class="btn" style="border-radius:0 8px 8px 0;font-size:11px;padding:5px 12px" onclick="showPatientTab(\'future\')">Future</button>' +
+      '</div>' +
+      '<div id="patientTabContent"><div style="color:var(--taupe);font-size:12px;font-style:italic">Loading...</div></div>' +
+    '</div>';
+  }
+
+  detail.innerHTML = html;
+
+  // Load patient appointments async
+  if (patientId) {
+    try {
+      const data = await apiFetch('/patients/' + patientId + '/appointments');
+      window._patientApptData = data;
+      showPatientTab('today');
+    } catch(e) {
+      document.getElementById('patientTabContent').innerHTML = '<div style="color:var(--taupe);font-size:12px">Could not load history</div>';
+    }
+  }
+}
+
+function showPatientTab(tab) {
+  const data = window._patientApptData;
+  if (!data) return;
+  const container = document.getElementById('patientTabContent');
+  if (!container) return;
+
+  // Update tab buttons
+  document.querySelectorAll('#patientApptTabs .btn').forEach(b => b.classList.remove('active'));
+  const tabIdx = {today: 0, past: 1, future: 2};
+  const btns = document.querySelectorAll('#patientApptTabs .btn');
+  if (btns[tabIdx[tab]]) btns[tabIdx[tab]].classList.add('active');
+
+  const appts = data[tab] || [];
+  const assigns = data.assignments || [];
+
+  if (!appts.length) {
+    container.innerHTML = '<div style="color:var(--taupe);font-size:12px;font-style:italic;padding:10px 0">No ' + tab + ' appointments</div>';
+    return;
+  }
+
+  container.innerHTML = appts.map(a => {
+    const status = (a.status || '').toLowerCase();
+    let badge = '';
+    if (status.includes('check')) badge = '<span style="background:var(--sage-light);color:var(--sage-dark);padding:1px 6px;border-radius:4px;font-size:9px;font-weight:600;margin-left:6px">Checked In</span>';
+    else if (status.includes('fulfil')) badge = '<span style="background:var(--sand);color:var(--taupe);padding:1px 6px;border-radius:4px;font-size:9px;font-weight:600;margin-left:6px">Complete</span>';
+    else if (status.includes('cancel')) badge = '<span style="background:var(--blush-light);color:var(--blush-dark);padding:1px 6px;border-radius:4px;font-size:9px;font-weight:600;margin-left:6px">Cancelled</span>';
+
+    // Find matching room assignment
+    const matchAssign = assigns.find(x => x.appointment_id === a.id || (tab === 'today' && x.start_time === a.start_time));
+    const roomName = matchAssign ? (rooms[matchAssign.room_key]?.name || matchAssign.room_key) : '';
+    const resNames = matchAssign ? (matchAssign.resource_keys || []).map(rk => { const r = resources.find(x => x.key === rk); return r ? r.name : rk; }) : [];
+
+    const dateStr = tab !== 'today' ? new Date(a.start_time).toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ' &middot; ' : '';
+
+    return '<div style="padding:8px 0;border-bottom:1px solid var(--border)">' +
+      '<div style="font-size:11px;color:var(--charcoal);font-weight:600">' + dateStr + formatTime(a.start_time) + ' - ' + formatTime(a.end_time) + badge + '</div>' +
+      '<div style="font-size:12px;color:var(--navy);margin-top:1px">' + (a.provider_name || '') + '</div>' +
+      (roomName ? '<div style="font-size:11px;color:var(--taupe)">' + roomName + '</div>' : '') +
+      (resNames.length ? '<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px">' + resNames.map(n => '<span class="equipment-tag" style="font-size:9px;padding:1px 5px">' + n + '</span>').join('') + '</div>' : '') +
+    '</div>';
+  }).join('');
 }
 
 async function changeAssignmentRoom(assignId, newRoomKey) {
