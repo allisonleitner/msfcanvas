@@ -45,9 +45,9 @@
   .legend{padding:12px 24px;border-bottom:1px solid var(--border);display:flex;gap:14px;flex-wrap:wrap}
   .legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--charcoal);font-weight:500}
   .legend-dot{width:10px;height:10px;border-radius:50%}
-  .legend-dot.available{background:var(--sage);box-shadow:0 0 0 2px var(--sage-light)}
-  .legend-dot.occupied{background:var(--blush);box-shadow:0 0 0 2px var(--blush-light)}
-  .legend-dot.partial{background:var(--gold);box-shadow:0 0 0 2px var(--gold-light)}
+  .legend-dot.available{background:var(--eucalyptus);box-shadow:0 0 0 2px var(--sage-light)}
+  .legend-dot.occupied{background:var(--clay);box-shadow:0 0 0 2px var(--blush-light)}
+  .legend-dot.partial{background:var(--latte);box-shadow:0 0 0 2px var(--linen)}
   .legend-dot.non-bookable{background:var(--taupe-light);box-shadow:0 0 0 2px var(--sand)}
   .legend-dot.waiting{background:var(--navy);box-shadow:0 0 0 2px #d0d3db}
 
@@ -131,17 +131,17 @@
   .room{cursor:pointer;transition:all .25s}
   .room rect{transition:all .25s}
   .room:hover rect{filter:brightness(.92)}
-  .room.selected rect{stroke:#fff!important;stroke-width:4!important;filter:brightness(.88)}
+  .room.selected rect{stroke:var(--ivory)!important;stroke-width:3!important;stroke-opacity:1!important;filter:brightness(.9) drop-shadow(0 0 10px rgba(35,32,29,.25))!important}
   .room-label{font-family:'Domaine Display','Cormorant Garamond',Georgia,serif;font-size:13px;fill:var(--navy);font-weight:400;pointer-events:none;text-anchor:middle;letter-spacing:.5px}
   .room-label.fp-white{fill:#fff}
   .room-sublabel{font-size:7px;fill:rgba(255,255,255,.7);pointer-events:none;text-anchor:middle;font-family:'Inter',sans-serif}
   .room-count{font-size:9px;pointer-events:none;text-anchor:middle;font-family:'Inter',sans-serif;font-weight:600;fill:#fff}
-  /* Status shown via border on the fixed-color rooms */
-  .room-available rect{stroke:#2ea043;stroke-width:3}
-  .room-occupied rect{stroke:#e63946;stroke-width:3}
-  .room-partial rect{stroke:#d4a017;stroke-width:3}
+  /* Status shown via subtle inset border + soft glow using brand colors */
+  .room-available rect{stroke:var(--evergreen);stroke-width:2.5;stroke-opacity:.5;filter:drop-shadow(0 0 6px rgba(91,119,105,.3))}
+  .room-occupied rect{stroke:var(--clay);stroke-width:2.5;stroke-opacity:.6;filter:drop-shadow(0 0 6px rgba(198,108,77,.35))}
+  .room-partial rect{stroke:var(--latte);stroke-width:2.5;stroke-opacity:.6;filter:drop-shadow(0 0 6px rgba(175,159,144,.35))}
   .room-non-bookable rect{stroke:none;stroke-width:0}
-  .room-waiting rect{stroke:var(--navy);stroke-width:3}
+  .room-waiting rect{stroke:var(--warm-gray);stroke-width:2;stroke-opacity:.4;filter:drop-shadow(0 0 6px rgba(35,32,29,.2))}
   .wall-fill{fill:var(--warm-white);stroke:var(--border);stroke-width:1}
   @keyframes softPulse{0%,100%{opacity:1}50%{opacity:.5}}
   .room-occupied .pulse-dot{animation:softPulse 3s ease-in-out infinite}
