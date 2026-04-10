@@ -1667,19 +1667,31 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
         if not patient_id or not tier_key:
             return [JSONResponse({"error": "patient_id and tier_key required"}, status_code=HTTPStatus.BAD_REQUEST)]
 
-        PatientMembership.objects.update_or_create(
-            patient_id=patient_id,
-            tier_key=tier_key,
-            defaults={
+        start_date = body.get("start_date", "") or datetime.now(timezone.utc).isoformat()
+        renewal_date = body.get("renewal_date", "") or None
+
+        # Try to find existing, otherwise create
+        existing = PatientMembership.objects.filter(patient_id=patient_id, active=True).first()
+        if existing:
+            update_fields = {
+                "tier_key": tier_key,
                 "patient_name": body.get("patient_name", ""),
-                "start_date": body.get("start_date", datetime.now(timezone.utc).isoformat()),
-                "renewal_date": body.get("renewal_date", ""),
+                "start_date": start_date,
                 "status": body.get("status", "active"),
-                "stripe_customer_id": body.get("stripe_customer_id", ""),
-                "stripe_subscription_id": body.get("stripe_subscription_id", ""),
-                "active": True,
-            },
-        )
+            }
+            if renewal_date:
+                update_fields["renewal_date"] = renewal_date
+            PatientMembership.objects.filter(pk=existing.pk).update(**update_fields)
+        else:
+            PatientMembership.objects.create(
+                patient_id=patient_id,
+                tier_key=tier_key,
+                patient_name=body.get("patient_name", ""),
+                start_date=start_date,
+                renewal_date=renewal_date,
+                status=body.get("status", "active"),
+                active=True,
+            )
         return [JSONResponse({"success": True}, status_code=HTTPStatus.CREATED)]
 
     @api.post("/memberships/usage")
