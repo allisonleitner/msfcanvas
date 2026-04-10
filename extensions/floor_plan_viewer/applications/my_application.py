@@ -1592,6 +1592,49 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
         )
         return [JSONResponse({"success": True}, status_code=HTTPStatus.OK)]
 
+    @api.post("/memberships/tiers/create")
+    def create_membership_tier(self) -> list[Response | Effect]:
+        from floor_plan_viewer.models.custom_data import MembershipTier
+
+        try:
+            body = json.loads(self.request.body)
+        except (json.JSONDecodeError, TypeError):
+            return [JSONResponse({"error": "Invalid JSON"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+        key = body.get("key", "")
+        if not key:
+            return [JSONResponse({"error": "key is required"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+        if MembershipTier.objects.filter(key=key).exists():
+            # Update existing
+            MembershipTier.objects.filter(key=key).update(
+                name=body.get("name", key),
+                description=body.get("description", ""),
+                price_cents=body.get("price_cents", 0),
+                benefits=body.get("benefits", []),
+                stripe_price_id=body.get("stripe_price_id", ""),
+                active=True,
+            )
+        else:
+            MembershipTier.objects.create(
+                key=key,
+                name=body.get("name", key),
+                description=body.get("description", ""),
+                price_cents=body.get("price_cents", 0),
+                benefits=body.get("benefits", []),
+                stripe_price_id=body.get("stripe_price_id", ""),
+                active=True,
+            )
+        return [JSONResponse({"success": True}, status_code=HTTPStatus.OK)]
+
+    @api.delete("/memberships/tiers/<key>")
+    def delete_membership_tier(self) -> list[Response | Effect]:
+        from floor_plan_viewer.models.custom_data import MembershipTier
+
+        key = self.request.path_params["key"]
+        MembershipTier.objects.filter(key=key).update(active=False)
+        return [JSONResponse({"success": True}, status_code=HTTPStatus.OK)]
+
     @api.get("/memberships/patient/<patient_id>")
     def get_patient_membership(self) -> list[Response | Effect]:
         """Get a patient's membership, benefits checklist, and usage."""
@@ -1668,7 +1711,10 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
             return [JSONResponse({"error": "patient_id and tier_key required"}, status_code=HTTPStatus.BAD_REQUEST)]
 
         start_date = body.get("start_date", "") or datetime.now(timezone.utc).isoformat()
-        renewal_date = body.get("renewal_date", "") or None
+        # Auto-set renewal to 1 calendar year from start
+        start_dt = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+        auto_renewal = start_dt.replace(year=start_dt.year + 1)
+        renewal_date = body.get("renewal_date", "") or auto_renewal.isoformat()
 
         # Try to find existing, otherwise create
         existing = PatientMembership.objects.filter(patient_id=patient_id, active=True).first()
@@ -1679,8 +1725,7 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                 "start_date": start_date,
                 "status": body.get("status", "active"),
             }
-            if renewal_date:
-                update_fields["renewal_date"] = renewal_date
+            update_fields["renewal_date"] = renewal_date
             PatientMembership.objects.filter(pk=existing.pk).update(**update_fields)
         else:
             PatientMembership.objects.create(

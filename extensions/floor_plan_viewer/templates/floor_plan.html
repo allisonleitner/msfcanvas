@@ -489,6 +489,18 @@
           </div>
         </div>
 
+        <!-- Membership Tiers -->
+        <div class="config-section">
+          <div class="config-section-header">
+            <div class="config-section-title">Membership Tiers</div>
+            <div style="display:flex;gap:6px">
+              <button class="btn" onclick="seedMembershipTiers()">Seed Defaults</button>
+              <button class="btn" onclick="openTierForm()">+ Add Tier</button>
+            </div>
+          </div>
+          <div id="tierCards" style="display:flex;gap:16px;flex-wrap:wrap"></div>
+        </div>
+
         <!-- Staff Configuration -->
         <div class="config-section">
           <div class="config-section-header">
@@ -528,6 +540,36 @@
           </table>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tier Form Modal -->
+<div class="form-overlay" id="tierFormOverlay">
+  <div class="form-modal" style="width:600px;max-height:85vh">
+    <div class="form-modal-header"><h2 id="tierFormTitle">Add Membership Tier</h2><button class="modal-close" onclick="closeTierForm()">&times;</button></div>
+    <div class="form-modal-body">
+      <input type="hidden" id="tf-editing-key">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Tier Name</label><input class="form-input" id="tf-name" placeholder="e.g. Foundation"></div>
+        <div class="form-group"><label class="form-label">Key</label><input class="form-input" id="tf-key" placeholder="e.g. foundation"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Description</label><input class="form-input" id="tf-desc" placeholder="Short description"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Annual Price ($)</label><input class="form-input" id="tf-price" type="number" step="0.01" min="0" placeholder="0.00"></div>
+        <div class="form-group"><label class="form-label">Stripe Price ID</label><input class="form-input" id="tf-stripe" placeholder="price_..."></div>
+      </div>
+      <div style="margin-top:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <label class="form-label" style="margin:0">Benefits</label>
+          <button class="btn" style="padding:3px 10px;font-size:11px" onclick="addTierBenefit()">+ Add Benefit</button>
+        </div>
+        <div id="tf-benefits"></div>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeTierForm()">Cancel</button>
+      <button class="btn active" onclick="saveTier()">Save Tier</button>
     </div>
   </div>
 </div>
@@ -714,6 +756,7 @@ async function refreshData() {
   try { updateFloorPlan(); } catch(e) { console.warn('updateFloorPlan error:', e); }
   try { renderResourceTable(); } catch(e) { console.warn('renderResourceTable error:', e); }
   try { renderStaffTable(); } catch(e) { console.warn('renderStaffTable error:', e); }
+  try { await loadMemTiers(); renderTierCards(); } catch(e) { console.warn('tierCards error:', e); }
   try { renderSchedule(); } catch(e) { console.warn('renderSchedule error:', e); }
   try { renderSpeakerMapTable(); } catch(e) { console.warn('renderSpeakerMapTable:', e); }
   try { renderPresetTable(); } catch(e) { console.warn('renderPresetTable:', e); }
@@ -2006,6 +2049,136 @@ async function seedMembershipTiers() {
   await apiFetch('/memberships/tiers/seed', { method: 'POST' });
   showToast('Membership tiers configured');
   await loadMemTiers();
+  renderTierCards();
+}
+
+// === Tier Configuration (Configure tab) ===
+function renderTierCards() {
+  const container = document.getElementById('tierCards');
+  if (!container) return;
+  if (!memTiers.length) {
+    container.innerHTML = '<div style="color:var(--taupe);font-style:italic;padding:20px">No tiers configured. Click Seed Defaults or + Add Tier.</div>';
+    return;
+  }
+  container.innerHTML = memTiers.map(function(t) {
+    const price = t.price_cents > 0 ? '$' + (t.price_cents / 100).toFixed(2) + '/year' : 'Price not set';
+    const benefitCount = (t.benefits || []).length;
+    return '<div class="mem-card" style="flex:1;min-width:300px;max-width:420px">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+        '<span class="mem-tier-badge ' + t.key + '">' + t.name + '</span>' +
+        '<div style="display:flex;gap:4px">' +
+          '<button class="table-btn" onclick="openTierForm(\'' + t.key + '\')">Edit</button>' +
+          '<button class="table-btn" style="color:var(--clay);border-color:var(--clay)" onclick="if(confirm(\'Delete ' + t.name + '?\'))deleteTier(\'' + t.key + '\')">Delete</button>' +
+        '</div>' +
+      '</div>' +
+      '<div style="font-size:12px;color:var(--taupe);margin-bottom:6px">' + (t.description || '') + '</div>' +
+      '<div style="font-size:13px;font-weight:600;color:var(--navy)">' + price + '</div>' +
+      (t.stripe_price_id ? '<div style="font-size:10px;color:var(--latte);margin-top:2px">Stripe: ' + t.stripe_price_id + '</div>' : '') +
+      '<div style="font-size:11px;color:var(--taupe);margin-top:8px;border-top:1px solid var(--border);padding-top:8px">' + benefitCount + ' benefit' + (benefitCount !== 1 ? 's' : '') + ' configured</div>' +
+      '<ul style="list-style:none;padding:0;margin-top:4px">' +
+        (t.benefits || []).map(function(b) {
+          var qty = b.quantity === 0 ? 'Unlimited' : b.quantity + '/' + b.period;
+          return '<li style="font-size:11px;color:var(--charcoal);padding:2px 0">' + b.name + ' <span style="color:var(--latte)">(' + qty + ')</span></li>';
+        }).join('') +
+      '</ul>' +
+    '</div>';
+  }).join('');
+}
+
+let tierBenefitCount = 0;
+
+function openTierForm(editKey) {
+  document.getElementById('tierFormOverlay').classList.add('visible');
+  tierBenefitCount = 0;
+  document.getElementById('tf-benefits').innerHTML = '';
+
+  if (editKey) {
+    var t = memTiers.find(function(x) { return x.key === editKey; });
+    if (!t) return;
+    document.getElementById('tierFormTitle').textContent = 'Edit ' + t.name;
+    document.getElementById('tf-editing-key').value = t.key;
+    document.getElementById('tf-name').value = t.name;
+    document.getElementById('tf-key').value = t.key;
+    document.getElementById('tf-desc').value = t.description || '';
+    document.getElementById('tf-price').value = t.price_cents > 0 ? (t.price_cents / 100).toFixed(2) : '';
+    document.getElementById('tf-stripe').value = t.stripe_price_id || '';
+    (t.benefits || []).forEach(function(b) { addTierBenefit(b); });
+  } else {
+    document.getElementById('tierFormTitle').textContent = 'Add Membership Tier';
+    document.getElementById('tf-editing-key').value = '';
+    document.getElementById('tf-name').value = '';
+    document.getElementById('tf-key').value = '';
+    document.getElementById('tf-desc').value = '';
+    document.getElementById('tf-price').value = '';
+    document.getElementById('tf-stripe').value = '';
+  }
+}
+
+function closeTierForm() { document.getElementById('tierFormOverlay').classList.remove('visible'); }
+
+function addTierBenefit(existing) {
+  tierBenefitCount++;
+  var n = tierBenefitCount;
+  var bKey = existing ? existing.key : '';
+  var bName = existing ? existing.name : '';
+  var bQty = existing ? existing.quantity : 1;
+  var bPeriod = existing ? existing.period : 'year';
+
+  var html = '<div class="book-segment" id="tf-ben-' + n + '" style="padding:8px 10px;margin-bottom:6px">' +
+    '<div style="display:flex;gap:6px;align-items:center">' +
+      '<input class="book-seg-input" style="flex:2" id="tfb-' + n + '-name" placeholder="Benefit name" value="' + bName.replace(/"/g,'') + '">' +
+      '<input class="book-seg-input" style="flex:1;max-width:60px" id="tfb-' + n + '-key" placeholder="key" value="' + bKey + '">' +
+      '<input class="book-seg-input" style="width:50px" id="tfb-' + n + '-qty" type="number" min="0" placeholder="Qty" value="' + bQty + '" title="0 = unlimited">' +
+      '<select class="book-seg-input" style="width:70px" id="tfb-' + n + '-period"><option value="year"' + (bPeriod === 'year' ? ' selected' : '') + '>/ year</option><option value="unlimited"' + (bPeriod === 'unlimited' ? ' selected' : '') + '>unlimited</option></select>' +
+      '<button class="book-segment-remove" onclick="document.getElementById(\'tf-ben-' + n + '\').remove()" style="width:20px;height:20px;font-size:12px">&times;</button>' +
+    '</div>' +
+  '</div>';
+  document.getElementById('tf-benefits').insertAdjacentHTML('beforeend', html);
+}
+
+function getTierBenefits() {
+  var benefits = [];
+  document.querySelectorAll('#tf-benefits .book-segment').forEach(function(el) {
+    var n = el.id.replace('tf-ben-', '');
+    var name = document.getElementById('tfb-' + n + '-name').value.trim();
+    if (!name) return;
+    var key = document.getElementById('tfb-' + n + '-key').value.trim() || name.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    benefits.push({
+      key: key,
+      name: name,
+      quantity: parseInt(document.getElementById('tfb-' + n + '-qty').value || '0', 10),
+      period: document.getElementById('tfb-' + n + '-period').value,
+    });
+  });
+  return benefits;
+}
+
+async function saveTier() {
+  var key = document.getElementById('tf-key').value.trim();
+  var name = document.getElementById('tf-name').value.trim();
+  if (!key || !name) { showToast('Name and key are required', 'error'); return; }
+
+  var body = {
+    key: key,
+    name: name,
+    description: document.getElementById('tf-desc').value,
+    price_cents: Math.round(parseFloat(document.getElementById('tf-price').value || '0') * 100),
+    stripe_price_id: document.getElementById('tf-stripe').value.trim(),
+    benefits: getTierBenefits(),
+  };
+
+  await apiFetch('/memberships/tiers/create', { method: 'POST', body: JSON.stringify(body) });
+  closeTierForm();
+  showToast(name + ' tier saved');
+  await loadMemTiers();
+  renderTierCards();
+}
+
+async function deleteTier(key) {
+  await apiFetch('/memberships/tiers/' + key, { method: 'DELETE' });
+  showToast('Tier deleted');
+  await loadMemTiers();
+  renderTierCards();
 }
 
 async function openStripeCheckout() {
@@ -2360,6 +2533,7 @@ async function init(){
   document.getElementById('assignModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeAssignModal();});
   document.getElementById('resourceFormOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeResourceForm();});
   document.getElementById('bookingOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeBookingModal();});
+  document.getElementById('tierFormOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeTierForm();});
   document.getElementById('presetFormOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closePresetForm();});
   document.getElementById('speakerDiscoveryModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeSpeakerDiscovery();});
   await refreshData();
