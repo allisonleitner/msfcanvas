@@ -1438,7 +1438,7 @@ async function showApptDetail(blockIdx) {
   const apptStatus = (blk.status || (appt ? appt.status : '') || '').toLowerCase();
   const assignStatus = assign ? assign.status : '';
   const isCheckedIn = apptStatus.includes('check');
-  const isFulfilled = apptStatus.includes('fulfil');
+  const isFulfilled = apptStatus.includes('fulfil') || apptStatus === 'completed';
   const isCancelled = apptStatus.includes('cancel');
   const resKeys = blk.resource_keys || (assign ? assign.resource_keys : []) || [];
   const rawApptId = blk.appointment_id || (assign ? assign.appointment_id : '') || (appt ? appt.id : '');
@@ -1544,10 +1544,12 @@ function showPatientTab(tab) {
 
   container.innerHTML = appts.map((a, i) => {
     const status = (a.status || '').toLowerCase();
-    const isActive = !status.includes('fulfil') && !status.includes('cancel');
+    const isDone = status.includes('fulfil') || status === 'completed';
+    const isActive = !isDone && !status.includes('cancel');
     let badge = '';
     if (status.includes('check')) badge = '<span style="background:var(--sage-light);color:var(--sage-dark);padding:1px 6px;border-radius:4px;font-size:9px;font-weight:600;margin-left:6px">Checked In</span>';
-    else if (status.includes('fulfil')) badge = '<span style="background:var(--sand);color:var(--taupe);padding:1px 6px;border-radius:4px;font-size:9px;font-weight:600;margin-left:6px">Complete</span>';
+    else if (status === 'in-progress') badge = '<span style="background:var(--blush-light);color:var(--blush-dark);padding:1px 6px;border-radius:4px;font-size:9px;font-weight:600;margin-left:6px">In Session</span>';
+    else if (isDone) badge = '<span style="background:var(--sand);color:var(--taupe);padding:1px 6px;border-radius:4px;font-size:9px;font-weight:600;margin-left:6px">Complete</span>';
     else if (status.includes('cancel')) badge = '<span style="background:var(--blush-light);color:var(--blush-dark);padding:1px 6px;border-radius:4px;font-size:9px;font-weight:600;margin-left:6px">Cancelled</span>';
 
     const matchAssign = assigns.find(x => x.appointment_id === a.id || (tab === 'today' && x.start_time === a.start_time));

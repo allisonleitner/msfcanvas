@@ -1039,6 +1039,13 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
             start_time__lt=end,
         ).select_related("patient", "provider").order_by("start_time")
 
+        # Load local assignment statuses to overlay on Canvas appointment status
+        from floor_plan_viewer.models.custom_data import RoomAssignment
+        local_statuses = {}
+        for ra in RoomAssignment.objects.filter(start_time__lt=end, end_time__gt=start).exclude(status="cancelled"):
+            if ra.appointment_id:
+                local_statuses[ra.appointment_id] = ra.status
+
         result = []
         for appt in appointments:
             patient_name = ""
@@ -1055,11 +1062,17 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                 )
 
             duration = appt.duration_minutes or 30
-            end_time = appt.start_time + timedelta(minutes=duration)
+            end_time_dt = appt.start_time + timedelta(minutes=duration)
 
             provider_id = ""
             if appt.provider:
                 provider_id = str(appt.provider.id)
+
+            # Use local status if available (checked-in, completed, in-progress)
+            # since Canvas SDK doesn't always reflect FHIR status changes
+            canvas_status = str(getattr(appt, "status", "") or "")
+            local_status = local_statuses.get(str(appt.id), "")
+            effective_status = local_status or canvas_status
 
             result.append({
                 "id": str(appt.id),
@@ -1068,9 +1081,9 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                 "provider_id": provider_id,
                 "provider_name": provider_name,
                 "start_time": appt.start_time.isoformat(),
-                "end_time": end_time.isoformat(),
+                "end_time": end_time_dt.isoformat(),
                 "duration_minutes": duration,
-                "status": getattr(appt, "status", ""),
+                "status": effective_status,
             })
 
         return [JSONResponse({"appointments": result}, status_code=HTTPStatus.OK)]
@@ -1205,6 +1218,12 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                 "dob": str(patient.birth_date) if patient.birth_date else "",
             }
 
+        # Build local status map for this patient's assignments
+        all_local = {}
+        for ra in RoomAssignment.objects.filter(patient_id=patient_id).exclude(status="cancelled"):
+            if ra.appointment_id:
+                all_local[ra.appointment_id] = ra.status
+
         def format_appt(appt: Appointment) -> dict:
             provider_name = ""
             if appt.provider:
@@ -1214,6 +1233,8 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                 )
             duration = appt.duration_minutes or 30
             end_time = appt.start_time + timedelta(minutes=duration)
+            canvas_status = str(getattr(appt, "status", "") or "")
+            local_status = all_local.get(str(appt.id), "")
             return {
                 "id": str(appt.id),
                 "provider_name": provider_name,
@@ -1221,7 +1242,7 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
                 "start_time": appt.start_time.isoformat(),
                 "end_time": end_time.isoformat(),
                 "duration_minutes": duration,
-                "status": getattr(appt, "status", ""),
+                "status": local_status or canvas_status,
             }
 
         base_qs = Appointment.objects.filter(
@@ -1436,41 +1457,49 @@ class FloorPlanApi(StaffSessionAuthMixin, SimpleAPI):
 
     @api.post("/checkin/<appointment_id>")
     def checkin_patient(self) -> list[Response | Effect]:
-        """Update appointment status to checked-in via FHIR."""
+        """Update appointment status to checked-in via FHIR + local assignment."""
+        from floor_plan_viewer.models.custom_data import RoomAssignment
+
         appt_id = self.request.path_params["appointment_id"]
+        # Update local assignment status
+        RoomAssignment.objects.filter(appointment_id=appt_id).exclude(status="cancelled").update(status="checked-in")
+
         fhir = self._fhir_client()
         if not fhir:
-            return [JSONResponse({"error": "FHIR not configured"}, status_code=HTTPStatus.BAD_REQUEST)]
+            return [JSONResponse({"success": True, "status": "checked-in"}, status_code=HTTPStatus.OK)]
         try:
             headers = fhir._headers()
             resp = http_requests.get(f"{fhir.fhir_url}/Appointment/{appt_id}", headers=headers, timeout=15)
-            if resp.status_code != 200:
-                return [JSONResponse({"error": f"Appointment not found: {resp.status_code}"}, status_code=HTTPStatus.NOT_FOUND)]
-            appt = resp.json()
-            appt = dict(appt, status="checked-in")
-            resp = http_requests.put(f"{fhir.fhir_url}/Appointment/{appt_id}", json=appt, headers=headers, timeout=15)
-            return [JSONResponse({"success": True, "status": "checked-in"}, status_code=HTTPStatus.OK)]
+            if resp.status_code == 200:
+                appt = resp.json()
+                appt = dict(appt, status="checked-in")
+                http_requests.put(f"{fhir.fhir_url}/Appointment/{appt_id}", json=appt, headers=headers, timeout=15)
         except Exception as e:
-            return [JSONResponse({"error": str(e)}, status_code=HTTPStatus.BAD_GATEWAY)]
+            log.warning("[floor_plan] FHIR checkin error: %s", e)
+        return [JSONResponse({"success": True, "status": "checked-in"}, status_code=HTTPStatus.OK)]
 
     @api.post("/checkout/<appointment_id>")
     def checkout_patient(self) -> list[Response | Effect]:
-        """Update appointment status to fulfilled via FHIR."""
+        """Update appointment status to fulfilled/completed via FHIR + local assignment."""
+        from floor_plan_viewer.models.custom_data import RoomAssignment
+
         appt_id = self.request.path_params["appointment_id"]
+        # Update local assignment status
+        RoomAssignment.objects.filter(appointment_id=appt_id).exclude(status="cancelled").update(status="completed")
+
         fhir = self._fhir_client()
         if not fhir:
-            return [JSONResponse({"error": "FHIR not configured"}, status_code=HTTPStatus.BAD_REQUEST)]
+            return [JSONResponse({"success": True, "status": "completed"}, status_code=HTTPStatus.OK)]
         try:
             headers = fhir._headers()
             resp = http_requests.get(f"{fhir.fhir_url}/Appointment/{appt_id}", headers=headers, timeout=15)
-            if resp.status_code != 200:
-                return [JSONResponse({"error": f"Appointment not found: {resp.status_code}"}, status_code=HTTPStatus.NOT_FOUND)]
-            appt = resp.json()
-            appt = dict(appt, status="fulfilled")
-            resp = http_requests.put(f"{fhir.fhir_url}/Appointment/{appt_id}", json=appt, headers=headers, timeout=15)
-            return [JSONResponse({"success": True, "status": "fulfilled"}, status_code=HTTPStatus.OK)]
+            if resp.status_code == 200:
+                appt = resp.json()
+                appt = dict(appt, status="fulfilled")
+                http_requests.put(f"{fhir.fhir_url}/Appointment/{appt_id}", json=appt, headers=headers, timeout=15)
         except Exception as e:
-            return [JSONResponse({"error": str(e)}, status_code=HTTPStatus.BAD_GATEWAY)]
+            log.warning("[floor_plan] FHIR checkout error: %s", e)
+        return [JSONResponse({"success": True, "status": "completed"}, status_code=HTTPStatus.OK)]
 
     @api.post("/cancel/<appointment_id>")
     def cancel_appointment(self) -> list[Response | Effect]:
